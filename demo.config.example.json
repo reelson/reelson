@@ -1,0 +1,31 @@
+{
+    "$comment": "Copy to <project>/demo.config.json. Every field is optional; see skills/demo-record/scripts/config.ts for defaults.",
+    "videosDir": "docs/videos",
+    "language": "en",
+    "locale": "en-US",
+    "brand": {
+        "name": "YOUR BRAND",
+        "tagline": "PRODUCT",
+        "eyebrow": "Your Brand",
+        "color": "#dc2626",
+        "colorSoft": "#f87171"
+    },
+    "template": "classic",
+    "strings": {
+        "recapTitle": "In short",
+        "stepsLabel": "steps",
+        "secondsLabel": "seconds"
+    },
+    "music": {
+        "file": null,
+        "lufs": -28,
+        "lufsUnderNarration": -34
+    },
+    "record": {
+        "viewport": { "width": 1440, "height": 900 },
+        "deviceScaleFactor": 2,
+        "extraHTTPHeaders": { "X-Demo-Recording": "1" },
+        "hideSelectors": [],
+        "personaDomain": "example.com"
+    }
+}

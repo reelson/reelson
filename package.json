@@ -1,0 +1,18 @@
+{
+    "name": "demo-video-kit",
+    "private": true,
+    "type": "module",
+    "description": "Claude Code skills that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
+    "engines": {
+        "node": ">=22.6"
+    },
+    "scripts": {
+        "setup": "npm install && npx playwright install chromium",
+        "example:record": "node skills/demo-record/scripts/record.ts examples/todo-add-item/scenario.ts",
+        "example:scaffold": "node skills/demo-video/scripts/scaffold.ts examples/todo-add-item --title \"Plan your day\" --subtitle \"Add tasks and tick them off\" --force",
+        "example:check": "node skills/demo-video/scripts/check-zooms.ts examples/todo-add-item"
+    },
+    "dependencies": {
+        "@playwright/test": "^1.55.0"
+    }
+}

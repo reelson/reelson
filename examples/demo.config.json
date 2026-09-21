@@ -1,0 +1,15 @@
+{
+    "$comment": "Config for the bundled examples. A real project keeps its own demo.config.json at its root (copy demo.config.example.json).",
+    "videosDir": ".",
+    "language": "en",
+    "locale": "en-US",
+    "brand": {
+        "name": "DEMO KIT",
+        "tagline": "EXAMPLE",
+        "eyebrow": "Demo Kit",
+        "color": "#6366f1",
+        "colorSoft": "#a5b4fc"
+    },
+    "template": "classic",
+    "music": { "file": null }
+}

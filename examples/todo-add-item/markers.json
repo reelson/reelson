@@ -1,0 +1,61 @@
+{
+  "scenario": "todo-add-item",
+  "baseURL": "https://demo.playwright.dev",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "durationSeconds": 20.133333,
+  "cuts": [],
+  "transitions": [],
+  "clicks": [
+    {
+      "move": 3.13,
+      "at": 3.85,
+      "x": 722,
+      "y": 211,
+      "kind": "type",
+      "until": 5.71
+    },
+    {
+      "move": 6.74,
+      "at": 7.28,
+      "x": 721,
+      "y": 205,
+      "kind": "type",
+      "until": 9.78
+    },
+    {
+      "move": 11.17,
+      "at": 11.78,
+      "x": 464,
+      "y": 326,
+      "kind": "click"
+    },
+    {
+      "move": 13.41,
+      "at": 14.06,
+      "x": 686,
+      "y": 379,
+      "kind": "click"
+    }
+  ],
+  "markers": [
+    {
+      "label": "Type a task and press Enter",
+      "at": 6.74
+    },
+    {
+      "label": "Add as many as you need",
+      "at": 11.17
+    },
+    {
+      "label": "Tick a task when it is done",
+      "at": 13.41
+    },
+    {
+      "label": "Filter what is left",
+      "at": 15.97
+    }
+  ]
+}

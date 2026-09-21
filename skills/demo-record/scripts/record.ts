@@ -1,0 +1,289 @@
+/**
+ * Records a scripted browser walkthrough of the app as a video.
+ *
+ *   node <skills>/demo-record/scripts/record.ts <scenario.ts> [--out <dir>] [--headed]
+ *
+ * The scenario module default-exports a `Scenario` (see ./scenario.ts). The
+ * recorder drives it with Playwright, draws a visible cursor with click
+ * ripples into the page, hides local dev chrome, and writes into --out
+ * (default: the scenario's directory). Project settings (viewport, locale,
+ * brand colour, hidden selectors, persona domain) come from demo.config.json
+ * (see ./config.ts):
+ *
+ *   recording.webm   raw Playwright capture
+ *   recording.mp4    H.264 transcode (what HyperFrames consumes)
+ *   markers.json     { durationSeconds, viewport, markers: [{ label, at }] }
+ *
+ * Markers are the timestamps (seconds from the start of the video) of every
+ * `demo.marker()` call, so callouts/zooms in the composition can be timed
+ * against the real footage instead of guessed.
+ */
+import {
+    chromium,
+    type Browser,
+    type BrowserContext,
+    type Page,
+} from '@playwright/test'
+import { spawnSync } from 'node:child_process'
+import {
+    existsSync,
+    mkdirSync,
+    readdirSync,
+    renameSync,
+    rmSync,
+    writeFileSync,
+} from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { COMMON_DEV_CHROME, loadConfig } from './config.ts'
+import { cursorOverlayScript, hideDevChromeScript } from './cursor-overlay.ts'
+import { createDemo, type Scenario } from './scenario.ts'
+
+const args = process.argv.slice(2)
+const scenarioArg = args.find((a) => !a.startsWith('--'))
+if (!scenarioArg) {
+    console.error('usage: record.ts <scenario.ts> [--out <dir>] [--headed]')
+    process.exit(2)
+}
+
+const scenarioPath = resolve(scenarioArg)
+const outDir = resolve(flag('--out') ?? dirname(scenarioPath))
+const headed = args.includes('--headed')
+
+function flag(name: string): string | undefined {
+    const i = args.indexOf(name)
+    return i === -1 ? undefined : args[i + 1]
+}
+
+const config = loadConfig(dirname(scenarioPath))
+const scenario: Scenario = (await import(pathToFileURL(scenarioPath).href))
+    .default
+const viewport = scenario.viewport ?? config.record.viewport
+const captureScale =
+    scenario.deviceScaleFactor ?? config.record.deviceScaleFactor
+const rawDir = resolve(outDir, '.raw')
+
+mkdirSync(outDir, { recursive: true })
+rmSync(rawDir, { recursive: true, force: true })
+
+// Chrome's screencast (what Playwright films) only delivers device pixels when the
+// scale factor is forced at launch; the context's deviceScaleFactor alone films
+// CSS pixels padded into the bigger canvas.
+const browser: Browser = await chromium.launch({
+    headless: !headed,
+    args: [`--force-device-scale-factor=${captureScale}`],
+})
+const context: BrowserContext = await browser.newContext({
+    baseURL: scenario.baseURL,
+    ignoreHTTPSErrors: true,
+    locale: config.locale,
+    viewport,
+    deviceScaleFactor: captureScale,
+    // Film at device pixels (2x by default) so text survives the frame scaling and zooms.
+    recordVideo: {
+        dir: rawDir,
+        size: {
+            width: viewport.width * captureScale,
+            height: viewport.height * captureScale,
+        },
+    },
+    // Tells the app it is being recorded (X-Demo-Recording by default), so it can skip
+    // dev conveniences that would look wrong on camera (pre-filled forms, pre-ticked consents).
+    extraHTTPHeaders: config.record.extraHTTPHeaders,
+})
+await context.addInitScript(cursorOverlayScript(config.brand.color))
+// Local-only chrome that must never appear in a docs video.
+const hideScript = hideDevChromeScript([
+    ...COMMON_DEV_CHROME,
+    ...config.record.hideSelectors,
+])
+if (hideScript) {
+    await context.addInitScript(hideScript)
+}
+
+const page: Page = await context.newPage()
+const demo = createDemo(page, hashSeed(scenario.name), {
+    domain: config.record.personaDomain,
+    language: config.language,
+})
+
+let failure: unknown = null
+try {
+    // Start with the cursor resting mid-screen (not at 0,0), even before the first goto.
+    await demo.rest()
+    await demo.pause(scenario.leadInMs ?? 800)
+    await scenario.run(demo)
+    await demo.pause(scenario.leadOutMs ?? 1200)
+} catch (error) {
+    failure = error
+    console.error('scenario failed:', error)
+}
+
+const videoPath = await page.video()?.path()
+await context.close()
+await browser.close()
+
+const webm = resolve(
+    outDir,
+    failure ? 'recording.failed.webm' : 'recording.webm',
+)
+const mp4 = resolve(outDir, 'recording.mp4')
+const produced = videoPath ?? resolve(rawDir, readdirSync(rawDir)[0] ?? '')
+if (!produced || !existsSync(produced)) {
+    console.error('no video was produced')
+    process.exit(1)
+}
+renameSync(produced, webm)
+rmSync(rawDir, { recursive: true, force: true })
+
+if (failure) {
+    console.error(`partial capture kept for debugging: ${webm}`)
+    process.exit(1)
+}
+
+// Playwright captures VP8/WebM at 25 fps; HyperFrames wants a plain H.264 MP4.
+// Ranges collected by demo.cut() are removed here (trim + concat), so the
+// published recording and markers.json are already tidy.
+const keep = keptRanges(demo.cuts)
+const videoFilter =
+    keep.length > 1
+        ? keep
+              .map(
+                  (r, i) =>
+                      `[0:v]trim=${r.from}:${r.to},setpts=PTS-STARTPTS[v${i}]`,
+              )
+              .join(';') +
+          ';' +
+          keep.map((_, i) => `[v${i}]`).join('') +
+          `concat=n=${keep.length}:v=1:a=0,scale=trunc(iw/2)*2:trunc(ih/2)*2[v]`
+        : null
+const ffmpeg = spawnSync(
+    'ffmpeg',
+    [
+        '-y',
+        '-loglevel',
+        'error',
+        '-i',
+        webm,
+        ...(videoFilter
+            ? ['-filter_complex', videoFilter, '-map', '[v]']
+            : ['-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2']),
+        '-c:v',
+        'libx264',
+        '-preset',
+        'slow',
+        '-crf',
+        '15',
+        '-pix_fmt',
+        'yuv420p',
+        '-r',
+        '30',
+        // A keyframe every second: HyperFrames seeks frame-by-frame and warns (and can
+        // freeze frames) on sparse keyframes.
+        '-g',
+        '30',
+        '-keyint_min',
+        '30',
+        '-movflags',
+        '+faststart',
+        '-an',
+        mp4,
+    ],
+    { stdio: 'inherit' },
+)
+if (ffmpeg.status !== 0) {
+    console.error(
+        'ffmpeg transcode failed (is ffmpeg installed? brew install ffmpeg)',
+    )
+    process.exit(1)
+}
+
+/** Complement of the cut ranges over [0, ∞): what stays in the video. */
+function keptRanges(
+    cuts: { from: number; to: number }[],
+): { from: number; to: string | number }[] {
+    const sorted = [...cuts].sort((a, b) => a.from - b.from)
+    const ranges: { from: number; to: string | number }[] = []
+    let cursor = 0
+    for (const c of sorted) {
+        if (c.from > cursor) {
+            ranges.push({ from: cursor, to: c.from })
+        }
+        cursor = Math.max(cursor, c.to)
+    }
+    ranges.push({ from: cursor, to: 1e9 })
+
+    return ranges
+}
+
+/** Recording time → time in the cut video. Times inside a cut collapse to its start. */
+function toCutTime(t: number, cuts: { from: number; to: number }[]): number {
+    let removed = 0
+    for (const c of [...cuts].sort((a, b) => a.from - b.from)) {
+        if (t >= c.to) {
+            removed += c.to - c.from
+        } else if (t > c.from) {
+            removed += t - c.from
+        }
+    }
+
+    return Number((t - removed).toFixed(2))
+}
+
+const probe = spawnSync(
+    'ffprobe',
+    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', mp4],
+    { encoding: 'utf8' },
+)
+const durationSeconds =
+    Number.parseFloat(probe.stdout.trim()) || demo.elapsedSeconds()
+
+writeFileSync(
+    resolve(outDir, 'markers.json'),
+    JSON.stringify(
+        {
+            scenario: scenario.name,
+            baseURL: scenario.baseURL,
+            viewport,
+            durationSeconds,
+            cuts: demo.cuts,
+            transitions: demo.transitions.map((t) => ({
+                ...t,
+                at: toCutTime(t.at, demo.cuts),
+            })),
+            clicks: demo.clicks
+                .filter(
+                    (c) =>
+                        !demo.cuts.some(
+                            (cut) => c.at > cut.from && c.at < cut.to,
+                        ),
+                )
+                .map((c) => ({
+                    ...c,
+                    at: toCutTime(c.at, demo.cuts),
+                    move: toCutTime(c.move, demo.cuts),
+                    ...(c.until !== undefined
+                        ? { until: toCutTime(c.until, demo.cuts) }
+                        : {}),
+                })),
+            markers: demo.markers.map((m) => ({
+                ...m,
+                at: toCutTime(m.at, demo.cuts),
+            })),
+        },
+        null,
+        2,
+    ) + '\n',
+)
+
+console.log(
+    `recorded ${scenario.name}: ${mp4} (${durationSeconds.toFixed(1)}s, ${demo.markers.length} markers)`,
+)
+
+function hashSeed(text: string): number {
+    let h = 2166136261
+    for (const ch of text) {
+        h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
+    }
+    return h >>> 0
+}
