@@ -1,0 +1,67 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    test:
+        name: Typecheck + unit tests
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - run: npm run typecheck
+            - run: npm test
+
+    smoke:
+        name: Record → build → check → render (example)
+        needs: test
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - name: Install ffmpeg
+              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+            - run: npm ci
+            - run: npx playwright install --with-deps chromium
+            - name: Record the TodoMVC example
+              run: npm run example:record
+            - name: Build the composition from video.json
+              run: npm run example:build
+            - name: Check (schemas, zoom timing, hyperframes lint)
+              run: npm run example:check
+            - name: Render
+              run: npm run example:render
+            - name: Verify the render
+              run: |
+                  out=examples/todo-add-item/video/renders/todo-add-item.mp4
+                  duration=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out")
+                  echo "duration: ${duration}s"
+                  awk -v d="$duration" 'BEGIN { exit !(d > 15 && d < 40) }'
+                  mkdir -p frames
+                  for t in 0 2 8 13; do ffmpeg -y -loglevel error -ss "$t" -i "$out" -frames:v 1 -vf scale=960:-1 "frames/t$t.jpg"; done
+            - name: Upload the render and frames
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: example-render
+                  path: |
+                      examples/todo-add-item/video/renders/
+                      examples/todo-add-item/recording.failed.webm
+                      frames/
+                  if-no-files-found: ignore

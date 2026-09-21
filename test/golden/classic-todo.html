@@ -1,20 +1,27 @@
 <!doctype html>
-<html lang="{{LANG}}">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <!-- Vendored (assets/vendor/, copied by reelkit build): renders work offline and never drift. -->
+    <script src="assets/vendor/gsap.min.js"></script>
     <style>
+      /* Inter variable (SIL OFL, assets/vendor/Inter-OFL.txt): latin + latin-ext (ș ț ă ő ł …) */
+      @font-face { font-family: 'Inter Variable'; font-style: normal; font-weight: 100 900; font-display: block;
+        src: url(assets/vendor/inter-latin-ext-wght-normal.woff2) format('woff2-variations');
+        unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+      @font-face { font-family: 'Inter Variable'; font-style: normal; font-weight: 100 900; font-display: block;
+        src: url(assets/vendor/inter-latin-wght-normal.woff2) format('woff2-variations');
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b1220; }
       :root {
-        --brand: {{BRAND_COLOR}};          /* demo.config.json brand.color */
-        --brand-soft: {{BRAND_COLOR_SOFT}};
+        --brand: #6366f1;          /* demo.config.json brand.color */
+        --brand-soft: #a5b4fc;
         --ink: #f8fafc;
         --muted: #94a3b8;
         --line: rgba(255, 255, 255, 0.10);
-        --font: Inter, ui-sans-serif, system-ui, sans-serif;
+        --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
       }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
         background: linear-gradient(160deg, #0b1220 0%, #101a2e 50%, #0c1424 100%); }
@@ -39,6 +46,7 @@
       .wordmark { display: flex; gap: 0.02em; font-size: 168px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
       .wordmark .l { display: inline-block; will-change: transform, opacity, filter; }
       .wordmark .l.space { width: 0.32em; }
+      .brand-sub:empty { display: none; }
       .brand-sub { font-size: 44px; font-weight: 600; letter-spacing: 0.42em; color: var(--muted); padding-left: 0.42em; will-change: transform, opacity; }
       .brand-line { width: 220px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-soft)); transform-origin: center; will-change: transform, opacity; }
 
@@ -81,7 +89,7 @@
 
       /* Framed recording */
       #screen { display: grid; place-items: center; }
-      #frame { position: relative; width: {{FRAME_W}}px; height: {{FRAME_H}}px; border-radius: 20px; overflow: hidden;
+      #frame { position: relative; width: 1504px; height: 940px; border-radius: 20px; overflow: hidden;
         /* No will-change here: it makes Chrome rasterize the frame once at 1x and stretch that
            bitmap during zooms, which blurs the 2x capture. */
         background: #fff; border: 1px solid rgba(255, 255, 255, 0.14);
@@ -124,7 +132,7 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="{{TOTAL}}" data-width="1920" data-height="1080">
+    <div id="root" data-composition-id="main" data-start="0" data-duration="26.53" data-width="1920" data-height="1080">
 
       <!-- Background (untimed, always on) -->
       <div id="bg" class="clip">
@@ -138,16 +146,16 @@
       </div>
 
       <!-- 1. Cover: 0 → COVER_DURATION. Frame 0 is the poster. -->
-      <section id="cover" class="clip cover" data-start="0" data-duration="{{COVER_DURATION}}" data-track-index="3">
+      <section id="cover" class="clip cover" data-start="0" data-duration="4" data-track-index="3">
         <div class="stack" id="stack">
           <div class="top">
-            <div class="wordmark" data-text="{{BRAND}}"></div>
+            <div class="wordmark" data-text="ACME"></div>
             <div class="brand-line"></div>
-            <div class="brand-sub">{{BRAND_SUB}}</div>
+            <div class="brand-sub">PLATFORM</div>
           </div>
           <div class="bottom">
-            <h1 class="title">{{TITLE}}</h1>
-            <p class="subtitle">{{SUBTITLE}}</p>
+            <h1 class="title">Plan your day</h1>
+            <p class="subtitle">Add tasks and tick them off</p>
             <div class="meta" id="intro-meta"></div>
           </div>
         </div>
@@ -158,63 +166,94 @@
            carries the timing and #frame's transform/opacity are animated to match. -->
       <section id="screen" class="clip">
         <div id="frame">
-{{VIDEOS}}
+          <video id="recording" class="clip" src="assets/recording.mp4" muted playsinline
+            data-start="3" data-duration="17.53" data-media-start="2.6" data-track-index="1"></video>
         </div>
         <div id="callouts"></div>
       </section>
-{{TRANSITIONS}}
-{{AUDIO}}
-{{MUSIC}}
+
+
+      <!-- Music bed, pre-rendered by reelkit build (trim + loudnorm + fades) -->
+      <audio id="music" class="clip" src="assets/music.m4a" data-start="0" data-duration="26.53" data-track-index="4"></audio>
 
       <!-- 3. Recap card: title left, numbered steps right -->
-      <section id="outro" class="clip recap-card" data-start="{{RECAP_START}}" data-duration="{{RECAP_DURATION}}" data-track-index="2">
+      <section id="outro" class="clip recap-card" data-start="20.13" data-duration="4.2" data-track-index="2">
         <div class="left">
-          <div class="eyebrow">{{EYEBROW}}</div>
-          <h1 class="title">{{OUTRO_TITLE}}</h1>
+          <div class="eyebrow">Acme</div>
+          <h1 class="title">In short</h1>
           <div class="accent"></div>
         </div>
         <div class="recap" id="recap"></div>
       </section>
 
       <!-- 4. Closing brand card -->
-      <section id="brand-out" class="clip brand-card" data-start="{{BRAND_OUT_START}}" data-duration="{{BRAND_OUT_DURATION}}" data-track-index="3">
-        <div class="wordmark" data-text="{{BRAND}}"></div>
+      <section id="brand-out" class="clip brand-card" data-start="23.93" data-duration="2.6" data-track-index="3">
+        <div class="wordmark" data-text="ACME"></div>
         <div class="brand-line"></div>
-        <div class="brand-sub">{{BRAND_SUB}}</div>
+        <div class="brand-sub">PLATFORM</div>
       </section>
     </div>
 
     <script>
       /* ------------------------------------------------------------------
-       * Edit this block. Times are seconds on the COMPOSITION timeline
-       * (cover included). markers.json times are recording times; convert
-       * with: compositionTime = clipStart + (recordingTime - mediaStart).
+       * Generated by `reelkit build` from video.json — edit video.json and
+       * rebuild; changes made here are overwritten. Times are composition
+       * seconds (cover included):
+       *   callouts: [{ at, duration, text, group? }]   numbered step pills
+       *   zooms: [{ at, duration, x, y, scale, in, out }]   x/y = 0..1 focus
+       *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
+       *   chip: { steps, seconds }   cover chip text, already pluralised
        * ------------------------------------------------------------------ */
       const DEMO = {
-        total: {{TOTAL}},
-        coverDuration: {{COVER_DURATION}},
-        coverExit: {{COVER_EXIT}},       // the cover lifts away and the recording rises in (= clipStart)
-        clipStart: {{CLIP_START}},
-        clipDuration: {{CLIP_DURATION}},
-        mediaStart: {{MEDIA_START}},
-        recapStart: {{RECAP_START}},
-        recapDuration: {{RECAP_DURATION}},
-        brandOutStart: {{BRAND_OUT_START}},
-        brandOutDuration: {{BRAND_OUT_DURATION}},
-        // { at, duration, text } — a numbered pill shown over the recording.
-        callouts: {{CALLOUTS}},
-        // { at, duration, x, y, scale, in?, out? } — x/y are 0..1 fractions of the frame
-        // (focus point), scale 1.4–2.2 reads well. `in`/`out` are the ease durations
-        // (default 0.8 s): the zoom rides along with the cursor's glide and must be
-        // done before the click (check-zooms.ts).
-        zooms: [],
-        // { at, gap } — hand-off cards (from markers.json transitions). The recording leaves
-        // through the top during the 0.9 s before `at`; the card holds `gap` seconds of
-        // paused footage; the next actor's recording rides back in from below at at + gap.
-        transitions: {{TRANSITION_TIMES}},
-        // Cover chip wording (demo.config.json strings).
-        strings: { steps: '{{STEPS_LABEL}}', seconds: '{{SECONDS_LABEL}}' },
-        maxSteps: {{MAX_STEPS}},
+        "total": 26.53,
+        "coverDuration": 4,
+        "coverExit": 3,
+        "clipStart": 3,
+        "clipDuration": 17.53,
+        "mediaStart": 2.6,
+        "recapStart": 20.13,
+        "recapDuration": 4.2,
+        "brandOutStart": 23.93,
+        "brandOutDuration": 2.6,
+        "callouts": [
+          {
+            "at": 7.14,
+            "duration": 3,
+            "text": "Type a task and press Enter"
+          },
+          {
+            "at": 11.57,
+            "duration": 2.04,
+            "text": "Add as many as you need"
+          },
+          {
+            "at": 13.81,
+            "duration": 2.36,
+            "text": "Tick a task when it is done"
+          },
+          {
+            "at": 16.37,
+            "duration": 3,
+            "text": "Filter what is left"
+          }
+        ],
+        "zooms": [
+          {
+            "at": 11.28,
+            "duration": 5.18,
+            "x": 0.399,
+            "y": 0.392,
+            "scale": 1.7,
+            "in": 0.8,
+            "out": 0.8
+          }
+        ],
+        "transitions": [],
+        "chip": {
+          "steps": "4 steps",
+          "seconds": "27 seconds"
+        },
+        "maxSteps": 10
       };
 
       /* ---- Builder: normally nothing below needs editing. ---- */
@@ -224,6 +263,14 @@
       // GSAP fromTo() renders its from-state at construction (immediateRender). For
       // every 'out' tween that must stay off, or it overwrites the entry state at t=0.
       const later = { immediateRender: false };
+
+      // Text from video.json is set with textContent, never innerHTML: "<", "&" stay literal.
+      const node = (tag, className, text) => {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (text !== undefined) el.textContent = text;
+        return el;
+      };
 
       // Background: glows drift and breathe on sine curves for the whole video — slow but
       // perceptible, never busy — and the whole layer settles from a zoomed, slightly
@@ -238,8 +285,8 @@
 
       // Wordmarks: split into letters once so the cover and the closing card can animate them.
       document.querySelectorAll('.wordmark').forEach((el) => {
-        el.innerHTML = [...el.dataset.text].map((ch) =>
-          ch === ' ' ? '<span class="l space"></span>' : '<span class="l">' + ch + '</span>').join('');
+        el.replaceChildren(...[...el.dataset.text].map((ch) =>
+          ch === ' ' ? node('span', 'l space') : node('span', 'l', ch)));
       });
 
       // 1. Cover. Frame 0 = the poster: letters, line, sub and title are big (130%) and
@@ -249,7 +296,7 @@
       //    leaves through the top while the recording arrives from below on the same belt.
       //    The from-states below ARE the poster — keep them sharp (no blur at t=0).
       const introMeta = document.getElementById('intro-meta');
-      introMeta.innerHTML = '<b>' + DEMO.callouts.length + ' ' + DEMO.strings.steps + '</b><span>·</span><span>' + Math.round(DEMO.total) + ' ' + DEMO.strings.seconds + '</span>';
+      introMeta.append(node('b', '', DEMO.chip.steps), node('span', '', '·'), node('span', '', DEMO.chip.seconds));
       const c0 = 0.08;
       tl.fromTo('#cover .l', { scale: 1.3, opacity: 0.6, x: (i, el, all) => (i - (all.length - 1) / 2) * 26 },
         { scale: 1, opacity: 1, x: 0, duration: 1.4, ease: 'sine.inOut', stagger: { each: 0.06, from: 'center' } }, c0);
@@ -292,8 +339,9 @@
         const el = document.createElement('div');
         el.className = 'callout';
         el.id = 'callout-' + i;
-        el.innerHTML = '<span class="n">' + (i + 1) + '</span>' +
-          (c.group ? '<span class="who">' + c.group + '</span>' : '') + '<span>' + c.text + '</span>';
+        el.append(node('span', 'n', String(i + 1)));
+        if (c.group) el.append(node('span', 'who', c.group));
+        el.append(node('span', '', c.text));
         host.appendChild(el);
         tl.fromTo(el, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', ...later }, c.at);
         tl.fromTo(el, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in', ...later }, c.at + c.duration - 0.3);
@@ -320,14 +368,14 @@
           const heading = document.createElement('div');
           heading.className = 'recap-group';
           heading.id = 'recap-group-' + i;
-          heading.textContent = c.group;
+          heading.textContent = c.group; // plain text
           recap.appendChild(heading);
           recapRows.push('#' + heading.id);
         }
         const el = document.createElement('div');
         el.className = 'step';
         el.id = 'step-' + i;
-        el.innerHTML = '<span class="n">' + (i + 1) + '</span><span>' + c.text + '</span>';
+        el.append(node('span', 'n', String(i + 1)), node('span', '', c.text));
         recap.appendChild(el);
         recapRows.push('#' + el.id);
       });

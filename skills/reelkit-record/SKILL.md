@@ -1,9 +1,9 @@
 ---
-name: demo-record
-description: Use when the user wants a screen recording / walkthrough video of a feature of their web app — "record a demo of X", "make a video showing how to Y", "screen capture the Z flow", "docs video". Drives the app with Playwright, draws a visible human-paced cursor, hides dev chrome, and writes recording.mp4 + markers.json into <videosDir>/<slug>/. Pair with the demo-video skill (HyperFrames) for the intro/outro/callouts and the final MP4. Also covers the manual OpenScreen path.
+name: reelkit-record
+description: Use when the user wants a screen recording / walkthrough video of a feature of their web app — "record a demo of X", "make a video showing how to Y", "screen capture the Z flow", "docs video". Drives the app with Playwright via `reelkit record`, draws a visible human-paced cursor, hides dev chrome, and writes recording.mp4 + markers.json into <videosDir>/<slug>/. Pair with the reelkit-compose skill (HyperFrames) for the intro/outro/callouts and the final MP4. Also covers the manual OpenScreen path.
 ---
 
-# demo-record
+# reelkit-record
 
 Produces the raw footage for a demo video: a scripted, repeatable browser walkthrough of
 the app, captured as video, with timestamps for every step you want to call out later.
@@ -21,21 +21,23 @@ with raw Playwright calls.
 └── markers.json     ← generated: duration, viewport, markers, clicks, cuts (committed)
 ```
 
-`recording.mp4` + `markers.json` are the input contract of the `demo-video` skill.
+`recording.mp4` + `markers.json` are the input contract of the `reelkit-compose` skill. Everything
+runs through the `reelkit` CLI (`reelkit help`); if it is missing, run the kit's `install.sh`.
 
 ## Project config
 
 Everything project-specific lives in `demo.config.json` at the project root (found by
 walking up from the scenario). Read it before writing a scenario — it tells you the videos
 directory, the UI language (callouts and personas follow it), the brand, and what to hide.
-If it is missing, create it from the kit's `demo.config.example.json` and ask the user for
-the brand name/colour and UI language. Fields (all optional, see `scripts/config.ts`):
+If it is missing, run `reelkit init` and ask the user for the brand name/colour and UI
+language. It is validated against `schemas/demo.config.schema.json` — a mistyped key is an
+error with a "did you mean" hint. Fields (all optional, see `scripts/config.ts`):
 
 | Field                          | Used for                                                          |
 |--------------------------------|-------------------------------------------------------------------|
 | `videosDir`                    | where `<slug>/` folders live (default `docs/videos`)              |
 | `language`, `locale`           | persona names, browser locale, `<html lang>` of the composition   |
-| `brand.color`                  | click-ring colour (and the cards in demo-video)                   |
+| `brand.color`                  | click-ring colour (and the cards in reelkit-compose)                   |
 | `record.viewport`              | default 1440x900; keep 16:10 or 16:9                              |
 | `record.hideSelectors`         | extra local-only UI to hide (env badges, dev-login buttons)       |
 | `record.extraHTTPHeaders`      | default `X-Demo-Recording: 1`, so the app can skip dev prefills   |
@@ -54,7 +56,7 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
   action and before every `demo.goto()`, so the video never opens with a jump from a corner.
   Raw `page.click()`/`fill()` (e.g. a login helper) move the mouse without telling `demo`; the
   next `demo.goto()` re-syncs, so keep such raw steps before a goto.
-- **Markers**: `demo.marker('label')` stamps the video time; `demo-video` turns each into a
+- **Markers**: `demo.marker('label')` stamps the video time; `reelkit-compose` turns each into a
   pre-timed callout and a row in the recap.
 - **Cuts**: `demo.cut(fn)` removes slow waits (3-D Secure, spinners, queued jobs) from the
   video and shifts the markers.
@@ -65,8 +67,9 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 ## Prerequisites
 
 - The app running and reachable at the scenario's `baseURL`.
-- Kit dependencies once: `npm run setup` in the kit (installs `@playwright/test` + Chromium).
-- `ffmpeg` on PATH (`brew install ffmpeg`). Node 22.6+ (TypeScript runs directly).
+- reelkit installed once per machine (`install.sh` in the kit: Playwright + Chromium, the
+  `reelkit` command, the skill links).
+- `ffmpeg` on PATH (`brew install ffmpeg`). Node 22.18+ (TypeScript runs directly).
 
 ## Workflow
 
@@ -74,22 +77,22 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
    (login, table/modal locators) and reuse them from the scenario — a scenario is mostly an
    e2e test with a cursor. Check the project's CLAUDE.md / e2e docs for seeded accounts.
 
-2. **Write `<videosDir>/<slug>/scenario.ts`.** Start from the kit's
-   `examples/todo-add-item/scenario.ts`. Import the type through the installed skill path,
-   e.g. `import type { Scenario } from '../../../.claude/skills/demo-record/scripts/scenario.ts'`.
-   Rules:
+2. **Write `<videosDir>/<slug>/scenario.ts`.** `reelkit new <slug> --url <origin>` creates a
+   stub with the right type import; the kit's `examples/todo-add-item/scenario.ts` is a full
+   example. Rules:
    - `demo.marker('...')` right **after** the UI reaches each state worth a callout. Labels
-     become placeholder callout text — write them in the UI language as imperative steps.
+     become the callouts in video.json (and its `marker` keys) — write them in the UI language
+     as imperative steps, and keep them stable: video.json refers to them by label.
      **At most 10 markers** (the recap holds ten); fold small steps together.
    - **Don't pause for zooms.** Zooms ride along with the cursor's glide; `demo.click` /
-     `demo.type` log every glide and click into `markers.json` (`clicks`) and demo-video's
-     `check-zooms.ts` times zooms against them.
+     `demo.type` log every glide and click into `markers.json` (`clicks`), and a zoom in
+     video.json is anchored to click numbers and timed from them.
    - Hold ~2–3 s after the last marker so its callout can be read.
    - Nothing pre-filled on camera: if the app pre-fills forms or ticks consents locally,
      gate that on the `X-Demo-Recording` header in the app rather than working around it.
      Tick checkboxes with `demo.click` on camera.
    - Keep it 10–40 s of footage, one feature per video. Login is recorded and trimmed away
-     later (`--trim-start`).
+     later (video.json `trim.start`, suggested automatically).
    - Use `demo.click` / `demo.type` / `demo.moveTo` / `demo.scroll`, not raw `page.click` or
      `fill()` (those teleport the cursor and paste text). Raw `demo.page` is for waits, reads
      and `selectOption` (glide there with `demo.moveTo` first).
@@ -103,8 +106,8 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 3. **Record.**
 
    ```bash
-   node .claude/skills/demo-record/scripts/record.ts <videosDir>/<slug>/scenario.ts
-   node .claude/skills/demo-record/scripts/record.ts <videosDir>/<slug>/scenario.ts --headed   # watch it
+   reelkit record <slug>
+   reelkit record <slug> --headed     # watch it
    ```
 
    Prints the duration and marker count. On a scenario error the partial capture is kept as
@@ -121,7 +124,7 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
    nothing personal (real emails, tokens), cursor where the callout will point. New dev UI
    on screen → add its selector to `record.hideSelectors`.
 
-5. **Compose** with the `demo-video` skill.
+5. **Compose** with the `reelkit-compose` skill (`reelkit build <slug> --title "..."`).
 
 ## Scenario API (`scripts/scenario.ts`)
 
@@ -149,7 +152,7 @@ export default {
 
 **Two actors (e.g. manager → employee)**: wrap the account switch in `demo.transition()`.
 Everything inside `fn` (clear cookies, log in as the other account, `demo.goto` their first
-page) is cut, and `markers.json` gets a `transitions` entry; demo-video splits the footage
+page) is cut, and `markers.json` gets a `transitions` entry; reelkit-compose splits the footage
 there and shows a hand-off card (`from` → `to`, title, subtitle). Leave ~3 s after the last
 marker before it. Uploading a file on camera: generate it (e.g. a PDF via
 `browser.newPage().pdf()`) and answer the `filechooser` event.
@@ -167,6 +170,7 @@ $OS record --window "Chrome" --duration 30 --project <videosDir>/<slug>/demo.ope
 $OS export <videosDir>/<slug>/demo.openscreen -o <videosDir>/<slug>/recording.mp4 --auto-zoom --json
 ```
 
-Then run demo-video's `scaffold.ts` as usual — without `markers.json` it probes the file and
-you add callouts by hand. **Don't combine OpenScreen with the Playwright recorder**: its
+Then `reelkit build <slug>` as usual — without `markers.json` it probes the file; give the
+callouts an `at` (recording seconds) in video.json. Zooms need manual `at`/`x`/`y` (no clicks
+are logged). **Don't combine OpenScreen with the Playwright recorder**: its
 effects follow the OS cursor, which Playwright never moves.

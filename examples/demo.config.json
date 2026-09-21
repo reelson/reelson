@@ -1,4 +1,5 @@
 {
+    "$schema": "../skills/reelkit-record/schemas/demo.config.schema.json",
     "$comment": "Config for the bundled examples. A real project keeps its own demo.config.json at its root (copy demo.config.example.json).",
     "videosDir": ".",
     "language": "en",
@@ -11,5 +12,7 @@
         "colorSoft": "#a5b4fc"
     },
     "template": "classic",
-    "music": { "file": null }
+    "music": {
+        "file": null
+    }
 }

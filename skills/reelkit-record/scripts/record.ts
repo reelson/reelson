@@ -1,7 +1,8 @@
 /**
  * Records a scripted browser walkthrough of the app as a video.
  *
- *   node <skills>/demo-record/scripts/record.ts <scenario.ts> [--out <dir>] [--headed]
+ *   reelkit record <slug> [--headed]
+ *   node <skills>/reelkit-record/scripts/record.ts <scenario.ts> [--out <dir>] [--headed]
  *
  * The scenario module default-exports a `Scenario` (see ./scenario.ts). The
  * recorder drives it with Playwright, draws a visible cursor with click
@@ -35,7 +36,7 @@ import {
 } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { COMMON_DEV_CHROME, loadConfig } from './config.ts'
+import { COMMON_DEV_CHROME, ConfigError, loadConfig } from './config.ts'
 import { cursorOverlayScript, hideDevChromeScript } from './cursor-overlay.ts'
 import { createDemo, type Scenario } from './scenario.ts'
 
@@ -55,7 +56,14 @@ function flag(name: string): string | undefined {
     return i === -1 ? undefined : args[i + 1]
 }
 
-const config = loadConfig(dirname(scenarioPath))
+const config = (() => {
+    try {
+        return loadConfig(dirname(scenarioPath))
+    } catch (error) {
+        console.error(error instanceof ConfigError ? `reelkit: ${error.message}` : error)
+        process.exit(1)
+    }
+})()
 const scenario: Scenario = (await import(pathToFileURL(scenarioPath).href))
     .default
 const viewport = scenario.viewport ?? config.record.viewport

@@ -1,24 +1,27 @@
 # Templates
 
-A template is a folder with one HyperFrames composition that `scaffold.ts` fills in:
+A template is a folder with one HyperFrames composition that `reelkit build` fills in:
 
 ```
 templates/<name>/
 ├── index.html      ← required: the composition with {{PLACEHOLDERS}}
 ├── template.json   ← optional: timing overrides, description
-└── assets/         ← optional: copied into video/assets/ (logos, fonts, textures)
+└── assets/         ← optional: copied into video/assets/ (logos, fonts, textures, vendored JS)
 ```
 
 Lookup order: `<videosDir>/_templates/<name>/` in the project, then this folder. Choose one
-with `--template <name>` or `template` in `demo.config.json`.
+with `template` in video.json or demo.config.json (or `reelkit build <slug> --template <name>`).
+
+Keep templates self-contained: load scripts and fonts from `assets/` (see `classic/assets/vendor/`:
+GSAP + Inter), never from a CDN, so renders work offline and never change underneath you.
 
 ## Making a new template
 
 1. Copy `classic/` to `<new-name>/`.
 2. Change the design of the section you want (cover, recap, brand card, transition card,
    callouts, background) — keep the placeholders and the element IDs the builder script uses.
-3. If a card gets longer or shorter, set it in `template.json` so the scaffold computes the
-   timeline correctly:
+3. If a card gets longer or shorter, set it in `template.json` so the build computes the
+   timeline correctly (unknown keys are an error):
 
    ```json
    {
@@ -27,9 +30,9 @@ with `--template <name>` or `template` in `demo.config.json`.
    }
    ```
 
-4. Test it on the example: from the kit root,
-   `node skills/demo-video/scripts/scaffold.ts examples/todo-add-item --title "Plan your day" --template <new-name> --force`,
-   then `hyperframes check` + `snapshot`, and render once.
+4. Test it on the example: from `examples/`, `reelkit build todo-add-item --template <new-name>`,
+   `reelkit check todo-add-item`, `reelkit snapshot todo-add-item --at 0,2,8,13,22`, and render
+   once. Add a golden test for it next to `test/composition.test.ts` (copy the classic one).
 
 ## Timing keys (`template.json` → `timing`, seconds unless noted)
 
@@ -46,33 +49,31 @@ with `--template <name>` or `template` in `demo.config.json`.
 | `transitionGap`   | 2.6     | how long a hand-off card holds                                    |
 | `belt`            | 0.9     | the recording's exit/entry around a hand-off card                 |
 | `maxW`, `maxH`    | 1600, 940 | px box the framed recording is fitted into (1920x1080 stage)    |
-| `maxSteps`        | 10      | recap capacity (the scaffold warns above it)                      |
+| `maxSteps`        | 10      | recap capacity (the build warns above it)                         |
 
 ## Placeholders
 
 | Placeholder                                   | Value                                                   |
 |-----------------------------------------------|---------------------------------------------------------|
 | `{{LANG}}`                                    | `language` from config (`<html lang>`)                  |
-| `{{BRAND}}`, `{{BRAND_SUB}}`, `{{EYEBROW}}`   | `brand.name`, `brand.tagline`, `brand.eyebrow` (HTML-escaped) |
+| `{{BRAND}}`, `{{BRAND_SUB}}`, `{{EYEBROW}}`   | brand name, tagline, eyebrow (config, overridable per video; HTML-escaped). Hide an empty tagline with `:empty` |
 | `{{BRAND_COLOR}}`, `{{BRAND_COLOR_SOFT}}`     | `brand.color`, `brand.colorSoft`                        |
-| `{{TITLE}}`, `{{SUBTITLE}}`, `{{OUTRO_TITLE}}`| `--title`, `--subtitle`, `strings.recapTitle`           |
-| `{{STEPS_LABEL}}`, `{{SECONDS_LABEL}}`        | `strings.*`, escaped for a single-quoted JS string      |
-| `{{MAX_STEPS}}`                               | `timing.maxSteps`                                       |
+| `{{TITLE}}`, `{{SUBTITLE}}`, `{{OUTRO_TITLE}}`| video.json title/subtitle, recap title                  |
 | `{{TOTAL}}`                                   | composition length                                      |
-| `{{COVER_DURATION}}`, `{{COVER_EXIT}}`        | cover clip length / exit time                           |
-| `{{CLIP_START}}`, `{{CLIP_DURATION}}`, `{{MEDIA_START}}` | recording on the timeline; `MEDIA_START` = `--trim-start` |
+| `{{COVER_DURATION}}`                          | cover clip length                                       |
 | `{{RECAP_START}}`, `{{RECAP_DURATION}}`       | recap card                                              |
 | `{{BRAND_OUT_START}}`, `{{BRAND_OUT_DURATION}}` | closing card                                          |
 | `{{FRAME_W}}`, `{{FRAME_H}}`                  | framed recording size in px                             |
 | `{{VIDEOS}}`                                  | `<video>` clip(s), one per actor segment — put inside `#frame` |
 | `{{TRANSITIONS}}`                             | hand-off card `<section>`s (`#transition-N`, `.stack`, `.roles`, `.role.from/.to`, `.arrow`, `.title`, `.subtitle`) |
-| `{{TRANSITION_TIMES}}`                        | `[{ at, gap }]` for the builder                         |
-| `{{CALLOUTS}}`                                | `[{ at, duration, text, group? }]`                      |
 | `{{AUDIO}}`, `{{MUSIC}}`                      | narration / music `<audio>` clips (or empty)            |
+| `{{DEMO}}`                                    | the timeline as a JS object literal, for the builder script: `const DEMO = {{DEMO}};` |
 
-The scaffold fails if any `{{PLACEHOLDER}}` is left unfilled, so a template may omit ones it
-doesn't need but must not invent new ones without adding them to `scaffold.ts`.
+`DEMO` holds `total`, `coverDuration`, `coverExit`, `clipStart`, `clipDuration`, `mediaStart`,
+`recapStart`, `recapDuration`, `brandOutStart`, `brandOutDuration`, `callouts` (`{ at, duration,
+text, group? }`), `zooms` (`{ at, duration, x, y, scale, in, out }`), `transitions` (`{ at, gap }`),
+`chip` (`{ steps, seconds }`, already pluralised) and `maxSteps` — all times in composition seconds.
+Insert any text from it with `textContent`, never `innerHTML`.
 
-`check-zooms.ts` reads the `const DEMO = { ... }` block (it must stay pure literals, closed by
-`\n      };` at six spaces of indentation) and needs `clipStart`, `mediaStart`, `zooms` and
-`transitions` in it.
+The build fails if a `{{PLACEHOLDER}}` is left unfilled, so a template may omit ones it doesn't
+need but must not invent new ones without adding them to `scripts/composition.ts`.

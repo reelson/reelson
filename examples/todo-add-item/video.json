@@ -1,0 +1,35 @@
+{
+    "$schema": "../../skills/reelkit-compose/schemas/video.schema.json",
+    "title": "Plan your day",
+    "subtitle": "Add tasks and tick them off",
+    "trim": {
+        "start": 2.63
+    },
+    "callouts": [
+        {
+            "marker": "Type a task and press Enter",
+            "text": "Type a task and press Enter"
+        },
+        {
+            "marker": "Add as many as you need",
+            "text": "Add as many as you need"
+        },
+        {
+            "marker": "Tick a task when it is done",
+            "text": "Tick a task when it is done"
+        },
+        {
+            "marker": "Filter what is left",
+            "text": "Filter what is left"
+        }
+    ],
+    "zooms": [
+        {
+            "clicks": [
+                3,
+                4
+            ],
+            "scale": 1.7
+        }
+    ]
+}

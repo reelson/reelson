@@ -44,7 +44,8 @@ accounts), but should not loosen them without a reason.
     glides to the first click it frames (starting ≤ 0.35 s before the glide), fully in 0.1 s
     before that click; zoom out while it glides to the next target outside the zoom, done
     before that click. No easing during a click. No extra pauses in the scenario to make room
-    for zooms — shorten the ease (≥ 0.4 s) instead. `check-zooms.ts` enforces it.
+    for zooms — shorten the ease (≥ 0.4 s) instead. A zoom anchored with `clicks` in video.json
+    is timed this way automatically; `reelkit check` enforces it for every zoom.
 
 ## What makes a video good
 
@@ -60,7 +61,8 @@ reader could follow without the video. If you can't write the callouts, the vide
 - Small `demo.scroll()` steps over big jumps; or navigate straight to the section.
 - Read values from the page instead of hard-coding seeded data.
 - Wrap slow waits in `demo.cut()`; a short glimpse is kept so the cut doesn't feel like a glitch.
-- Trim the login off with `--trim-start` unless the video is about logging in.
+- Trim the login off (video.json `trim.start`, suggested on the first build) unless the video is
+  about logging in.
 - Keep the 1440x900 viewport; wider makes text tiny inside the 1920x1080 frame.
 
 **Composition**
@@ -76,9 +78,9 @@ reader could follow without the video. If you can't write the callouts, the vide
 
 **Verify the artifact, not the log**
 
-1. `check-zooms.ts` and `hyperframes check` pass with 0 errors.
+1. `reelkit check <slug>` says "ready to render" (schemas, zoom timing, `hyperframes check`).
 2. Extract and look at frames: t=0, settled cover, each callout, the zoom, the recap, the end.
-3. `ffprobe` duration matches the timeline the scaffold printed.
+3. `ffprobe` duration matches the timeline the build printed.
 4. Watch it once at 1x. If a step is unreadable, pause longer in the scenario, not in the
    composition.
 
@@ -86,10 +88,9 @@ reader could follow without the video. If you can't write the callouts, the vide
 
 | Want to change            | Do                                                                          |
 |---------------------------|-----------------------------------------------------------------------------|
-| Callout text, zoom, times | Edit the `DEMO` block in `video/index.html`, re-render.                     |
-| Trims (start/end)         | Re-run `scaffold.ts --force` with new `--trim-*`; paste callouts/zooms back. |
-| Pacing, missing step      | Edit `scenario.ts`, re-record, re-scaffold, re-word, re-render.             |
-| UI changed                | Re-record; if markers barely moved, keep `index.html` and re-render.        |
+| Callout text, zoom, trims | Edit `video.json`, `reelkit render <slug>` (it rebuilds).                   |
+| Pacing, missing step      | Edit `scenario.ts`, `reelkit record`, add the new marker to video.json, render. |
+| UI changed                | `reelkit record` then `reelkit render`: callouts follow their markers, zooms their click numbers (re-check if the clicks changed). |
 | Look of intro/outro       | New template (`templates/README.md`), not per-video edits.                  |
 
 ## Troubleshooting
@@ -101,4 +102,7 @@ reader could follow without the video. If you can't write the callouts, the vide
 - **Blurry UI text (worst in zooms)**: capture must be 2x (`ffprobe recording.mp4` →
   2880x1800), `hyperframes.json` `autoProxy: false`, no `will-change` on `#frame`.
 - **Callout clipped during a zoom**: it ended up inside `#frame`; callouts live in `#callouts`.
-- **`Cannot find module '@playwright/test'`**: run `npm run setup` in the kit.
+- **`Cannot find module '@playwright/test'`** or **`reelkit: command not found`**: run the kit's
+  `install.sh` (or `npm run setup && npm link` in the kit).
+- **`… is invalid: … unknown key — did you mean …`**: a typo in demo.config.json or video.json;
+  the message names the path. Editors autocomplete both through their `$schema`.

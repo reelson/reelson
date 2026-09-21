@@ -1,5 +1,5 @@
 /**
- * Per-project settings shared by demo-record and demo-video.
+ * Per-project settings shared by reelkit-record and reelkit-compose.
  *
  * Each project that uses the kit keeps a `demo.config.json` at its root (copy
  * demo.config.example.json from the kit). The scripts find it by walking up
@@ -9,6 +9,17 @@
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { loadSchema, validate } from './validate.ts'
+
+/** JSON Schema for demo.config.json (editors pick it up through `$schema`). */
+export const CONFIG_SCHEMA_PATH = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '../schemas/demo.config.schema.json',
+)
+
+/** A noun that follows a number: one string, or forms per Intl.PluralRules category. */
+export type Label = string | Partial<Record<Intl.LDMLPluralRule, string>> & { other: string }
 
 export interface DemoConfig {
     /** Where demo folders live, relative to the project root. */
@@ -29,14 +40,14 @@ export interface DemoConfig {
         /** Lighter accent for gradients. */
         colorSoft: string
     }
-    /** Template folder name under demo-video/templates/ (or <videosDir>/_templates/). */
+    /** Template folder name under reelkit-compose/templates/ (or <videosDir>/_templates/). */
     template: string
     /** Every piece of on-card text that is not per-video. */
     strings: {
         recapTitle: string
         /** Chip on the cover: "{steps} {stepsLabel} · {seconds} {secondsLabel}". */
-        stepsLabel: string
-        secondsLabel: string
+        stepsLabel: Label
+        secondsLabel: Label
     }
     music: {
         /** Audio file laid under every video, relative to the project root. null = no music. */
@@ -72,8 +83,8 @@ export const DEFAULTS: DemoConfig = {
     template: 'classic',
     strings: {
         recapTitle: 'In short',
-        stepsLabel: 'steps',
-        secondsLabel: 'seconds',
+        stepsLabel: { one: 'step', other: 'steps' },
+        secondsLabel: { one: 'second', other: 'seconds' },
     },
     music: { file: null, lufs: -28, lufsUnderNarration: -34 },
     record: {
@@ -114,12 +125,42 @@ export function loadConfig(...startDirs: string[]): LoadedConfig {
         return { ...DEFAULTS, root: process.cwd(), path: null }
     }
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Partial<DemoConfig>
-
-    return {
-        ...deepMerge(DEFAULTS, raw),
-        root: dirname(path),
-        path,
+    const problems = validate(raw, loadSchema(CONFIG_SCHEMA_PATH))
+    if (problems.length) {
+        throw new ConfigError(path, problems)
     }
+
+    const merged = deepMerge(DEFAULTS, raw)
+    // Plural forms replace the defaults as a whole: merging would leak "step" into { other: "pași" }.
+    for (const key of ['stepsLabel', 'secondsLabel'] as const) {
+        const own = raw.strings?.[key]
+        if (own !== undefined) {
+            merged.strings[key] = own
+        }
+    }
+
+    return { ...merged, root: dirname(path), path }
+}
+
+export class ConfigError extends Error {
+    file: string
+    problems: string[]
+
+    constructor(file: string, problems: string[]) {
+        super(`${file} is invalid:\n  ${problems.join('\n  ')}`)
+        this.file = file
+        this.problems = problems
+    }
+}
+
+/** "1 step", "4 steps", "20 de pași": the count followed by the right plural form. */
+export function countLabel(count: number, label: Label, language: string): string {
+    if (typeof label === 'string') {
+        return `${count} ${label}`
+    }
+    const category = new Intl.PluralRules(language).select(count)
+
+    return `${count} ${label[category] ?? label.other}`
 }
 
 /** Resolves a path from the config against the project root. */

@@ -14,8 +14,8 @@ Emphasis:   zoom on <what> during step <n>     only where the UI is small
 Output:     mp4 (default) / also gif           slug: <kebab-case>
 ```
 
-Claude writes the scenario, records, verifies frames, scaffolds the composition, words the
-callouts, checks, renders, and reports the file path with a few extracted frames.
+Claude writes the scenario, records, verifies frames, builds the composition, words the
+callouts in video.json, checks, renders, and reports the file path with a few extracted frames.
 
 ## Example prompts
 
@@ -48,7 +48,7 @@ callouts, checks, renders, and reports the file path with a few extracted frames
 **Re-record after a UI change**
 
 > The customers table got new columns. Re-record <videosDir>/customers-search with the
-> existing scenario, re-scaffold keeping the current callouts and zoom, re-render, and show me
+> existing scenario, re-render with the current video.json, and show me
 > frames at each callout.
 
 **Tweak an existing video (no re-record)**
@@ -62,7 +62,7 @@ callouts, checks, renders, and reports the file path with a few extracted frames
 
 **Another template**
 
-> Re-scaffold <videosDir>/customers-search with the `<name>` template and render it next to the
+> Render <videosDir>/customers-search with the `<name>` template next to the
 > current one so I can compare.
 
 **Narrated recording (manual, OpenScreen)**

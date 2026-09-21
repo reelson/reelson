@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# Installs the demo-record + demo-video skills into a project (or globally).
+# Installs reelkit: the `reelkit` command (once per machine) and the
+# reelkit-record + reelkit-compose skills (per project, or globally).
 #
-#   ./install.sh <project-dir>            symlink skills into <project>/.claude/skills/
-#   ./install.sh <project-dir> --copy     copy instead (teammates without the kit can use them)
-#   ./install.sh --global                 symlink into ~/.claude/skills/ (every project)
+#   ./install.sh <project-dir>   link the skills into <project>/.claude/skills/ and create
+#                                <project>/demo.config.json if it is missing
+#   ./install.sh --global        link the skills into ~/.claude/skills/ (every project)
 #
-# Also creates <project>/demo.config.json from the example (if missing) and prints the
-# .gitignore lines for generated files.
+# Skills are symlinks to this checkout, so `git pull` here updates every project.
 set -euo pipefail
 
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODE=link
 TARGET=""
 for arg in "$@"; do
     case "$arg" in
-        --copy) MODE=copy ;;
         --global) TARGET="$HOME" ;;
         -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
         *) TARGET="$(cd "$arg" && pwd)" ;;
@@ -24,31 +22,43 @@ if [[ -z "$TARGET" ]]; then
     sed -n '2,9p' "$0"; exit 2
 fi
 
+node_major="$(node -p 'process.versions.node.split(".").map(Number).slice(0,2).join(".")')"
+if ! node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=18)?0:1)'; then
+    echo "reelkit needs Node 22.18+ (found $node_major)"; exit 1
+fi
+command -v ffmpeg >/dev/null || echo "warning: ffmpeg not found — brew install ffmpeg"
+
 if [[ ! -d "$KIT/node_modules/@playwright/test" ]]; then
-    echo "Installing kit dependencies (Playwright)…"
+    echo "Installing kit dependencies (Playwright + Chromium)…"
     (cd "$KIT" && npm install --silent && npx playwright install chromium)
+fi
+if ! command -v reelkit >/dev/null || [[ "$(realpath "$(command -v reelkit)")" != "$KIT/bin/reelkit.ts" ]]; then
+    echo "Linking the reelkit command (npm link)…"
+    (cd "$KIT" && npm link --silent)
 fi
 
 SKILLS="$TARGET/.claude/skills"
 mkdir -p "$SKILLS"
-for skill in demo-record demo-video; do
+# Earlier installs used the names demo-record / demo-video: drop those links if they point here
+# (a project's own skills with those names are left alone).
+for old in demo-record demo-video; do
+    if [[ -L "$SKILLS/$old" && "$(readlink "$SKILLS/$old")" == "$KIT"/* ]]; then
+        rm "$SKILLS/$old"
+        echo "  removed old link $SKILLS/$old"
+    fi
+done
+for skill in reelkit-record reelkit-compose; do
     dest="$SKILLS/$skill"
     if [[ -e "$dest" || -L "$dest" ]]; then
-        echo "  $dest exists — replacing"
         rm -rf "$dest"
     fi
-    if [[ "$MODE" == copy ]]; then
-        cp -R "$KIT/skills/$skill" "$dest"
-    else
-        ln -s "$KIT/skills/$skill" "$dest"
-    fi
-    echo "  $MODE: $dest"
+    ln -s "$KIT/skills/$skill" "$dest"
+    echo "  linked $dest"
 done
 
 if [[ "$TARGET" != "$HOME" ]]; then
     if [[ ! -f "$TARGET/demo.config.json" ]]; then
-        cp "$KIT/demo.config.example.json" "$TARGET/demo.config.json"
-        echo "  created $TARGET/demo.config.json — set brand, language and music"
+        (cd "$TARGET" && reelkit init)
     fi
     cat <<GITIGNORE
 
@@ -56,14 +66,9 @@ Add to $TARGET/.gitignore (adjust docs/videos to your videosDir):
 
     /docs/videos/**/recording.*
     /docs/videos/**/.raw/
-    /docs/videos/**/video/assets/
-    /docs/videos/**/video/renders/
-    /docs/videos/**/video/snapshots/
-    /docs/videos/**/video/node_modules/
+    /docs/videos/**/video/
     /docs/videos/**/*.openscreen
 GITIGNORE
-    if [[ "$MODE" == copy ]]; then
-        echo
-        echo "Copied skills resolve @playwright/test from the project: it needs @playwright/test installed."
-    fi
 fi
+echo
+echo "Done. Try: reelkit help"

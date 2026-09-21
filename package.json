@@ -1,18 +1,31 @@
 {
     "name": "reelkit",
+    "version": "0.2.0",
     "private": true,
     "type": "module",
-    "description": "Claude Code skills that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
+    "description": "Claude Code skills + CLI that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
+    "bin": {
+        "reelkit": "bin/reelkit.ts"
+    },
     "engines": {
-        "node": ">=22.6"
+        "node": ">=22.18"
     },
     "scripts": {
         "setup": "npm install && npx playwright install chromium",
-        "example:record": "node skills/demo-record/scripts/record.ts examples/todo-add-item/scenario.ts",
-        "example:scaffold": "node skills/demo-video/scripts/scaffold.ts examples/todo-add-item --title \"Plan your day\" --subtitle \"Add tasks and tick them off\" --force",
-        "example:check": "node skills/demo-video/scripts/check-zooms.ts examples/todo-add-item"
+        "test": "node --test --test-reporter=spec \"test/**/*.test.ts\"",
+        "test:update-golden": "UPDATE_GOLDEN=1 node --test \"test/**/*.test.ts\"",
+        "typecheck": "tsc --noEmit",
+        "ci": "npm run typecheck && npm test",
+        "example:record": "cd examples && node ../bin/reelkit.ts record todo-add-item",
+        "example:build": "cd examples && node ../bin/reelkit.ts build todo-add-item",
+        "example:check": "cd examples && node ../bin/reelkit.ts check todo-add-item",
+        "example:render": "cd examples && node ../bin/reelkit.ts render todo-add-item"
     },
     "dependencies": {
         "@playwright/test": "^1.55.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.18.0",
+        "typescript": "^5.9.0"
     }
 }

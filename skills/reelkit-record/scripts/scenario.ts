@@ -36,7 +36,7 @@ export interface Marker {
 
 /**
  * Where and when the cursor clicked (or clicked into a field to type), in
- * viewport pixels. demo-video's check-zooms.ts uses these to keep zooms still
+ * viewport pixels. reelkit-compose's check-zooms.ts uses these to keep zooms still
  * and on target while the viewer watches a click.
  */
 export interface Click {
@@ -58,7 +58,7 @@ export interface Cut {
 
 /**
  * A hand-off between two actors (manager → employee). The stretch in between
- * (logout, second login) is cut from recording.mp4; the demo-video scaffold
+ * (logout, second login) is cut from recording.mp4; the reelkit-compose scaffold
  * splits the footage at `at` and shows a transition card there.
  */
 export interface Transition {

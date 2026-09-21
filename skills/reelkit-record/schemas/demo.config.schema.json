@@ -1,0 +1,178 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "reelkit project config (demo.config.json)",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "videosDir": {
+            "type": "string",
+            "description": "Where <slug>/ folders live, relative to the project root. Default docs/videos."
+        },
+        "language": {
+            "type": "string",
+            "description": "BCP 47 language of the product UI (en, ro, de-DE…). Drives <html lang>, plural rules and persona names."
+        },
+        "locale": {
+            "type": "string",
+            "description": "Browser locale while recording (Accept-Language, Intl formatting). Default en-US."
+        },
+        "brand": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Wordmark on the cover and the closing card."
+                },
+                "tagline": {
+                    "type": "string",
+                    "description": "Small spaced line under the wordmark. Empty hides it."
+                },
+                "eyebrow": {
+                    "type": "string",
+                    "description": "Label above the recap title."
+                },
+                "color": {
+                    "type": "string",
+                    "description": "Primary accent: numbers, lines, click ring. Any CSS colour."
+                },
+                "colorSoft": {
+                    "type": "string",
+                    "description": "Lighter accent for gradients."
+                }
+            }
+        },
+        "template": {
+            "type": "string",
+            "description": "Template folder name (skills/reelkit-compose/templates/<name> or <videosDir>/_templates/<name>). Default classic."
+        },
+        "strings": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "recapTitle": {
+                    "type": "string",
+                    "description": "Title of the recap card."
+                },
+                "stepsLabel": {
+                    "$ref": "#/definitions/label",
+                    "description": "Cover chip noun after the step count: a string, or plural forms (see definitions.plural)."
+                },
+                "secondsLabel": {
+                    "$ref": "#/definitions/label",
+                    "description": "Cover chip noun after the length in seconds; same forms as stepsLabel."
+                }
+            }
+        },
+        "music": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "file": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Music bed under every video, relative to the project root. null = no music."
+                },
+                "lufs": {
+                    "type": "number",
+                    "maximum": 0,
+                    "description": "Bed loudness under silent footage. Default -28."
+                },
+                "lufsUnderNarration": {
+                    "type": "number",
+                    "maximum": 0,
+                    "description": "Bed loudness under narration. Default -34."
+                }
+            }
+        },
+        "record": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "viewport": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "width",
+                        "height"
+                    ],
+                    "properties": {
+                        "width": {
+                            "type": "integer",
+                            "minimum": 320
+                        },
+                        "height": {
+                            "type": "integer",
+                            "minimum": 240
+                        }
+                    }
+                },
+                "deviceScaleFactor": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                },
+                "extraHTTPHeaders": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "Sent with every request while recording. Default { \"X-Demo-Recording\": \"1\" }."
+                },
+                "hideSelectors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "CSS selectors hidden on every recorded page (dev toolbars, env badges)."
+                },
+                "personaDomain": {
+                    "type": "string",
+                    "description": "Email domain for demo.persona()."
+                }
+            }
+        }
+    },
+    "definitions": {
+        "label": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "$ref": "#/definitions/plural"
+                }
+            ]
+        },
+        "plural": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "other"
+            ],
+            "properties": {
+                "zero": {
+                    "type": "string"
+                },
+                "one": {
+                    "type": "string"
+                },
+                "two": {
+                    "type": "string"
+                },
+                "few": {
+                    "type": "string"
+                },
+                "many": {
+                    "type": "string"
+                },
+                "other": {
+                    "type": "string"
+                }
+            },
+            "description": "Plural forms keyed by Intl.PluralRules category, e.g. { \"one\": \"step\", \"other\": \"steps\" }."
+        }
+    }
+}

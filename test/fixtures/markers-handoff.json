@@ -1,0 +1,17 @@
+{
+    "scenario": "handoff",
+    "viewport": { "width": 1440, "height": 900 },
+    "durationSeconds": 20,
+    "cuts": [{ "from": 9.6, "to": 14.2 }],
+    "transitions": [{ "at": 10, "title": "The employee gets the document", "subtitle": "and accepts it", "from": "Manager", "to": "Employee" }],
+    "clicks": [
+        { "move": 2.0, "at": 2.6, "x": 300, "y": 200, "kind": "click" },
+        { "move": 4.0, "at": 4.6, "x": 320, "y": 230, "kind": "type", "until": 6.0 },
+        { "move": 12.0, "at": 12.6, "x": 1200, "y": 700, "kind": "click" }
+    ],
+    "markers": [
+        { "label": "Open the document", "at": 3.0 },
+        { "label": "Send it", "at": 8.0 },
+        { "label": "Accept it", "at": 13.0 }
+    ]
+}

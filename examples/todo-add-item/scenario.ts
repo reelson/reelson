@@ -2,13 +2,13 @@
  * Example demo: adding and completing items in the public TodoMVC app.
  * Runs anywhere with internet access, so it doubles as the kit's smoke test.
  *
- *   node skills/demo-record/scripts/record.ts examples/todo-add-item/scenario.ts
- *   node skills/demo-video/scripts/scaffold.ts examples/todo-add-item \
+ *   node skills/reelkit-record/scripts/record.ts examples/todo-add-item/scenario.ts
+ *   node skills/reelkit-compose/scripts/scaffold.ts examples/todo-add-item \
  *       --title "Plan your day" --subtitle "Add tasks and tick them off"
  *
  * Every `demo.marker()` becomes a timed callout placeholder in the composition.
  */
-import type { Scenario } from '../../skills/demo-record/scripts/scenario.ts'
+import type { Scenario } from '../../skills/reelkit-record/scripts/scenario.ts'
 
 export default {
     name: 'todo-add-item',

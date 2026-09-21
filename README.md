@@ -1,56 +1,59 @@
 # reelkit
 
-Two [Claude Code](https://claude.com/claude-code) skills that turn a prompt into a finished,
-branded demo video of a web app:
+Turn a prompt into a finished, branded demo video of a web app. Two
+[Claude Code](https://claude.com/claude-code) skills plus a `reelkit` CLI:
 
 | Skill                                    | Does                                                                        | Output                                   |
 |------------------------------------------|-----------------------------------------------------------------------------|------------------------------------------|
-| [`demo-record`](skills/demo-record/)     | Playwright walkthrough with a visible human-paced cursor, dev chrome hidden, step markers | `<slug>/recording.mp4` + `markers.json` |
-| [`demo-video`](skills/demo-video/)       | [HyperFrames](https://hyperframes.heygen.com) composition from a template: cover, framed recording, callouts, zooms, recap, brand card, music | `<slug>/video/renders/<slug>.mp4` |
+| [`reelkit-record`](skills/reelkit-record/)     | Playwright walkthrough with a visible human-paced cursor, dev chrome hidden, step markers and logged clicks | `<slug>/recording.mp4` + `markers.json` |
+| [`reelkit-compose`](skills/reelkit-compose/)       | [HyperFrames](https://hyperframes.heygen.com) composition from a template: cover, framed recording, callouts, cursor-timed zooms, recap, brand card, music | `<slug>/video/renders/<slug>.mp4` |
 
 The same prompt re-creates the video after a UI change: a scenario re-records in ~20 s,
-headless, with identical pacing.
+headless, with identical pacing, and callouts/zooms follow their markers and clicks.
 
 ```
-prompt ─▶ scenario.ts ─▶ record.ts ─▶ recording.mp4 + markers.json ─▶ scaffold.ts ─▶ video/index.html ─▶ hyperframes render ─▶ .mp4 / .gif
-                         (demo-record)                                (demo-video, template + demo.config.json)
+scenario.ts ──reelkit record──▶ recording.mp4 + markers.json
+                                          │
+video.json (title, trim, callouts, zooms) ┴──reelkit build──▶ video/ ──reelkit render──▶ .mp4 / .gif
+                     demo.config.json (brand, language, music) + template ┘
 ```
 
 ## Requirements
 
-- Node 22.6+ (the scripts are TypeScript run directly by `node`, no build step)
-- `ffmpeg` / `ffprobe` on PATH (`brew install ffmpeg`)
+- Node 22.18+ (TypeScript runs directly, no build step) and `ffmpeg` (`brew install ffmpeg`)
 - The app you record, running locally
-- HyperFrames is fetched by `npx` on first use (pinned version)
+- HyperFrames is fetched by `npx` on first use (version pinned in
+  [hyperframes.ts](skills/reelkit-compose/scripts/hyperframes.ts))
 
-## Install into a project
+## Install
 
 ```bash
 git clone git@github.com:reelkit/reelkit.git ~/workspace/my-projects/reelkit
-cd ~/workspace/my-projects/reelkit && npm run setup     # Playwright + Chromium, once
-
-./install.sh ~/code/my-app             # symlinks both skills into my-app/.claude/skills/
-./install.sh ~/code/my-app --copy      # or copy them (for teammates without the kit)
-./install.sh --global                  # or ~/.claude/skills/ for every project
+~/workspace/my-projects/reelkit/install.sh ~/code/my-app     # or --global for ~/.claude/skills
 ```
 
-The installer creates `my-app/demo.config.json` from [demo.config.example.json](demo.config.example.json)
-and prints the `.gitignore` lines for generated files. Symlinks keep every project on the
-latest kit; `git pull` in the kit updates them all.
+`install.sh` installs Playwright + Chromium, links the `reelkit` command (`npm link`), links
+both skills into `my-app/.claude/skills/`, creates `my-app/demo.config.json` and prints the
+`.gitignore` lines. The links point at this checkout, so `git pull` here updates every project.
 
 ## Configure per project — `demo.config.json`
 
-Everything project-specific lives in one file at the project root; nothing in the skills is
-tied to a product.
+Everything project-specific lives in one file at the project root. It is validated against
+[a JSON Schema](skills/reelkit-record/schemas/demo.config.schema.json) (editors autocomplete it; a
+typo is an error with a "did you mean" hint).
 
 ```jsonc
 {
     "videosDir": "docs/videos",          // where <slug>/ folders live
-    "language": "en", "locale": "en-US", // UI language: callouts, personas, <html lang>
+    "language": "en", "locale": "en-US", // UI language: plurals, personas, <html lang>
     "brand": { "name": "ACME", "tagline": "PLATFORM", "eyebrow": "Acme",
                "color": "#dc2626", "colorSoft": "#f87171" },
-    "template": "classic",               // skills/demo-video/templates/<name> or <videosDir>/_templates/<name>
-    "strings": { "recapTitle": "In short", "stepsLabel": "steps", "secondsLabel": "seconds" },
+    "template": "classic",
+    "strings": {
+        "recapTitle": "In short",
+        "stepsLabel": { "one": "step", "other": "steps" },      // Intl.PluralRules categories
+        "secondsLabel": { "one": "second", "other": "seconds" } // e.g. ro: one/few/other
+    },
     "music": { "file": "docs/videos/_music/track.mp3", "lufs": -28, "lufsUnderNarration": -34 },
     "record": {
         "viewport": { "width": 1440, "height": 900 },
@@ -61,9 +64,6 @@ tied to a product.
 }
 ```
 
-Personas ship for English and Romanian (`language: "ro"`); add more in
-[scenario.ts](skills/demo-record/scripts/scenario.ts).
-
 ## Use
 
 Ask Claude in the project, e.g.:
@@ -73,43 +73,51 @@ Ask Claude in the project, e.g.:
 > customer". Zoom on the search box while typing. Slug customers-search.
 
 More prompts in [docs/prompting.md](docs/prompting.md); the rules every video follows in
-[docs/style-guide.md](docs/style-guide.md).
-
-By hand:
+[docs/style-guide.md](docs/style-guide.md). By hand:
 
 ```bash
-node .claude/skills/demo-record/scripts/record.ts docs/videos/<slug>/scenario.ts [--headed]
-node .claude/skills/demo-video/scripts/scaffold.ts docs/videos/<slug> --title "..." --trim-start 4.8
-node .claude/skills/demo-video/scripts/check-zooms.ts docs/videos/<slug>
-cd docs/videos/<slug>/video && npx --yes hyperframes@0.8.46 check . && npm run render -- -o renders/<slug>.mp4
+reelkit new customers-search --url https://app.test    # scenario stub
+reelkit record customers-search [--headed]
+reelkit build customers-search --title "Find a customer"   # creates video.json on first run
+#   edit video.json: callout wording, { "clicks": [2, 3], "scale": 1.8 } zooms, trim
+reelkit check customers-search                          # schemas, zoom timing, hyperframes lint
+reelkit render customers-search [--gif]                 # or: reelkit render --all
 ```
+
+Per video, commit `scenario.ts`, `markers.json` and `video.json`; everything else is generated.
 
 ## Templates
 
-Intro/outro/recap designs are templates: [skills/demo-video/templates/](skills/demo-video/templates/).
-`classic` ships today; add a new one by copying it and adjusting `template.json` timings —
-see [templates/README.md](skills/demo-video/templates/README.md) for the placeholder contract.
-A project can also keep its own under `<videosDir>/_templates/<name>/`.
+Intro/outro/recap designs are templates: [skills/reelkit-compose/templates/](skills/reelkit-compose/templates/).
+`classic` ships today; a new one is a copy with its own design and `template.json` timings — see
+[templates/README.md](skills/reelkit-compose/templates/README.md) for the contract. A project can keep
+its own under `<videosDir>/_templates/<name>/`. Templates ship their scripts and fonts (no CDN).
 
-## Try it
-
-The kit records a public TodoMVC app, so it can be smoke-tested anywhere:
+## Develop
 
 ```bash
-npm run example:record
-npm run example:scaffold -- --trim-start 2.6
-npm run example:check
-cd examples/todo-add-item/video && npx --yes hyperframes@0.8.46 render . --video-frame-format jpg -q delivery -o renders/todo-add-item.mp4
+npm run setup          # deps + Chromium
+npm run typecheck      # tsc --noEmit
+npm test               # unit + golden tests (node:test)
+npm run test:update-golden   # after an intended template/composition change — review the diff
+npm run example:record && npm run example:build && npm run example:check && npm run example:render
 ```
+
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the type check and tests, then
+records the TodoMVC example, builds, checks and renders it, and uploads the MP4 and frames.
 
 ## Layout
 
 ```
+bin/reelkit.ts          the CLI
 skills/
-  demo-record/  SKILL.md, scripts/{record,scenario,cursor-overlay,config}.ts
-  demo-video/   SKILL.md, scripts/{scaffold,check-zooms}.ts, templates/<name>/
+  reelkit-record/  SKILL.md, scripts/ (record, scenario, cursor-overlay, config, validate), schemas/
+  reelkit-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
+                schemas/, templates/<name>/
 docs/           style-guide.md, prompting.md
-examples/       demo.config.json + todo-add-item/ (scenario, markers, composition)
+examples/       demo.config.json + todo-add-item/ (scenario, markers, video.json)
+test/           unit + golden tests, fixtures
 music/          local-only tracks (git-ignored; licences are per project)
-install.sh, demo.config.example.json
 ```
+
+Third-party code and fonts: [NOTICE.md](NOTICE.md).

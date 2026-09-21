@@ -1,0 +1,78 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "reelkit video (video.json)",
+    "description": "The source of truth for one video. `reelkit build` regenerates video/index.html from it; every time in here is a RECORDING time (seconds in recording.mp4, as in markers.json), so trims and templates can change without re-timing anything.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["title"],
+    "properties": {
+        "title": { "type": "string", "description": "Cover title: the task, e.g. \"Find a customer\"." },
+        "subtitle": { "type": "string", "description": "Cover subtitle: the benefit or context." },
+        "template": { "type": "string", "description": "Overrides demo.config.json `template` for this video." },
+        "recapTitle": { "type": "string", "description": "Overrides demo.config.json `strings.recapTitle`." },
+        "brand": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Per-video overrides of demo.config.json `brand` text.",
+            "properties": {
+                "name": { "type": "string" },
+                "tagline": { "type": "string" },
+                "eyebrow": { "type": "string" }
+            }
+        },
+        "trim": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "start": { "type": "number", "minimum": 0, "description": "Recording seconds to skip (usually the login)." },
+                "end": { "type": "number", "exclusiveMinimum": 0, "description": "Recording second to stop at. Default: the end." }
+            }
+        },
+        "music": {
+            "type": ["string", "boolean", "null"],
+            "description": "Music bed: a file (relative to the project root) for this video only, false for none, null/omitted for demo.config.json `music.file`."
+        },
+        "callouts": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "Numbered step pills over the recording; they also become the recap. Give each a `marker` (a markers.json label) or an `at`.",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["text"],
+                "properties": {
+                    "text": { "type": "string", "description": "Imperative step in the UI's language, ≤ 6 words." },
+                    "marker": { "type": "string", "description": "markers.json label this callout is timed from." },
+                    "at": { "type": "number", "minimum": 0, "description": "Recording time instead of a marker (manual recordings)." },
+                    "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds on screen. Default: until the next callout, max 3 s." },
+                    "group": { "type": "string", "description": "Role tag (two-actor videos). Default: taken from the hand-off cards." }
+                }
+            }
+        },
+        "zooms": {
+            "type": "array",
+            "description": "Zoom-ins on the framed recording. Prefer `clicks`: timing and focus are computed from the cursor so the zoom rides along with the glide.",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["scale"],
+                "properties": {
+                    "clicks": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": { "type": "integer", "minimum": 1 },
+                        "description": "[first, last] click numbers (1-based, markers.json `clicks`) the zoom frames. Timing and focus are computed."
+                    },
+                    "scale": { "type": "number", "minimum": 1.1, "maximum": 4, "description": "1.5–2.0 reads well." },
+                    "x": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame width. Default: centred on the clicks." },
+                    "y": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame height." },
+                    "at": { "type": "number", "minimum": 0, "description": "Manual zoom: recording time the zoom-in starts (instead of `clicks`)." },
+                    "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Manual zoom: seconds from zoom-in start to zoomed-out." },
+                    "in": { "type": "number", "minimum": 0.4, "description": "Zoom-in ease seconds (default 0.8)." },
+                    "out": { "type": "number", "minimum": 0.4, "description": "Zoom-out ease seconds (default 0.8)." }
+                }
+            }
+        }
+    }
+}
