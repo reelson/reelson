@@ -1,4 +1,4 @@
-# demo-video-kit
+# reelwright
 
 Two [Claude Code](https://claude.com/claude-code) skills that turn a prompt into a finished,
 branded demo video of a web app:
@@ -26,8 +26,8 @@ prompt ─▶ scenario.ts ─▶ record.ts ─▶ recording.mp4 + markers.json �
 ## Install into a project
 
 ```bash
-git clone git@github.com:icaliman/demo-video-kit.git ~/workspace/my-projects/demo-video-kit
-cd ~/workspace/my-projects/demo-video-kit && npm run setup     # Playwright + Chromium, once
+git clone git@github.com:icaliman/reelwright.git ~/workspace/my-projects/reelwright
+cd ~/workspace/my-projects/reelwright && npm run setup     # Playwright + Chromium, once
 
 ./install.sh ~/code/my-app             # symlinks both skills into my-app/.claude/skills/
 ./install.sh ~/code/my-app --copy      # or copy them (for teammates without the kit)
