@@ -9,9 +9,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, relative, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfig } from '../skills/reelkit-record/scripts/config.ts'
-import { build, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
+import { build, plan, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
-import { hyperframes, RENDER_FLAGS } from '../skills/reelkit-compose/scripts/hyperframes.ts'
+import { studio } from '../skills/reelkit-compose/scripts/studio.ts'
+import { FPS, hyperframes, RENDER_FLAGS } from '../skills/reelkit-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice } from '../skills/reelkit-compose/scripts/timeline.ts'
 
@@ -28,7 +29,9 @@ Usage: reelkit <command> [options]
       --trim-start <s>, --trim-end <s>, --music <file> | --no-music
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
   snapshot <slug> --at 1,3.5,8  PNG frames into video/snapshots/
-  preview <slug>                open the HyperFrames studio
+  studio <slug> [--port 4800] [--no-open]
+                                preview + timeline of every layer; rebuilds on save
+  preview <slug>                open the HyperFrames studio (raw composition)
   templates                     list templates and intro/recap/outro sections
   render <slug...> | --all [--gif] [--no-build]
                                 build + render video/renders/<slug>.mp4 (and .gif)
@@ -73,6 +76,8 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             return checkCommand(argv)
         case 'snapshot':
             return snapshot(argv)
+        case 'studio':
+            return studioCommand(argv)
         case 'preview':
             return preview(argv)
         case 'render':
@@ -279,7 +284,50 @@ function snapshot(argv: string[]): number {
         options: { at: { type: 'string' } },
     })
     const slug = one(positionals, 'snapshot <slug> --at 1,3.5,8')
-    return hyperframes(['snapshot', '.', ...(values.at ? ['--at', values.at] : [])], builtVideoDir(slug))
+    const videoDir = builtVideoDir(slug)
+    let at = values.at
+    if (at) {
+        // There is no frame at the very end (it would come out blank): clamp to the last one.
+        const cfg = config()
+        const { total } = plan(resolveDemoDir(slug, cfg), cfg).timeline
+        const last = Math.floor(total * FPS - 1e-6) / FPS
+        at = at
+            .split(',')
+            .map((v) => {
+                const t = Number.parseFloat(v)
+                if (!Number.isFinite(t) || t < 0) {
+                    throw new ReelkitError(`--at expects seconds, got "${v}"`)
+                }
+                if (t <= last) {
+                    return v.trim()
+                }
+                console.log(`snapshot: ${t}s is past the last frame — using ${last.toFixed(3)}s`)
+                return last.toFixed(3)
+            })
+            .join(',')
+    }
+    return hyperframes(['snapshot', '.', ...(at ? ['--at', at] : [])], videoDir)
+}
+
+async function studioCommand(argv: string[]): Promise<number> {
+    const { values, positionals } = parseArgs({
+        args: argv,
+        allowPositionals: true,
+        options: { port: { type: 'string' }, 'no-open': { type: 'boolean' } },
+    })
+    const cfg = config()
+    const dir = resolveDemoDir(one(positionals, 'studio <slug> [--port 4800] [--no-open]'), cfg)
+    const port = values.port === undefined ? undefined : Number.parseInt(values.port, 10)
+    if (port !== undefined && !(port > 0 && port < 65536)) {
+        throw new ReelkitError(`--port expects a port number, got "${values.port}"`)
+    }
+    const url = await studio(dir, cfg, { port })
+    console.log(`studio for ${basename(dir)}: ${url}  (watching video.json, markers.json, templates, sections — Ctrl+C to stop)`)
+    if (!values['no-open']) {
+        spawnSync(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { stdio: 'ignore' })
+    }
+    // The server keeps the process alive; the exit code is set when it is stopped.
+    return 0
 }
 
 function preview(argv: string[]): number {

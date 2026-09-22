@@ -97,6 +97,7 @@ reelkit build <slug> --title "Find a customer" --subtitle "..."   # first run cr
 #   edit video.json: word the callouts, add zooms (by click number), adjust trim
 reelkit build <slug>                  # regenerate video/ from video.json
 reelkit check <slug>                  # schemas, zoom timing, `hyperframes check`
+reelkit studio <slug>                 # for the user: preview + layer timeline, rebuilds on save
 reelkit snapshot <slug> --at 1.2,3.5,6,10   # PNGs in video/snapshots/ — read them
 reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
 ```
@@ -109,7 +110,8 @@ reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
 3. **Check and look.** `reelkit check` must report "ready to render" (0 problems). Layout
    `info` items about the recap/brand cross-fade overlap and off-canvas glows are expected.
    Then snapshot the poster (t=0), the intro's hand-over, a callout, a zoom and the recap, and
-   look at them.
+   look at them. When the user wants to review it themselves, run `reelkit studio <slug> --no-open`
+   in the background and give them the URL: it follows your video.json edits live.
 4. **Render.** `reelkit render` rebuilds first. ~30–60 s per 12 s of video. `--all` renders
    every demo in the project; `--gif` adds a 15 fps GIF for READMEs.
 5. **Verify the artifact**, not the log: `ffprobe` duration ≈ the printed total; extract frames

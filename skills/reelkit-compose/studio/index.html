@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reelkit studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%235aa9ff%22/%3E%3Cpath d=%22M6 4.5v7l5.5-3.5z%22 fill=%22%230e1116%22/%3E%3C/svg%3E">
+<script src="/hf/player.js"></script>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #151a21;
+    --panel-2: #1b212a;
+    --line: #262e39;
+    --text: #d7dde5;
+    --muted: #7d8896;
+    --accent: #5aa9ff;
+    --intro: #7c6cf0;
+    --recording: #3f7d5c;
+    --recap: #c7862f;
+    --outro: #b24f7a;
+    --callout: #e2b340;
+    --zoom: #38b2ac;
+    --handoff: #8f9bb3;
+    --click: #9ecbff;
+    --marker: #a0a8b5;
+    --audio: #4f6a8f;
+    --bad: #ef5b5b;
+    --playhead: #ff5a4f;
+    --label-w: 104px;
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0; }
+  header h1 { font-size: 14px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header .slug { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 11px; padding: 2px 7px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .chip b { color: var(--text); font-weight: 500; }
+  .status { margin-left: auto; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #3fb96b; }
+  .status.error::before { background: var(--bad); }
+  .status.offline::before { background: var(--muted); }
+
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: 0; }
+  .stage { display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 12px; gap: 8px; }
+  .viewer { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  hyperframes-player { width: 100%; max-height: 100%; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: #000; }
+  .viewer.tall hyperframes-player { width: auto; height: 100%; }
+  .transport { display: flex; align-items: center; gap: 8px; }
+  button { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 4px 9px; cursor: pointer; }
+  button:hover { border-color: #3a4554; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .time { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .time .frame { color: var(--muted); margin-left: 8px; }
+  .spacer { flex: 1; }
+  .hint { color: var(--muted); font-size: 11px; }
+
+  aside { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 16px; }
+  aside h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+  .inspector dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; }
+  .inspector dt { color: var(--muted); }
+  .inspector dd { margin: 0; overflow-wrap: anywhere; }
+  .inspector .kind { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-bottom: 6px; color: #0e1116; font-weight: 600; }
+  .inspector .problem { color: var(--bad); margin-top: 6px; font-size: 12px; }
+  .empty { color: var(--muted); font-size: 12px; }
+  .warnings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .warnings li { font-size: 12px; padding: 6px 8px; border-radius: 4px; background: #2a1f14; border-left: 3px solid var(--recap); }
+  .warnings li.bad { background: #2b1618; border-left-color: var(--bad); }
+  .keys { font-size: 11px; color: var(--muted); display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+  kbd { font-family: ui-monospace, Menlo, monospace; font-size: 10px; padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel-2); color: var(--text); }
+
+  .timeline { border-top: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; height: 262px; }
+  .tl-bar { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-bottom: 1px solid var(--line); }
+  .tl-body { position: relative; flex: 1; overflow-x: auto; overflow-y: hidden; }
+  .tl-inner { position: relative; min-width: 100%; height: 100%; }
+  .labels { position: sticky; left: 0; z-index: 3; width: var(--label-w); float: left; height: 100%; background: var(--panel); border-right: 1px solid var(--line); }
+  .labels div { height: 28px; display: flex; align-items: center; padding: 0 10px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--line); }
+  .labels .ruler-label { height: 22px; }
+  .tracks { position: absolute; left: var(--label-w); top: 0; bottom: 0; cursor: text; }
+  .ruler { position: relative; height: 22px; border-bottom: 1px solid var(--line); }
+  .tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+  .tick span { position: absolute; left: 3px; top: 3px; font-size: 10px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .tick.minor { top: 15px; }
+  .lane { position: relative; height: 28px; border-bottom: 1px solid var(--line); }
+  .item { position: absolute; top: 4px; height: 20px; border-radius: 4px; font-size: 11px; line-height: 20px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #0e1116; cursor: pointer; min-width: 3px; border: 1px solid transparent; }
+  .item:hover { filter: brightness(1.15); }
+  .item.selected { border-color: #fff; box-shadow: 0 0 0 1px #fff; }
+  .item.bad { outline: 2px solid var(--bad); outline-offset: -1px; }
+  .item.intro { background: var(--intro); color: #fff; }
+  .item.recording { background: var(--recording); color: #fff; }
+  .item.recap { background: var(--recap); }
+  .item.outro { background: var(--outro); color: #fff; }
+  .item.callout { background: var(--callout); }
+  .item.handoff { background: var(--handoff); }
+  .item.audio { background: var(--audio); color: #fff; opacity: .85; }
+  .item.zoom { background: transparent; padding: 0; overflow: visible; }
+  .item.zoom svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .item.zoom span { position: relative; padding: 0 6px; color: var(--text); font-weight: 600; }
+  .dot { position: absolute; top: 9px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--click); cursor: pointer; }
+  .dot.type { border-radius: 2px; }
+  .dot.selected { box-shadow: 0 0 0 2px #fff; }
+  .glide { position: absolute; top: 13px; height: 2px; background: color-mix(in srgb, var(--click) 45%, transparent); pointer-events: none; }
+  .typing { position: absolute; top: 11px; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--click) 55%, transparent); pointer-events: none; }
+  .pin { position: absolute; top: 3px; bottom: 3px; width: 2px; margin-left: -1px; background: var(--marker); cursor: pointer; }
+  .pin.unused { background: repeating-linear-gradient(var(--marker) 0 3px, transparent 3px 6px); }
+  .pin.selected { background: #fff; width: 3px; }
+  .belt { position: absolute; top: 4px; height: 20px; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--handoff) 40%, transparent) 0 4px, transparent 4px 8px); border-radius: 4px 0 0 4px; pointer-events: none; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--playhead); pointer-events: none; z-index: 2; }
+  .playhead::before { content: ""; position: absolute; top: 0; left: -5px; border: 5px solid transparent; border-top: 7px solid var(--playhead); }
+  .banner { display: none; margin: 0; padding: 8px 14px; background: #3a1619; color: #ffd5d5; font-size: 12px; white-space: pre-wrap; border-bottom: 1px solid #5a2328; font-family: ui-monospace, Menlo, monospace; }
+  .banner.show { display: block; }
+  .tooltip { position: fixed; z-index: 10; pointer-events: none; background: #000d; border: 1px solid var(--line); padding: 4px 7px; border-radius: 4px; font-size: 11px; max-width: 320px; display: none; }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    aside { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">reelkit studio</h1>
+  <span class="slug" id="slug"></span>
+  <div class="chips" id="design"></div>
+  <span class="status" id="status">starting…</span>
+</header>
+<main>
+  <div class="stage">
+    <pre class="banner" id="banner"></pre>
+    <div class="viewer" id="viewer"><hyperframes-player id="player"></hyperframes-player></div>
+    <div class="transport">
+      <button id="start" title="Start (Home)">⏮</button>
+      <button id="back" title="Back one frame (←)">◀︎</button>
+      <button id="play" title="Play / pause (Space)">▶︎</button>
+      <button id="fwd" title="Forward one frame (→)">▶︎|</button>
+      <button id="end" title="Last frame (End)">⏭</button>
+      <span class="time" id="time">0.00 / 0.00<span class="frame"></span></span>
+      <span class="spacer"></span>
+      <button id="mute" title="Mute (M)">🔊</button>
+    </div>
+  </div>
+  <aside>
+    <section class="inspector">
+      <h2>Selected</h2>
+      <div id="inspector"><p class="empty">Click an item on the timeline.</p></div>
+    </section>
+    <section>
+      <h2>Warnings</h2>
+      <ul class="warnings" id="warnings"></ul>
+    </section>
+    <section>
+      <h2>Keys</h2>
+      <div class="keys">
+        <kbd>Space</kbd><span>play / pause</span>
+        <kbd>← →</kbd><span>one frame (Shift: one second)</span>
+        <kbd>[ ]</kbd><span>previous / next item edge</span>
+        <kbd>Home End</kbd><span>first / last frame</span>
+        <kbd>+ − 0</kbd><span>zoom timeline / fit</span>
+        <kbd>M</kbd><span>mute</span>
+      </div>
+    </section>
+  </aside>
+</main>
+<section class="timeline">
+  <div class="tl-bar">
+    <span class="hint">Click or drag to scrub · click an item to inspect it · read-only: edit video.json and the studio rebuilds</span>
+    <span class="spacer"></span>
+    <button id="zoom-out" title="Zoom out (−)">−</button>
+    <button id="zoom-fit" title="Fit (0)">Fit</button>
+    <button id="zoom-in" title="Zoom in (+)">+</button>
+  </div>
+  <div class="tl-body" id="tl-body">
+    <div class="tl-inner" id="tl-inner">
+      <div class="labels" id="labels"></div>
+      <div class="tracks" id="tracks"></div>
+    </div>
+  </div>
+</section>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const FPS = 30
+const $ = (id) => document.getElementById(id)
+const player = $('player')
+
+let data = null
+let version = -1
+let time = 0
+let playing = false
+let pxPerSec = null // null = fit
+let selected = null // { kind, key }
+/** Time to hold across a reload: the player fires `ready` (and resets to 0) more than once. */
+let restoring = null
+
+// ── data ───────────────────────────────────────────────────────────
+async function load() {
+  const res = await fetch('/api/plan')
+  const body = await res.json()
+  showError(body.error)
+  if (!body.data) return
+  const first = !data
+  data = body.data
+  if (body.version !== version) {
+    version = body.version
+    reloadPlayer(first ? 0 : time)
+  }
+  renderHeader()
+  renderWarnings()
+  renderTimeline()
+  renderInspector()
+}
+
+function reloadPlayer(at) {
+  restoring = at
+  playing = false
+  updatePlay()
+  player.setAttribute('src', `/video/index.html?v=${version}`)
+}
+
+player.addEventListener('ready', () => {
+  if (restoring === null) return
+  time = restoring
+  player.seek(time)
+  updateTime()
+})
+player.addEventListener('timeupdate', (e) => {
+  if (restoring !== null) return
+  time = e.detail.currentTime
+  // The runtime's clock can run past the composition; the video ends at its last frame.
+  if (playing && time >= lastFrame()) {
+    player.pause()
+    seek(lastFrame())
+    return
+  }
+  updateTime()
+})
+player.addEventListener('play', () => { restoring = null; playing = true; updatePlay() })
+player.addEventListener('pause', () => { playing = false; updatePlay() })
+player.addEventListener('ended', () => { playing = false; updatePlay() })
+
+function connect() {
+  const events = new EventSource('/api/events')
+  events.onopen = () => setStatus('live', '')
+  events.onmessage = (e) => {
+    const msg = JSON.parse(e.data)
+    if (msg.error) {
+      showError(msg.error)
+    } else {
+      load()
+    }
+  }
+  events.onerror = () => setStatus('studio stopped — rerun reelkit studio', 'offline')
+}
+
+// ── playback ───────────────────────────────────────────────────────
+const lastFrame = () => Math.max(0, Math.floor((data?.total ?? 0) * FPS - 1e-6) / FPS)
+
+function seek(t) {
+  if (!data) return
+  restoring = null
+  time = Math.min(Math.max(0, t), lastFrame())
+  player.seek(time)
+  updateTime()
+}
+
+function togglePlay() {
+  if (playing) {
+    player.pause()
+  } else {
+    if (time >= lastFrame() - 1e-3) seek(0)
+    restoring = null
+    player.play()
+  }
+}
+
+function updatePlay() {
+  $('play').textContent = playing ? '❚❚' : '▶︎'
+}
+
+function fmt(t) {
+  return t.toFixed(2)
+}
+
+function updateTime() {
+  if (!data) return
+  const frame = Math.round(time * FPS)
+  $('time').firstChild.textContent = `${fmt(time)} / ${fmt(data.total)}`
+  $('time').querySelector('.frame').textContent = `frame ${frame}`
+  const head = document.querySelector('.playhead')
+  if (head) {
+    head.style.left = `${time * scale()}px`
+    if (playing) follow()
+  }
+}
+
+/** Keep the playhead in view while playing. */
+function follow() {
+  const body = $('tl-body')
+  const labelW = labelWidth()
+  const x = time * scale() + labelW
+  if (x < body.scrollLeft + labelW || x > body.scrollLeft + body.clientWidth - 40) {
+    body.scrollLeft = x - labelW - 40
+  }
+}
+
+// ── header, warnings ───────────────────────────────────────────────
+function renderHeader() {
+  document.title = `${data.title} · reelkit studio`
+  $('title').textContent = data.title
+  $('slug').textContent = data.slug
+  const chips = [['template', data.template], ...data.sections.filter((s) => s.slot !== 'recording').map((s) => [s.slot, s.name])]
+  if (!data.sections.some((s) => s.slot === 'recap')) chips.splice(2, 0, ['recap', 'none'])
+  $('design').replaceChildren(
+    ...chips.map(([k, v]) => {
+      const chip = el('span', 'chip', `${k} `)
+      chip.append(el('b', '', v))
+      return chip
+    }),
+  )
+  $('viewer').classList.toggle('tall', data.frame.height > data.frame.width)
+}
+
+function renderWarnings() {
+  const list = $('warnings')
+  const items = [
+    ...data.warnings.map((w) => ({ text: w, bad: false })),
+    ...data.zooms.flatMap((z) => z.problems.map((p) => ({ text: `zoom ${z.n}: ${p}`, bad: true, select: { kind: 'zoom', key: z.n } }))),
+  ]
+  if (!items.length) {
+    list.replaceChildren(el('li', '', 'None — ready to render.'))
+    list.firstChild.style.borderLeftColor = '#3fb96b'
+    list.firstChild.style.background = '#14261b'
+    return
+  }
+  list.replaceChildren(
+    ...items.map((w) => {
+      const li = el('li', w.bad ? 'bad' : '', w.text)
+      if (w.select) {
+        li.style.cursor = 'pointer'
+        li.onclick = () => select(w.select.kind, w.select.key, true)
+      }
+      return li
+    }),
+  )
+}
+
+// ── timeline ───────────────────────────────────────────────────────
+const LANES = [
+  ['sections', 'Sections'],
+  ['callouts', 'Callouts'],
+  ['zooms', 'Zooms'],
+  ['handOffs', 'Hand-offs'],
+  ['clicks', 'Clicks'],
+  ['markers', 'Markers'],
+  ['audio', 'Audio'],
+]
+
+function labelWidth() {
+  return $('labels').getBoundingClientRect().width
+}
+
+function fitScale() {
+  const w = $('tl-body').clientWidth - labelWidth() - 16
+  return Math.max(10, w / data.total)
+}
+
+function scale() {
+  return pxPerSec ?? fitScale()
+}
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag)
+  if (cls) node.className = cls
+  if (text !== undefined) node.textContent = text
+  return node
+}
+
+function span(node, start, end) {
+  const s = scale()
+  node.style.left = `${start * s}px`
+  node.style.width = `${Math.max(3, (end - start) * s)}px`
+  return node
+}
+
+function hover(node, text) {
+  node.addEventListener('mouseenter', () => { const tip = $('tooltip'); tip.textContent = text; tip.style.display = 'block' })
+  node.addEventListener('mousemove', (e) => { const tip = $('tooltip'); tip.style.left = `${e.clientX + 12}px`; tip.style.top = `${e.clientY - 30}px` })
+  node.addEventListener('mouseleave', () => { $('tooltip').style.display = 'none' })
+}
+
+function pickable(node, kind, key, at) {
+  node.dataset.kind = kind
+  node.dataset.key = key
+  if (selected && selected.kind === kind && String(selected.key) === String(key)) node.classList.add('selected')
+  // Items select instead of scrubbing.
+  node.addEventListener('pointerdown', (e) => e.stopPropagation())
+  node.addEventListener('click', () => {
+    if (playing) player.pause()
+    select(kind, key, false)
+    seek(at)
+  })
+  return node
+}
+
+function renderTimeline() {
+  const s = scale()
+  const width = data.total * s
+  $('labels').replaceChildren(el('div', 'ruler-label', ''), ...LANES.map(([, label]) => el('div', '', label)))
+  const tracks = $('tracks')
+  tracks.style.width = `${width}px`
+  $('tl-inner').style.width = `${width + labelWidth() + 16}px`
+
+  // Ruler: a labelled tick every `step` seconds, minor ticks between.
+  const ruler = el('div', 'ruler')
+  const step = [0.5, 1, 2, 5, 10, 15, 30, 60].find((st) => st * s >= 60) ?? 60
+  for (let t = 0; t <= data.total + 1e-6; t += step / 2) {
+    const major = Math.abs(t / step - Math.round(t / step)) < 1e-6
+    const tick = el('div', major ? 'tick' : 'tick minor')
+    tick.style.left = `${t * s}px`
+    if (major) tick.append(el('span', '', `${+t.toFixed(1)}s`))
+    ruler.append(tick)
+  }
+
+  const lanes = Object.fromEntries(LANES.map(([key]) => [key, el('div', 'lane')]))
+
+  for (const sec of data.sections) {
+    const node = span(el('div', `item ${sec.slot}`, sec.slot === 'recording' ? 'recording' : `${sec.slot} · ${sec.name}`), sec.start, sec.end)
+    hover(node, `${sec.slot}${sec.slot === 'recording' ? '' : ` "${sec.name}"`}: ${fmt(sec.start)}–${fmt(sec.end)}s ${sec.detail}`)
+    lanes.sections.append(pickable(node, 'section', sec.slot, sec.start))
+  }
+
+  data.callouts.forEach((c, i) => {
+    // An overlap is already a warning; outline both callouts so it shows where.
+    const overlaps = (a, b) => a && b && a.end > b.at + 0.01
+    const bad = overlaps(c, data.callouts[i + 1]) || overlaps(data.callouts[i - 1], c)
+    const node = span(el('div', `item callout${bad ? ' bad' : ''}`, `${c.n} ${c.text}`), c.at, c.end)
+    hover(node, `${c.n}. ${c.text} (${fmt(c.at)}–${fmt(c.end)}s)${bad ? ' — overlaps a neighbour' : ''}`)
+    lanes.callouts.append(pickable(node, 'callout', c.n, c.at))
+  })
+
+  for (const z of data.zooms) {
+    const node = span(el('div', `item zoom${z.problems.length ? ' bad' : ''}`), z.at, z.end)
+    const dur = z.end - z.at
+    const a = (z.in / dur) * 100
+    const b = 100 - (z.out / dur) * 100
+    node.innerHTML = `<svg viewBox="0 0 100 20" preserveAspectRatio="none"><polygon points="0,20 ${a},2 ${b},2 100,20" fill="color-mix(in srgb, var(--zoom) 55%, transparent)" stroke="var(--zoom)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>`
+    node.append(el('span', '', `${z.scale}×`))
+    hover(node, `zoom ${z.n}: ${z.scale}× at ${z.x}, ${z.y} · ${fmt(z.at)}–${fmt(z.end)}s (in ${z.in}s, out ${z.out}s)`)
+    lanes.zooms.append(pickable(node, 'zoom', z.n, z.at))
+  }
+
+  data.handOffs.forEach((h, i) => {
+    lanes.handOffs.append(span(el('div', 'belt'), h.at - h.belt, h.at))
+    const node = span(el('div', 'item handoff', h.title), h.at, h.end)
+    hover(node, `hand-off: ${h.title}${h.from ? ` (${h.from} → ${h.to})` : ''} · ${fmt(h.at)}–${fmt(h.end)}s`)
+    lanes.handOffs.append(pickable(node, 'handoff', i + 1, h.at - h.belt))
+  })
+
+  for (const c of data.clicks) {
+    if (c.at > c.glide) lanes.clicks.append(span(el('div', 'glide'), c.glide, c.at))
+    if (c.kind === 'type' && c.until > c.at) lanes.clicks.append(span(el('div', 'typing'), c.at, c.until))
+    const dot = el('div', `dot ${c.kind}`)
+    dot.style.left = `${c.at * s}px`
+    hover(dot, `${c.kind} #${c.n} at ${fmt(c.at)}s${c.kind === 'type' ? ` (typing until ${fmt(c.until)}s)` : ''}, glide from ${fmt(c.glide)}s`)
+    lanes.clicks.append(pickable(dot, 'click', c.n, c.at))
+  }
+
+  data.markers.forEach((m, i) => {
+    const pin = el('div', `pin${m.used ? '' : ' unused'}`)
+    pin.style.left = `${m.at * s}px`
+    hover(pin, `marker "${m.label}" at ${fmt(m.at)}s (recording ${fmt(m.recordingAt)}s)${m.used ? '' : ' — no callout uses it'}`)
+    lanes.markers.append(pickable(pin, 'marker', i + 1, m.at))
+  })
+
+  if (data.audio.narration) {
+    const n = data.audio.narration
+    const node = span(el('div', 'item audio', 'narration'), n.start, n.end)
+    node.style.top = '4px'
+    node.style.height = '9px'
+    node.style.lineHeight = '9px'
+    node.style.fontSize = '9px'
+    lanes.audio.append(pickable(node, 'audio', 'narration', n.start))
+  }
+  if (data.audio.music) {
+    const m = data.audio.music
+    const node = span(el('div', 'item audio', 'music'), m.start, m.end)
+    if (data.audio.narration) {
+      node.style.top = '15px'
+      node.style.height = '9px'
+      node.style.lineHeight = '9px'
+      node.style.fontSize = '9px'
+    }
+    lanes.audio.append(pickable(node, 'audio', 'music', m.start))
+  }
+  if (!data.audio.narration && !data.audio.music) {
+    const none = el('div', 'hint', 'no narration, no music')
+    Object.assign(none.style, { position: 'absolute', left: '8px', top: '7px' })
+    lanes.audio.append(none)
+  }
+
+  tracks.replaceChildren(ruler, ...Object.values(lanes), el('div', 'playhead'))
+  updateTime()
+}
+
+// Scrub: pointer down + drag anywhere on the tracks (items select instead).
+let scrubbing = false
+function timeAt(e) {
+  const rect = $('tracks').getBoundingClientRect()
+  return (e.clientX - rect.left) / scale()
+}
+$('tracks').addEventListener('pointerdown', (e) => {
+  if (!data) return
+  scrubbing = true
+  $('tracks').setPointerCapture(e.pointerId)
+  if (playing) player.pause()
+  seek(timeAt(e))
+})
+$('tracks').addEventListener('pointermove', (e) => { if (scrubbing) seek(timeAt(e)) })
+$('tracks').addEventListener('pointerup', () => { scrubbing = false })
+
+function setZoom(next) {
+  const body = $('tl-body')
+  const center = (body.scrollLeft + body.clientWidth / 2 - labelWidth()) / scale()
+  pxPerSec = next
+  renderTimeline()
+  body.scrollLeft = center * scale() - body.clientWidth / 2 + labelWidth()
+}
+$('zoom-in').onclick = () => setZoom(scale() * 1.5)
+$('zoom-out').onclick = () => setZoom(Math.max(fitScale(), scale() / 1.5) === fitScale() ? null : scale() / 1.5)
+$('zoom-fit').onclick = () => setZoom(null)
+$('tl-body').addEventListener('wheel', (e) => {
+  if (!(e.ctrlKey || e.metaKey) || !data) return
+  e.preventDefault()
+  const next = scale() * (e.deltaY < 0 ? 1.15 : 1 / 1.15)
+  setZoom(next <= fitScale() ? null : next)
+}, { passive: false })
+new ResizeObserver(() => { if (data && pxPerSec === null) renderTimeline() }).observe($('tl-body'))
+
+// ── inspector ──────────────────────────────────────────────────────
+function select(kind, key, andSeek) {
+  selected = { kind, key }
+  document.querySelectorAll('.selected').forEach((n) => n.classList.remove('selected'))
+  document.querySelectorAll(`[data-kind="${kind}"][data-key="${key}"]`).forEach((n) => n.classList.add('selected'))
+  renderInspector()
+  if (andSeek) {
+    const at = findItem()?.seekTo
+    if (at !== undefined) seek(at)
+  }
+}
+
+function findItem() {
+  if (!selected || !data) return null
+  const { kind, key } = selected
+  const k = String(key)
+  if (kind === 'section') {
+    const s = data.sections.find((x) => x.slot === k)
+    return s && { label: s.slot, color: `var(--${s.slot})`, seekTo: s.start, rows: [
+      ['section', s.slot === 'recording' ? '—' : s.name], ['from', `${fmt(s.start)}s`], ['to', `${fmt(s.end)}s`], ['length', `${fmt(s.end - s.start)}s`], ['', s.detail],
+    ] }
+  }
+  if (kind === 'callout') {
+    const c = data.callouts.find((x) => String(x.n) === k)
+    return c && { label: `callout ${c.n}`, color: 'var(--callout)', seekTo: c.at, rows: [
+      ['text', c.text], ['from', `${fmt(c.at)}s`], ['to', `${fmt(c.end)}s`], ['length', `${fmt(c.end - c.at)}s`], ...(c.group ? [['role', c.group]] : []),
+    ] }
+  }
+  if (kind === 'zoom') {
+    const z = data.zooms.find((x) => String(x.n) === k)
+    return z && { label: `zoom ${z.n}`, color: 'var(--zoom)', seekTo: z.at, problems: z.problems, rows: [
+      ['scale', `${z.scale}×`], ['focus', `${z.x}, ${z.y}`], ['from', `${fmt(z.at)}s`], ['to', `${fmt(z.end)}s`], ['ease in', `${z.in}s`], ['ease out', `${z.out}s`],
+    ] }
+  }
+  if (kind === 'handoff') {
+    const h = data.handOffs[Number(k) - 1]
+    return h && { label: 'hand-off', color: 'var(--handoff)', seekTo: h.at - h.belt, rows: [
+      ['title', h.title], ...(h.subtitle ? [['subtitle', h.subtitle]] : []), ...(h.from ? [['roles', `${h.from} → ${h.to}`]] : []),
+      ['belt out', `${fmt(h.at - h.belt)}s`], ['card in', `${fmt(h.at)}s`], ['holds to', `${fmt(h.end)}s`],
+    ] }
+  }
+  if (kind === 'click') {
+    const c = data.clicks.find((x) => String(x.n) === k)
+    return c && { label: `${c.kind} #${c.n}`, color: 'var(--click)', seekTo: c.at, rows: [
+      ['glide from', `${fmt(c.glide)}s`], [c.kind, `${fmt(c.at)}s`], ...(c.kind === 'type' ? [['typing to', `${fmt(c.until)}s`]] : []), ['zoom ref', `"clicks": [${c.n}]`],
+    ] }
+  }
+  if (kind === 'marker') {
+    const m = data.markers[Number(k) - 1]
+    return m && { label: 'marker', color: 'var(--marker)', seekTo: m.at, rows: [
+      ['label', m.label], ['at', `${fmt(m.at)}s`], ['recording', `${fmt(m.recordingAt)}s`], ['callout', m.used ? 'yes' : 'none uses it'],
+    ] }
+  }
+  if (kind === 'audio') {
+    const a = data.audio[k]
+    return a && { label: k, color: 'var(--audio)', seekTo: a.start, rows: [['from', `${fmt(a.start)}s`], ['to', `${fmt(a.end)}s`]] }
+  }
+  return null
+}
+
+function renderInspector() {
+  const box = $('inspector')
+  const item = findItem()
+  if (!item) {
+    box.replaceChildren(el('p', 'empty', 'Click an item on the timeline.'))
+    return
+  }
+  const kind = el('span', 'kind', item.label)
+  kind.style.background = item.color
+  const dl = el('dl')
+  for (const [k, v] of item.rows) {
+    if (!k && !v) continue
+    dl.append(el('dt', '', k), el('dd', '', v))
+  }
+  box.replaceChildren(kind, dl, ...(item.problems ?? []).map((p) => el('p', 'problem', p)))
+}
+
+// ── status, keys ───────────────────────────────────────────────────
+function setStatus(text, cls) {
+  $('status').textContent = text
+  $('status').className = `status ${cls}`
+}
+
+function showError(error) {
+  $('banner').textContent = error ? `Build failed — showing the last good build.\n${error}` : ''
+  $('banner').classList.toggle('show', !!error)
+  setStatus(error ? 'build failed' : 'live', error ? 'error' : '')
+}
+
+/** Every start/end on the timeline, for [ and ]. */
+function edges() {
+  const all = [
+    0, data.total,
+    ...data.sections.flatMap((s) => [s.start, s.end]),
+    ...data.callouts.flatMap((c) => [c.at, c.end]),
+    ...data.zooms.flatMap((z) => [z.at, z.at + z.in, z.end - z.out, z.end]),
+    ...data.handOffs.flatMap((h) => [h.at - h.belt, h.at, h.end]),
+    ...data.clicks.map((c) => c.at),
+    ...data.markers.map((m) => m.at),
+  ]
+  return [...new Set(all.map((t) => Math.round(t * 1000) / 1000))].sort((a, b) => a - b)
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!data || (e.target instanceof Element && e.target.closest('input, textarea'))) return
+  const frame = 1 / FPS
+  const big = e.shiftKey ? 1 : frame
+  switch (e.key) {
+    case ' ': e.preventDefault(); togglePlay(); break
+    case 'ArrowLeft': e.preventDefault(); seek(time - big); break
+    case 'ArrowRight': e.preventDefault(); seek(time + big); break
+    case 'Home': seek(0); break
+    case 'End': seek(lastFrame()); break
+    case '[': { const prev = edges().filter((t) => t < time - 1e-3).at(-1); if (prev !== undefined) seek(prev); break }
+    case ']': { const next = edges().find((t) => t > time + 1e-3); if (next !== undefined) seek(next); break }
+    case '+': case '=': $('zoom-in').click(); break
+    case '-': $('zoom-out').click(); break
+    case '0': setZoom(null); break
+    case 'm': case 'M': $('mute').click(); break
+  }
+})
+
+$('play').onclick = togglePlay
+$('start').onclick = () => seek(0)
+$('end').onclick = () => seek(lastFrame())
+$('back').onclick = () => seek(time - 1 / FPS)
+$('fwd').onclick = () => seek(time + 1 / FPS)
+$('mute').onclick = () => {
+  player.muted = !player.muted
+  $('mute').textContent = player.muted ? '🔇' : '🔊'
+}
+
+load().then(connect)
+</script>
+</body>
+</html>

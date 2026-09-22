@@ -83,6 +83,7 @@ reelkit record customers-search [--headed]
 reelkit build customers-search --title "Find a customer"   # creates video.json on first run
 #   edit video.json: callout wording, { "clicks": [2, 3], "scale": 1.8 } zooms, trim
 reelkit check customers-search                          # schemas, zoom timing, hyperframes lint
+reelkit studio customers-search                         # preview + timeline of every layer; rebuilds on save
 reelkit templates                                       # templates and intro/recap/outro sections
 reelkit render customers-search [--gif]                 # or: reelkit render --all
 ```

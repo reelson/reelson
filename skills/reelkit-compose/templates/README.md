@@ -83,6 +83,11 @@ A section ends its script with `gsap.set(…, { opacity: 0 })` for everything wh
 uses `later` (cold-seek safety). Intro tweens that start at t=0 must NOT use `later`: their
 from-state is the poster.
 
+Nothing on `tl` may run past `DEMO.total`: HyperFrames' snapshots and the studio player go by
+the timeline's length. A looping effect lives on its own paused timeline, played to the end with
+`tl.add(loop.tweenFromTo(0, DEMO.total, { duration: DEMO.total, ease: 'none' }), 0)` (see the
+glows in `classic/stage.html`).
+
 ## Timing
 
 `template.json` → `timing` (stage keys, seconds unless noted):
@@ -143,9 +148,10 @@ not invent new ones without adding them to `scripts/composition.ts`.
    Set `description` and `timing` in `section.json`.
 3. Try it on the example with each neighbour it may meet: from `examples/`,
    `reelkit build todo-add-item --outro <name>` (this edits video.json — revert it after),
-   `reelkit check todo-add-item`, `reelkit snapshot todo-add-item --at …` at t=0, the settled
-   intro, the hand-over, the recap and just before the end, and render once to see the real
-   last frame (a snapshot exactly at the end can come out empty). Try `--recap none` too.
+   `reelkit check todo-add-item`, then `reelkit studio todo-add-item`: scrub t=0, the settled
+   intro, the hand-over, the recap and the last frame (<kbd>End</kbd>); it rebuilds on every save
+   of your section files. `reelkit snapshot todo-add-item --at …` gives PNGs of the same moments
+   (a time past the last frame is clamped to it). Try `--recap none` too.
 4. For a kit section, add it to the golden tests in `test/composition.test.ts` and to the
    `catalog` test.
 
