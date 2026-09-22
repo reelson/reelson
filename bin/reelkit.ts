@@ -15,6 +15,7 @@ import { captionCues, toSrt, toVtt } from '../skills/reelkit-compose/scripts/cap
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
 import { reframe, type Format } from '../skills/reelkit-compose/scripts/formats.ts'
 import { studio } from '../skills/reelkit-compose/scripts/studio.ts'
+import { verify } from '../skills/reelkit-compose/scripts/verify.ts'
 import { DRAFT_FLAGS, FPS, hyperframes, RENDER_FLAGS, renderIfChanged } from '../skills/reelkit-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice } from '../skills/reelkit-compose/scripts/timeline.ts'
@@ -32,6 +33,9 @@ Usage: reelkit <command> [options]
       --intro <name>, --recap <name|none>, --outro <name>
       --trim-start <s|auto>, --trim-end <s>, --music <file> | --no-music
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
+  verify <slug...> | --all [--update]
+                                re-record headless into a scratch folder and check video.json
+                                still fits (markers, click numbers, zooms); --update keeps it
   snapshot <slug> --at 1,3.5,8  PNG frames into video/snapshots/
   studio <slug> [--port 4800] [--no-open]
                                 preview + edit on a timeline of every layer (saves video.json)
@@ -83,6 +87,8 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             return buildCommand(argv)
         case 'check':
             return checkCommand(argv)
+        case 'verify':
+            return verifyCommand(argv)
         case 'snapshot':
             return snapshot(argv)
         case 'studio':
@@ -249,6 +255,27 @@ function buildCommand(argv: string[]): number {
     const cfg = config()
     build(resolveDemoDir(one(positionals, 'build <slug> [options]'), cfg), cfg, options)
     return 0
+}
+
+function verifyCommand(argv: string[]): number {
+    const { values, positionals } = parseArgs({
+        args: argv,
+        allowPositionals: true,
+        options: { all: { type: 'boolean' }, update: { type: 'boolean' } },
+    })
+    const cfg = config()
+    const dirs = values.all ? listDemos(cfg) : positionals.map((p) => resolveDemoDir(p, cfg))
+    if (!dirs.length) {
+        throw new ReelkitError(values.all ? 'no demos with a video.json under videosDir' : 'usage: reelkit verify <slug...> | --all [--update]')
+    }
+    let failing = 0
+    for (const dir of dirs) {
+        if (verify(dir, cfg, { update: values.update })) {
+            failing++
+        }
+    }
+    console.log(failing ? `\n${failing} of ${dirs.length} demo(s) need attention` : `\nall ${dirs.length} demo(s) still record and fit their video.json`)
+    return failing ? 1 : 0
 }
 
 function checkCommand(argv: string[]): number {

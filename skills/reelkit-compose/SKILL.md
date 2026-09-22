@@ -141,6 +141,11 @@ reelkit render <slug> [--gif] [--draft]   # build + render video/renders/<slug>.
    (`ffmpeg -ss <t> -i video/renders/<slug>.mp4 -frames:v 1 f.png`) at t=0, ~2 s, a callout, a
    zoom, the recap, the end. Look at them. Then report the file path.
 
+After the app changes (a release, a redesign), run `reelkit verify --all`: it re-records every
+demo into a scratch folder and reports scenarios that no longer run, callouts/trims whose
+marker is gone, and zoom/trim click numbers that now point at a different click. Fix those in
+scenario.ts / video.json, then `reelkit verify <slug> --update` keeps the new take.
+
 Sharp UI text comes from the 2x capture; the build keeps it (`media.autoProxy: false`, no
 `will-change` on `#frame`, jpg frames — png at 2x can stall the renderer).
 
