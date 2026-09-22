@@ -19,12 +19,7 @@
  * `demo.marker()` call, so callouts/zooms in the composition can be timed
  * against the real footage instead of guessed.
  */
-import {
-    chromium,
-    type Browser,
-    type BrowserContext,
-    type Page,
-} from '@playwright/test'
+import type { Browser, BrowserContext, Page } from '@playwright/test'
 import { spawnSync } from 'node:child_process'
 import {
     existsSync,
@@ -34,6 +29,7 @@ import {
     rmSync,
     writeFileSync,
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { COMMON_DEV_CHROME, ConfigError, loadConfig } from './config.ts'
@@ -64,6 +60,9 @@ const config = (() => {
         process.exit(1)
     }
 })()
+// The project's own Playwright when the scenario can see one: its helpers (a login from the
+// e2e suite) import it too, and Playwright refuses to be loaded twice from two places.
+const { chromium } = await import(playwrightFor(scenarioPath))
 const scenario: Scenario = (await import(pathToFileURL(scenarioPath).href))
     .default
 const viewport = scenario.viewport ?? config.record.viewport
@@ -339,6 +338,22 @@ writeFileSync(
 console.log(
     `recorded ${scenario.name}: ${mp4} (${durationSeconds.toFixed(1)}s, ${demo.markers.length} markers)`,
 )
+
+/**
+ * The @playwright/test the project uses — seen from the scenario, else from the working
+ * directory (the project root) — or reelkit's own when the project has none.
+ */
+function playwrightFor(scenarioFile: string): string {
+    for (const from of [scenarioFile, resolve(process.cwd(), 'package.json')]) {
+        try {
+            const pkg = createRequire(from).resolve('@playwright/test/package.json')
+            return pathToFileURL(resolve(dirname(pkg), 'index.mjs')).href
+        } catch {
+            // not installed there
+        }
+    }
+    return '@playwright/test'
+}
 
 function hashSeed(text: string): number {
     let h = 2166136261

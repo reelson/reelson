@@ -113,7 +113,7 @@ export function hideDevChromeScript(selectors: string[]): string {
     return `
 (() => {
     const style = document.createElement('style');
-    style.textContent = ${'${JSON.stringify(css)}'};
+    style.textContent = ${JSON.stringify(css)};
     const mount = () => document.head.appendChild(style);
     if (document.head) mount(); else document.addEventListener('DOMContentLoaded', mount);
 })();
