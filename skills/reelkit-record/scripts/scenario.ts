@@ -193,13 +193,31 @@ export interface Demo {
     type: (target: Locator, text: string) => Promise<void>
     /** Slow wheel scroll so the viewer can follow. */
     scroll: (deltaY: number, opts?: { stepPx?: number }) => Promise<void>
+    /**
+     * Runs `action` (e.g. a click on a target="_blank" link), waits for the tab or pop-up it
+     * opens, and continues there: `demo.page` and every demo action now use it, and the video
+     * films it. When it closes, the demo (and the video) return to the page that opened it.
+     */
+    popup: (action: () => Promise<unknown>) => Promise<Page>
+    /** Continue on another page of the context (see popup); the video follows. */
+    switchTo: (next: Page) => Promise<void>
+}
+
+/** What the recorder hears from the demo. */
+export interface DemoHooks {
+    /** The page the demo acts on (and the video shows) changed. */
+    onSwitch?: (page: Page) => void
 }
 
 export function createDemo(
-    page: Page,
+    first: Page,
     seed: number = 1,
     personaDefaults: { domain?: string; language?: string } = {},
+    hooks: DemoHooks = {},
 ): Demo {
+    // The page every action uses; demo.popup / demo.switchTo move it, a close moves it back.
+    let page = first
+    const openers: Page[] = []
     const startedAt = Date.now()
     const markers: Marker[] = []
     const clicks: Click[] = []
@@ -314,8 +332,29 @@ export function createDemo(
         }
     }
 
+    const switchTo: Demo['switchTo'] = async (next) => {
+        if (next === page) {
+            return
+        }
+        openers.push(page)
+        page = next
+        await next.waitForLoadState('domcontentloaded').catch(() => {})
+        await next.bringToFront().catch(() => {})
+        // The new page's mouse starts where the cursor is, so the video shows no jump.
+        await next.mouse.move(pos.x, pos.y)
+        hooks.onSwitch?.(next)
+        next.once('close', () => {
+            if (page === next) {
+                page = openers.pop() ?? first
+                hooks.onSwitch?.(page)
+            }
+        })
+    }
+
     return {
-        page,
+        get page() {
+            return page
+        },
         markers,
         clicks,
         persona: (personaSeed, domain) =>
@@ -389,6 +428,12 @@ export function createDemo(
             await typeNaturally(text)
             click.until = stamp()
             await page.waitForTimeout(300 + rng() * 200)
+        },
+        switchTo,
+        popup: async (action) => {
+            const [opened] = await Promise.all([page.context().waitForEvent('page'), action()])
+            await switchTo(opened)
+            return opened
         },
         scroll: async (deltaY, opts = {}) => {
             const step = opts.stepPx ?? 80

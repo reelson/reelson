@@ -18,6 +18,14 @@ export interface Frame {
     file: string
     /** When Chrome painted it: epoch milliseconds. */
     t: number
+    /** Which page painted it (0 = the first); see `frameSchedule` switches. */
+    page?: number
+}
+
+/** From `t` (epoch ms) on, the video shows `page`. */
+export interface CameraSwitch {
+    t: number
+    page: number
 }
 
 export interface Screencast {
@@ -25,8 +33,8 @@ export interface Screencast {
     stop: () => Promise<Frame[]>
 }
 
-/** Starts filming `page`; frames are written into `dir` as they arrive. */
-export async function startScreencast(context: BrowserContext, page: Page, dir: string, quality = 92): Promise<Screencast> {
+/** Starts filming `page`; frames are written into `dir` as they arrive, tagged `pageId`. */
+export async function startScreencast(context: BrowserContext, page: Page, dir: string, pageId = 0, quality = 92): Promise<Screencast> {
     mkdirSync(dir, { recursive: true })
     const cdp: CDPSession = await context.newCDPSession(page)
     const frames: Frame[] = []
@@ -34,8 +42,8 @@ export async function startScreencast(context: BrowserContext, page: Page, dir: 
     cdp.on('Page.screencastFrame', (event: { data: string; sessionId: number; metadata: { timestamp?: number } }) => {
         // Ack first: Chrome sends the next frame only after the previous one is acknowledged.
         cdp.send('Page.screencastFrameAck', { sessionId: event.sessionId }).catch(() => {})
-        const file = resolve(dir, `f${String(frames.length).padStart(6, '0')}.jpg`)
-        frames.push({ file, t: (event.metadata.timestamp ?? Date.now() / 1000) * 1000 })
+        const file = resolve(dir, `${pageId ? `p${pageId}-` : ''}f${String(frames.length).padStart(6, '0')}.jpg`)
+        frames.push({ file, t: (event.metadata.timestamp ?? Date.now() / 1000) * 1000, page: pageId })
         writes.push(writeFile(file, Buffer.from(event.data, 'base64')))
     })
     await cdp.send('Page.startScreencast', { format: 'jpeg', quality, everyNthFrame: 1 })
@@ -54,34 +62,57 @@ export async function startScreencast(context: BrowserContext, page: Page, dir: 
  * How long each frame stays on screen in the finished video (seconds), in order. Video
  * time 0 is `startedAt` (the recording clock of createDemo); a frame shows from the moment
  * it was painted until the next one; the first frame also covers anything before it.
- * `cuts` are ranges of that clock (seconds) left out of the video.
+ * `cuts` are ranges of that clock (seconds) left out of the video. With `switches`, only
+ * the page the camera is on counts at each moment (a pop-up, then back to its opener, which
+ * shows its last frame from before); without, every frame counts.
  */
 export function frameSchedule(
     frames: Frame[],
     startedAt: number,
     endedAt: number,
     cuts: { from: number; to: number }[],
+    switches?: CameraSwitch[],
 ): { file: string; duration: number }[] {
     const end = (endedAt - startedAt) / 1000
-    const sorted = [...frames].sort((a, b) => a.t - b.t).map((f) => ({ file: f.file, t: (f.t - startedAt) / 1000 }))
+    const seconds = (t: number) => (t - startedAt) / 1000
+    const camera = switches?.length
+        ? [...switches].sort((a, b) => a.t - b.t).map((s) => ({ at: Math.max(0, seconds(s.t)), page: s.page }))
+        : [{ at: 0, page: -1 }]
+    const pieces = camera.map((c, i) => ({ from: i === 0 ? 0 : c.at, to: i + 1 < camera.length ? camera[i + 1].at : end, page: c.page }))
     const kept = keptRanges(cuts, end)
     const out: { file: string; duration: number }[] = []
-    sorted.forEach((frame, i) => {
-        const from = i === 0 ? 0 : Math.max(0, frame.t)
-        const to = i + 1 < sorted.length ? Math.max(0, sorted[i + 1].t) : end
+    const add = (file: string, from: number, to: number) => {
         for (const range of kept) {
             const overlap = Math.min(to, range.to) - Math.max(from, range.from)
             if (overlap <= 0) {
                 continue
             }
             const last = out[out.length - 1]
-            if (last?.file === frame.file) {
+            if (last?.file === file) {
                 last.duration += overlap
             } else {
-                out.push({ file: frame.file, duration: overlap })
+                out.push({ file, duration: overlap })
             }
         }
-    })
+    }
+    for (const piece of pieces.filter((p) => p.to > p.from)) {
+        const own = frames
+            .filter((f) => piece.page === -1 || (f.page ?? 0) === piece.page)
+            .sort((a, b) => a.t - b.t)
+            .map((f) => ({ file: f.file, t: seconds(f.t) }))
+        if (!own.length) {
+            continue
+        }
+        // On screen at the start of the piece: the page's latest frame so far, else its first.
+        let i = Math.max(0, own.findLastIndex((f) => f.t <= piece.from))
+        for (; i < own.length && own[i].t < piece.to; i++) {
+            const from = Math.max(piece.from, own[i].t)
+            const to = Math.min(piece.to, i + 1 < own.length ? own[i + 1].t : piece.to)
+            if (to > from) {
+                add(own[i].file, i === 0 && own[i].t > piece.from ? piece.from : from, to)
+            }
+        }
+    }
 
     return out
 }

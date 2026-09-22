@@ -156,6 +156,8 @@ export default {
         demo.click(loc, { settleMs })
         demo.type(loc, text)
         demo.scroll(deltaY, { stepPx })
+        demo.popup(() => demo.click(link))   // continue in the tab/pop-up it opens (returned)
+        demo.switchTo(page)                  // continue on another page of the context
     },
 } satisfies Scenario
 ```
@@ -164,7 +166,16 @@ export default {
 Everything inside `fn` (clear cookies, log in as the other account, `demo.goto` their first
 page) is cut, and `markers.json` gets a `transitions` entry; reelkit-compose splits the footage
 there and shows a hand-off card (`from` → `to`, title, subtitle). Leave ~3 s after the last
-marker before it. Uploading a file on camera: generate it (e.g. a PDF via
+marker before it.
+
+**Pop-ups and new tabs** (target="_blank", OAuth, a PDF preview): `const tab = await
+demo.popup(() => demo.click(link))`. From then on `demo.page` and every demo action use the new
+page, and the video cuts to it; when it closes (`window.close()`, `tab.close()`) the demo and
+the video return to the page that opened it. A page opened any other way is filmed but never
+shown — the recorder warns about it. (`record.capture: "playwright"` films the first page
+only.)
+
+Uploading a file on camera: generate it (e.g. a PDF via
 `browser.newPage().pdf()`) and answer the `filechooser` event.
 
 ## Alternative: OpenScreen (manual recordings)

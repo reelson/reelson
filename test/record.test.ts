@@ -57,4 +57,19 @@ describe('frameSchedule', () => {
         const sched = frameSchedule([frame('a', 0), frame('b', 4)], T0, T0 + 5000, [{ from: 1, to: 2 }])
         assert.deepEqual(sched.map((e) => [e.file, Math.round(e.duration * 1000) / 1000]), [['a', 3], ['b', 1]])
     })
+
+    it('films only the page the camera is on: a pop-up, then back to its opener', () => {
+        const main = (file: string, s: number) => ({ file, t: T0 + s * 1000, page: 0 })
+        const pop = (file: string, s: number) => ({ file, t: T0 + s * 1000, page: 1 })
+        const frames = [main('m0', 0), main('m1', 1), pop('p0', 2.2), main('m2-hidden', 2.5), pop('p1', 3), main('m3', 4.5)]
+        const switches = [{ t: T0, page: 0 }, { t: T0 + 2000, page: 1 }, { t: T0 + 4000, page: 0 }]
+        const sched = frameSchedule(frames, T0, T0 + 5000, [], switches)
+        assert.deepEqual(
+            sched.map((e) => [e.file, Math.round(e.duration * 100) / 100]),
+            // At 2 s the pop-up has not painted yet: its first frame covers the switch. Back
+            // on the opener at 4 s, its latest frame so far (painted while hidden) shows.
+            [['m0', 1], ['m1', 1], ['p0', 1], ['p1', 1], ['m2-hidden', 0.5], ['m3', 0.5]],
+        )
+        close(total(sched), 5)
+    })
 })

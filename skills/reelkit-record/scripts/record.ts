@@ -32,7 +32,7 @@ import {
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { encodeFrames, frameSchedule, startScreencast } from './capture.ts'
+import { encodeFrames, frameSchedule, startScreencast, type CameraSwitch } from './capture.ts'
 import { COMMON_DEV_CHROME, ConfigError, loadConfig } from './config.ts'
 import { CURSOR_BINDING, cursorOverlayScript, hideDevChromeScript, type CursorEvent } from './cursor-overlay.ts'
 import { createDemo, type Scenario } from './scenario.ts'
@@ -103,9 +103,16 @@ const context: BrowserContext = await browser.newContext({
 })
 // The page reports every cursor move and press (its own clock = this machine's clock);
 // with record.cursor "layer" (the default) it draws nothing and the video draws the cursor.
-const cursorEvents: CursorEvent[] = []
-await context.exposeBinding(CURSOR_BINDING, (_source, event: CursorEvent) => {
-    cursorEvents.push(event)
+// Every page gets an id: the first is 0, pop-ups and new tabs count up. Frames and cursor
+// events carry it, so the video (and its cursor) show only the page the demo is on.
+const pageIds = new Map<Page, number>()
+const idOf = (p: Page): number => {
+    if (!pageIds.has(p)) pageIds.set(p, pageIds.size)
+    return pageIds.get(p) as number
+}
+const cursorEvents: (CursorEvent & { page: number })[] = []
+await context.exposeBinding(CURSOR_BINDING, (source, event: CursorEvent) => {
+    cursorEvents.push({ ...event, page: source.page ? idOf(source.page) : 0 })
 })
 await context.addInitScript(
     cursorOverlayScript(config.brand.color, { draw: config.record.cursor === 'recorded', report: true }),
@@ -120,11 +127,32 @@ if (hideScript) {
 }
 
 const page: Page = await context.newPage()
-const filming = screencast ? await startScreencast(context, page, rawDir) : null
-const demo = createDemo(page, hashSeed(scenario.name), {
-    domain: config.record.personaDomain,
-    language: config.language,
+idOf(page)
+const filming = screencast ? [await startScreencast(context, page, rawDir, 0)] : []
+// Pop-ups and new tabs: filmed from the moment they open; the video shows them once the
+// scenario moves there (demo.popup / demo.switchTo).
+const opened: { id: number; url: string }[] = []
+const pendingCasts: Promise<void>[] = []
+context.on('page', (p) => {
+    if (p === page) return
+    const id = idOf(p)
+    opened.push({ id, url: p.url() })
+    p.once('load', () => {
+        const entry = opened.find((o) => o.id === id)
+        if (entry) entry.url = p.url()
+    })
+    if (screencast) {
+        pendingCasts.push(startScreencast(context, p, rawDir, id).then((cast) => void filming.push(cast)).catch(() => {}))
+    }
 })
+const camera: CameraSwitch[] = []
+const demo = createDemo(
+    page,
+    hashSeed(scenario.name),
+    { domain: config.record.personaDomain, language: config.language },
+    { onSwitch: (p) => camera.push({ t: Date.now(), page: idOf(p) }) },
+)
+camera.push({ t: demo.startedAt, page: 0 })
 
 let failure: unknown = null
 try {
@@ -139,7 +167,18 @@ try {
 }
 
 const endedAt = Date.now()
-const frames = filming ? await filming.stop() : []
+await Promise.all(pendingCasts)
+const frames = (await Promise.all(filming.map((cast) => cast.stop()))).flat()
+if (!screencast && camera.some((c) => c.page !== 0)) {
+    console.warn('warning: record.capture "playwright" films only the first page — the pop-up/new tab is not in the video; use "screencast"')
+}
+const unfilmed = opened.filter((o) => !camera.some((c) => c.page === o.id))
+for (const o of unfilmed) {
+    console.warn(
+        `warning: a new tab / pop-up opened (${o.url || 'about:blank'}) and was not filmed — ` +
+            'open it with `await demo.popup(() => demo.click(link))` to show it in the video',
+    )
+}
 const videoPath = screencast ? undefined : await page.video()?.path()
 await context.close()
 await browser.close()
@@ -147,7 +186,7 @@ await browser.close()
 const mp4 = resolve(outDir, 'recording.mp4')
 if (screencast) {
     // Frames painted after the scenario ended are not part of it.
-    const schedule = frameSchedule(frames.filter((f) => f.t <= endedAt), demo.startedAt, endedAt, failure ? [] : demo.cuts)
+    const schedule = frameSchedule(frames.filter((f) => f.t <= endedAt), demo.startedAt, endedAt, failure ? [] : demo.cuts, camera)
     const target = failure ? resolve(outDir, 'recording.failed.mp4') : mp4
     if (!(await encodeFrames(schedule, target))) {
         console.error(schedule.length ? 'ffmpeg could not encode the frames (is ffmpeg installed? brew install ffmpeg)' : 'no frames were captured')
@@ -279,6 +318,13 @@ function cursorLog(
     return { drawn, path, presses }
 }
 
+/** The cursor events of the page the video showed at that moment. */
+function onCamera(events: (CursorEvent & { page: number })[], switches: CameraSwitch[]): CursorEvent[] {
+    const sorted = [...switches].sort((a, b) => a.t - b.t)
+    const pageAt = (t: number): number => sorted.filter((s) => s.t <= t).at(-1)?.page ?? 0
+    return events.filter((e) => e.page === pageAt(e.t))
+}
+
 /** Complement of the cut ranges over [0, ∞): what stays in the video. */
 function keptRanges(
     cuts: { from: number; to: number }[],
@@ -351,7 +397,7 @@ writeFileSync(
                 ...m,
                 at: toCutTime(m.at, demo.cuts),
             })),
-            cursor: cursorLog(cursorEvents, demo.startedAt, demo.cuts, config.record.cursor === 'recorded'),
+            cursor: cursorLog(onCamera(cursorEvents, camera), demo.startedAt, demo.cuts, config.record.cursor === 'recorded'),
         },
         null,
         2,
