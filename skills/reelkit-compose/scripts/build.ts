@@ -247,7 +247,7 @@ export function serializeVideoSpec(spec: VideoSpec, demoDir: string, config: Loa
 /** video.json in a stable, readable key order, without `$schema` (re-added on write). */
 function withoutSchema(spec: VideoSpec): VideoSpec {
     const { $schema: _ignored, ...rest } = spec as VideoSpec & { $schema?: string }
-    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms']
+    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms', 'cursor']
     const known = order.filter((k) => rest[k] !== undefined).map((k) => [k, rest[k]])
     const others = Object.entries(rest).filter(([k]) => !order.includes(k as keyof VideoSpec))
 

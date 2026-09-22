@@ -155,4 +155,31 @@ describe('hand-offs (demo.transition)', () => {
         assert.equal(t.callouts[0].at, round(plain.callouts[0].at + 0.5))
         assert.throws(() => computeTimeline(fixture('todo'), spec({ callouts: [{ at: 5, offset: 1, text: 'x' }] })), /`offset` shifts a `marker`/)
     })
+
+    it('maps the logged cursor into composition time: trimmed, pushed past hand-off cards', () => {
+        const markers = {
+            ...fixture('handoff'),
+            cursor: {
+                drawn: false,
+                path: [[0.5, 10, 10], [1.5, 20, 20], [4, 30, 30], [12, 40, 40]] as [number, number, number][],
+                presses: [[4, 30, 30], [0.2, 1, 1]] as [number, number, number][],
+            },
+        }
+        const { timeline: t } = computeTimeline(markers, spec({ trim: { start: 1 } }))
+        assert.ok(t.cursor)
+        // The last move before the trim is where the cursor rests when the footage starts.
+        assert.deepEqual(t.cursor.path.map((p) => p[0]), [t.clipStart, t.toComposition(1.5), t.toComposition(4), t.toComposition(12)])
+        assert.deepEqual(t.cursor.path[0].slice(1), [10, 10])
+        assert.equal(round(t.toComposition(12) - t.toComposition(4)), round(8 + t.transitions[0].gap))
+        assert.deepEqual(t.cursor.presses, [[t.toComposition(4), 30, 30]])
+        assert.equal(t.cursor.size, 44)
+        assert.ok(Math.abs(t.cursor.scale - t.frame.width / markers.viewport.width) < 1e-4)
+
+        assert.equal(computeTimeline(markers, spec({ cursor: false })).timeline.cursor, null)
+        assert.equal(computeTimeline(markers, spec({ cursor: { size: 60, ripple: false } })).timeline.cursor?.size, 60)
+        const filmed = { ...markers, cursor: { ...markers.cursor, drawn: true } }
+        const { timeline, warnings } = computeTimeline(filmed, spec({ cursor: { size: 60 } }))
+        assert.equal(timeline.cursor, null)
+        assert.match(warnings.join(), /cursor filmed in/)
+    })
 })

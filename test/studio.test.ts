@@ -37,6 +37,8 @@ describe('studioData', () => {
         assert.deepEqual(d.clicks.map((c) => c.n), [1, 2, 3, 4])
         assert.ok(d.markers.every((m) => m.used))
         assert.deepEqual(d.audio, { narration: null, music: null })
+        assert.equal(d.cursor.state, 'layer')
+        assert.equal(d.cursor.presses.length, 4)
         // Plain JSON: nothing is lost on the way to the page.
         assert.deepEqual(JSON.parse(JSON.stringify(d)), d)
     })
@@ -55,5 +57,7 @@ describe('studioData', () => {
         assert.deepEqual(d.markers.map((m) => m.used), [true, false, false])
         assert.deepEqual(d.audio.narration, { start: d.sections[1].start, end: d.sections[1].end })
         assert.deepEqual(d.audio.music, { start: 0, end: d.total })
+        // No cursor log in this fixture: the cursor is part of the footage.
+        assert.equal(d.cursor.state, 'filmed')
     })
 })

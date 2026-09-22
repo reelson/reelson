@@ -48,7 +48,12 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 ## What the recorder adds on top of plain Playwright video
 
 - **Visible cursor**: a large black macOS-style arrow with a press squash and a brand-coloured
-  double ring on click (Playwright's synthetic mouse is otherwise invisible).
+  double ring on click (Playwright's synthetic mouse is otherwise invisible). By default
+  (`record.cursor: "layer"`) the page only *logs* it: every move and press goes into
+  markers.json `cursor` (video seconds, ~40 ms capture latency already added), and the video
+  draws it — smooth, the same size under zooms, and restyled (size, ripple, brand colour)
+  without re-recording. `"recorded"` films it into recording.mp4 instead (the pre-0.4 way).
+  Clicks land where the glide ended (no snap to the element's centre).
 - **Human pacing**: curved, eased glides with a faint tremor, landing slightly off-centre;
   typing with uneven delays and beats after spaces/punctuation. Seeded per scenario, so
   re-records are identical. Never slow.

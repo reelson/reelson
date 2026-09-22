@@ -78,6 +78,23 @@ export interface Markers {
     clicks?: Click[]
     transitions?: HandOff[]
     cuts?: { from: number; to: number }[]
+    cursor?: CursorLog
+}
+
+/** The cursor as reelkit-record logged it: [t, x, y] in recording seconds and viewport CSS px. */
+export interface CursorLog {
+    /** Already filmed into recording.mp4 (record.cursor "recorded"): the video must not draw it. */
+    drawn: boolean
+    path: [number, number, number][]
+    presses: [number, number, number][]
+}
+
+/** video.json `cursor`: how the video draws a logged cursor. */
+export interface CursorSpec {
+    /** Arrow height in recording CSS px (44 = the classic macOS-style size). */
+    size?: number
+    /** The ring on each press. */
+    ripple?: boolean
 }
 
 export interface CalloutSpec {
@@ -116,6 +133,8 @@ export interface VideoSpec {
     music?: string | boolean | null
     callouts?: CalloutSpec[]
     zooms?: ZoomSpec[]
+    /** false: no cursor at all. Only for recordings with a logged (not filmed) cursor. */
+    cursor?: false | CursorSpec
 }
 
 export interface Callout {
@@ -147,6 +166,17 @@ export interface Timeline {
     /** One <video> clip per stretch of footage between hand-offs. */
     segments: { start: number; duration: number; mediaStart: number }[]
     callouts: Callout[]
+    /**
+     * The cursor layer, or null when the footage already shows the cursor (or none is wanted).
+     * Composition seconds; x/y in recording CSS px (× `scale` for frame px).
+     */
+    cursor: {
+        size: number
+        ripple: boolean
+        scale: number
+        path: [number, number, number][]
+        presses: [number, number, number][]
+    } | null
     /** Recording time → composition time (footage after a hand-off is pushed back by the gap). */
     toComposition: (recordingTime: number) => number
 }
@@ -264,6 +294,34 @@ export function computeTimeline(
     const outroStart = recap ? round(recap.start + recap.duration - stage.overlap) : clipEnd
     const total = round(outroStart + timing.outro.duration)
 
+    const frame = {
+        width: Math.round(markers.viewport.width * scale),
+        height: Math.round(markers.viewport.height * scale),
+    }
+    const log = markers.cursor
+    if (spec.cursor !== undefined && (!log || log.drawn)) {
+        warnings.push(
+            'video.json `cursor` has no effect: this recording has the cursor filmed in — re-record (record.cursor "layer") to draw it as a layer',
+        )
+    }
+    let cursor: Timeline['cursor'] = null
+    if (log && !log.drawn && spec.cursor !== false && log.path.length) {
+        const inside = (t: number): boolean => t >= mediaStart && t <= mediaEnd
+        // Where the cursor rests when the footage starts: the last move before the trim.
+        const before = log.path.filter(([t]) => t < mediaStart).at(-1)
+        const path: [number, number, number][] = [
+            ...(before ? [[clipStart, before[1], before[2]] as [number, number, number]] : []),
+            ...log.path.filter(([t]) => inside(t)).map(([t, x, y]): [number, number, number] => [toComposition(t), x, y]),
+        ]
+        cursor = {
+            size: spec.cursor?.size ?? 44,
+            ripple: spec.cursor?.ripple ?? true,
+            scale: Math.round((frame.width / markers.viewport.width) * 10000) / 10000,
+            path,
+            presses: log.presses.filter(([t]) => inside(t)).map(([t, x, y]) => [toComposition(t), x, y]),
+        }
+    }
+
     return {
         timeline: {
             total,
@@ -276,14 +334,12 @@ export function computeTimeline(
             mediaStart: round(mediaStart),
             mediaEnd: round(mediaEnd),
             belt: stage.belt,
-            frame: {
-                width: Math.round(markers.viewport.width * scale),
-                height: Math.round(markers.viewport.height * scale),
-            },
+            frame,
             viewport: markers.viewport,
             transitions,
             segments,
             callouts,
+            cursor,
             toComposition,
         },
         warnings,

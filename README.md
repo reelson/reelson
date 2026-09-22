@@ -61,7 +61,8 @@ typo is an error with a "did you mean" hint).
         "viewport": { "width": 1440, "height": 900 },
         "hideSelectors": [".environment-indicator"],   // local-only UI to hide on camera
         "extraHTTPHeaders": { "X-Demo-Recording": "1" },
-        "personaDomain": "example.com"
+        "personaDomain": "example.com",
+        "cursor": "layer"                              // or "recorded": film it into the footage
     }
 }
 ```

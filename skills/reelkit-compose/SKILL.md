@@ -62,6 +62,10 @@ changing the trim or the template never re-times anything. Validated against
   not be on screen at once (`reelkit check` flags it): a zoom holds while later clicks stay in
   view, so one zoom over the whole range is usually the fix.
 - To find click numbers, read `clicks` in markers.json (each has `at`, `x`, `y`, `kind`).
+- **Cursor**: recordings made with `record.cursor: "layer"` (the default) have their cursor
+  drawn by the video. `"cursor": { "size": 56, "ripple": false }` restyles it, `"cursor": false`
+  hides it. For a recording with the cursor filmed in, the build warns that `cursor` has no
+  effect.
 
 ## Templates and sections
 

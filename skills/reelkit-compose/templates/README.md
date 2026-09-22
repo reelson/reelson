@@ -133,8 +133,15 @@ Only in sections: `{{START}}`, `{{DURATION}}`, `{{TRACK}}` (put all three on the
 
 `DEMO` holds `total`, `clipStart`, `clipDuration`, `mediaStart`, `sections` (`intro`, `recap` or
 `null`, `outro`, as above), `callouts` (`{ at, duration, text, group? }`), `zooms`
-(`{ at, duration, x, y, scale, in, out }`), `transitions` (`{ at, gap }`) and `chip`
-(`{ steps, seconds }`, already pluralised) — all times in composition seconds.
+(`{ at, duration, x, y, scale, in, out }`), `transitions` (`{ at, gap }`), `chip`
+(`{ steps, seconds }`, already pluralised) and `cursor` — all times in composition seconds.
+
+`cursor` is `null` when the footage already shows the cursor (or video.json turned it off);
+otherwise `{ size, ripple, scale, path: [[t, x, y]], presses: [[t, x, y]] }` with x/y in
+recording CSS px (× `scale` = `#frame` px) and `size` the arrow height in the same units. A stage
+that gets a `cursor` must draw it — the recording has none. The classic stage draws it inside
+`#frame` (so it rides with the footage), tweens between consecutive points (≤ 0.1 s apart; a
+longer gap is a jump), counter-scales it during zooms and plays a ripple + squash per press.
 
 Placeholders are filled in one pass, so text from video.json is never read as one. The build
 fails if a `{{PLACEHOLDER}}` is left unfilled: a file may omit ones it doesn't need but must

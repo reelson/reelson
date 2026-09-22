@@ -77,6 +77,16 @@
         box-shadow: 0 50px 140px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
+      /* Cursor layer (DEMO.cursor): the recorder logs the cursor instead of filming it, and
+         the stage draws it — inside #frame, so it rides with the footage. */
+      .cursor-layer { position: absolute; inset: 0; pointer-events: none; }
+      .cursor { position: absolute; left: 0; top: 0;
+        filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25)); }
+      .cursor svg { display: block; }
+      .cursor-ripple { position: absolute; border-radius: 50%; opacity: 0; }
+      .cursor-ripple.a { border: 4px solid var(--brand); background: color-mix(in srgb, var(--brand) 22%, transparent); }
+      .cursor-ripple.b { border: 2px solid color-mix(in srgb, var(--brand) 90%, transparent); }
+
       /* Transition card: the hand-off between two actors (demo.transition() in the scenario).
          The recording leaves through the top, this card rides in on the same belt, then the
          recording comes back from below with the next actor. */
@@ -221,6 +231,8 @@
        *               outro: { start, duration } }
        *   callouts: [{ at, duration, text, group? }]   numbered step pills
        *   zooms: [{ at, duration, x, y, scale, in, out }]   x/y = 0..1 focus
+       *   cursor: { size, ripple, scale, path: [[t, x, y]], presses: [[t, x, y]] } | null
+       *           the logged cursor (x/y recording px, × scale = frame px); null = filmed in
        *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
@@ -278,6 +290,40 @@
             "out": 0.8
           }
         ],
+        "cursor": {
+          "size": 44,
+          "ripple": true,
+          "scale": 1.0444,
+          "path": [
+            [3, 720, 470],
+            [3.65, 720.4, 418.2],
+            [3.76, 720.8, 366.4],
+            [3.88, 721.2, 314.6],
+            [3.99, 721.6, 262.8],
+            [4.11, 722, 211],
+            [7.23, 721.8, 209.8],
+            [7.31, 721.6, 208.6],
+            [7.4, 721.4, 207.4],
+            [7.49, 721.2, 206.2],
+            [7.57, 721, 205],
+            [11.67, 669.6, 229.2],
+            [11.77, 618.2, 253.4],
+            [11.86, 566.8, 277.6],
+            [11.96, 515.4, 301.8],
+            [12.06, 464, 326],
+            [13.91, 508.4, 336.6],
+            [14.02, 552.8, 347.2],
+            [14.12, 597.2, 357.8],
+            [14.23, 641.6, 368.4],
+            [14.33, 686, 379]
+          ],
+          "presses": [
+            [4.28, 722, 211],
+            [7.71, 721, 205],
+            [12.21, 464, 326],
+            [14.49, 686, 379]
+          ]
+        },
         "transitions": [],
         "chip": {
           "steps": "4 steps",
@@ -394,6 +440,66 @@
         tl.fromTo('#frame', { scale: 1 }, { scale: z.scale, transformOrigin: origin, duration: zoomIn, ease: 'power2.inOut', ...later }, z.at);
         tl.fromTo('#frame', { scale: z.scale }, { scale: 1, transformOrigin: origin, duration: zoomOut, ease: 'power2.inOut', ...later }, z.at + z.duration - zoomOut);
       });
+
+      // Cursor layer: every logged move is a tween to the next point (a glide's moves are
+      // 20–50 ms apart; a longer gap is a jump: a cut, a new page). During a zoom the arrow
+      // is counter-scaled, so it keeps its size while the footage grows.
+      if (DEMO.cursor) {
+        const C = DEMO.cursor;
+        const size = C.size * C.scale;
+        const tip = { x: (5.5 / 24) * size, y: (2.5 / 24) * size }; // the arrow's point in its 24-unit box
+        const layer = node('div', 'cursor-layer');
+        const cursor = node('div', 'cursor');
+        cursor.innerHTML = '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '">'
+          + '<path d="M5.5 2.5v17.4l4.6-4.4 2.9 6.5 3-1.3-2.9-6.4h6.4z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+        const arrow = cursor.firstChild;
+        const E = gsap.parseEase('power2.inOut'); // the zooms' ease
+        const zoomAt = (t) => {
+          for (const z of DEMO.zooms) {
+            const zin = z.in ?? 0.8, zout = z.out ?? 0.8, end = z.at + z.duration;
+            if (t >= z.at && t < z.at + zin) return 1 + (z.scale - 1) * E((t - z.at) / zin);
+            if (t >= z.at + zin && t < end - zout) return z.scale;
+            if (t >= end - zout && t < end) return 1 + (z.scale - 1) * (1 - E((t - (end - zout)) / zout));
+          }
+          return 1;
+        };
+        const place = (p) => ({ x: p[1] * C.scale - tip.x, y: p[2] * C.scale - tip.y });
+
+        if (C.ripple) {
+          C.presses.forEach((p) => {
+            const counter = 1 / zoomAt(p[0]);
+            [['a', 0.55, 0], ['b', 0.8, 0.08]].forEach(([kind, duration, delay]) => {
+              const ring = node('div', 'cursor-ripple ' + kind);
+              const d = 84 * C.scale;
+              Object.assign(ring.style, { width: d + 'px', height: d + 'px', left: p[1] * C.scale - d / 2 + 'px', top: p[2] * C.scale - d / 2 + 'px' });
+              layer.append(ring);
+              tl.fromTo(ring, { scale: 0.2 * counter, opacity: 1 }, { scale: 1.25 * counter, opacity: 0, duration, ease: 'power3.out', ...later }, p[0] + delay);
+            });
+          });
+        }
+        layer.append(cursor);
+        document.getElementById('frame').append(layer);
+
+        gsap.set(cursor, { ...place(C.path[0]), transformOrigin: tip.x + 'px ' + tip.y + 'px' });
+        gsap.set(arrow, { transformOrigin: tip.x + 'px ' + tip.y + 'px' });
+        for (let i = 1; i < C.path.length; i++) {
+          const a = C.path[i - 1], b = C.path[i], gap = b[0] - a[0];
+          const glide = gap <= 0.1;
+          tl.fromTo(cursor, place(a), { ...place(b), duration: glide ? Math.max(gap, 0.001) : 0.001, ease: 'none', ...later }, glide ? a[0] : b[0] - 0.001);
+        }
+        // Counter-scale: a custom ease makes the arrow's scale exactly 1 / the frame's scale.
+        DEMO.zooms.forEach((z) => {
+          const zin = z.in ?? 0.8, zout = z.out ?? 0.8, k = 1 / z.scale;
+          const inverse = (u) => 1 / (1 + (z.scale - 1) * u);
+          tl.fromTo(cursor, { scale: 1 }, { scale: k, duration: zin, ease: (p) => (inverse(E(p)) - 1) / (k - 1), ...later }, z.at);
+          tl.fromTo(cursor, { scale: k }, { scale: 1, duration: zout, ease: (p) => (inverse(1 - E(p)) - k) / (1 - k), ...later }, z.at + z.duration - zout);
+        });
+        // The press squash.
+        C.presses.forEach((p) => {
+          tl.fromTo(arrow, { scale: 1 }, { scale: 0.82, duration: 0.09, ease: 'power1.out', ...later }, p[0]);
+          tl.fromTo(arrow, { scale: 0.82 }, { scale: 1, duration: 0.13, ease: 'power1.out', ...later }, p[0] + 0.09);
+        });
+      }
 
       /* ---- Sections: each runs with `section` = its DEMO.sections entry, and may use
        *      tl, DEMO, FADE, later, node, stage. ---- */

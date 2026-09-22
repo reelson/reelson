@@ -44,6 +44,7 @@
             "X-Demo-Recording": "1"
         },
         "hideSelectors": [],
-        "personaDomain": "example.com"
+        "personaDomain": "example.com",
+        "cursor": "layer"
     }
 }

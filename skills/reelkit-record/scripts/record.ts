@@ -37,7 +37,7 @@ import {
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { COMMON_DEV_CHROME, ConfigError, loadConfig } from './config.ts'
-import { cursorOverlayScript, hideDevChromeScript } from './cursor-overlay.ts'
+import { CURSOR_BINDING, cursorOverlayScript, hideDevChromeScript, type CursorEvent } from './cursor-overlay.ts'
 import { createDemo, type Scenario } from './scenario.ts'
 
 const args = process.argv.slice(2)
@@ -99,7 +99,15 @@ const context: BrowserContext = await browser.newContext({
     // dev conveniences that would look wrong on camera (pre-filled forms, pre-ticked consents).
     extraHTTPHeaders: config.record.extraHTTPHeaders,
 })
-await context.addInitScript(cursorOverlayScript(config.brand.color))
+// The page reports every cursor move and press (its own clock = this machine's clock);
+// with record.cursor "layer" (the default) it draws nothing and the video draws the cursor.
+const cursorEvents: CursorEvent[] = []
+await context.exposeBinding(CURSOR_BINDING, (_source, event: CursorEvent) => {
+    cursorEvents.push(event)
+})
+await context.addInitScript(
+    cursorOverlayScript(config.brand.color, { draw: config.record.cursor === 'recorded', report: true }),
+)
 // Local-only chrome that must never appear in a docs video.
 const hideScript = hideDevChromeScript([
     ...COMMON_DEV_CHROME,
@@ -206,6 +214,47 @@ if (ffmpeg.status !== 0) {
     process.exit(1)
 }
 
+/**
+ * Seconds between the page handling an input event and the frame that shows it in the
+ * capture (measured on the example, see the reelkit-record SKILL.md).
+ */
+const CAPTURE_LATENCY = 0.04
+
+/**
+ * The cursor as the video saw it: [t, x, y] per move and per press (video seconds after
+ * cuts, CSS px). `drawn`: whether it is already in the footage (record.cursor "recorded").
+ */
+function cursorLog(
+    events: CursorEvent[],
+    startedAt: number,
+    cuts: { from: number; to: number }[],
+    drawn: boolean,
+): { drawn: boolean; path: [number, number, number][]; presses: [number, number, number][] } {
+    const toVideo = (e: CursorEvent): [number, number, number] => [
+        Number(toCutTime((e.t - startedAt) / 1000 + CAPTURE_LATENCY, cuts, 3).toFixed(3)),
+        Number(e.x.toFixed(1)),
+        Number(e.y.toFixed(1)),
+    ]
+    // Moves inside a cut collapse onto its start: keep only the last one per instant, so
+    // the cursor jumps once to where it is after the cut.
+    const kept = events.filter((e) => e.t >= startedAt).sort((a, b) => a.t - b.t)
+    const path: [number, number, number][] = []
+    for (const point of kept.filter((e) => e.type === 'move').map(toVideo)) {
+        if (path.length && path[path.length - 1][0] === point[0]) {
+            path[path.length - 1] = point
+        } else {
+            path.push(point)
+        }
+    }
+    const inCut = (e: CursorEvent): boolean => {
+        const t = (e.t - startedAt) / 1000
+        return cuts.some((c) => t > c.from && t < c.to)
+    }
+    const presses = kept.filter((e) => e.type === 'down' && !inCut(e)).map(toVideo)
+
+    return { drawn, path, presses }
+}
+
 /** Complement of the cut ranges over [0, ∞): what stays in the video. */
 function keptRanges(
     cuts: { from: number; to: number }[],
@@ -225,7 +274,7 @@ function keptRanges(
 }
 
 /** Recording time → time in the cut video. Times inside a cut collapse to its start. */
-function toCutTime(t: number, cuts: { from: number; to: number }[]): number {
+function toCutTime(t: number, cuts: { from: number; to: number }[], digits = 2): number {
     let removed = 0
     for (const c of [...cuts].sort((a, b) => a.from - b.from)) {
         if (t >= c.to) {
@@ -235,7 +284,7 @@ function toCutTime(t: number, cuts: { from: number; to: number }[]): number {
         }
     }
 
-    return Number((t - removed).toFixed(2))
+    return Number((t - removed).toFixed(digits))
 }
 
 const probe = spawnSync(
@@ -278,10 +327,13 @@ writeFileSync(
                 ...m,
                 at: toCutTime(m.at, demo.cuts),
             })),
+            cursor: cursorLog(cursorEvents, demo.startedAt, demo.cuts, config.record.cursor === 'recorded'),
         },
         null,
         2,
-    ) + '\n',
+    )
+        // One [t, x, y] per line instead of one number per line.
+        .replace(/\[\s+(-?[\d.]+),\s+(-?[\d.]+),\s+(-?[\d.]+)\s+\]/g, '[$1, $2, $3]') + '\n',
 )
 
 console.log(

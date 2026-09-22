@@ -4,12 +4,38 @@
  * draw our own: a large macOS-style black arrow that follows `mousemove`, a
  * press "squash" and an accent-coloured expanding ring on `mousedown`. Position survives
  * navigations via sessionStorage.
+ *
+ * With `report`, every move and press in the top window is also sent to the recorder
+ * (the CURSOR_BINDING binding) with the page's clock: the cursor layer is drawn from that
+ * log. With `draw: false` nothing is drawn — the video draws the cursor instead.
  */
-export function cursorOverlayScript(accent: string = '#dc2626'): string {
+export const CURSOR_BINDING = '__reelkitCursor'
+
+export interface CursorEvent {
+    type: 'move' | 'down' | 'up'
+    x: number
+    y: number
+    /** Date.now() in the page when the event was handled. */
+    t: number
+}
+
+export function cursorOverlayScript(accent: string = '#dc2626', options: { draw?: boolean; report?: boolean } = {}): string {
+    const { draw = true, report = false } = options
     return `
 (() => {
     if (window.__demoCursor) return;
     window.__demoCursor = true;
+
+    const REPORT = ${JSON.stringify(report)} && window.top === window;
+    const send = (type, e) => {
+        if (!REPORT) return;
+        const t = Date.now();
+        try { window[${JSON.stringify(CURSOR_BINDING)}]({ type, x: e.clientX, y: e.clientY, t }); } catch {}
+    };
+    document.addEventListener('mousemove', (e) => send('move', e), true);
+    document.addEventListener('mousedown', (e) => send('down', e), true);
+    document.addEventListener('mouseup', (e) => send('up', e), true);
+    if (!${JSON.stringify(draw)}) return;
 
     const SIZE = 44;          // px
     const ACCENT = ${JSON.stringify(accent)};

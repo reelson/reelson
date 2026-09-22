@@ -46,6 +46,11 @@ export interface StudioData {
     clicks: { n: number; kind: 'click' | 'type'; glide: number; at: number; until: number }[]
     markers: { label: string; at: number; recordingAt: number; used: boolean }[]
     audio: { narration: { start: number; end: number } | null; music: { start: number; end: number } | null }
+    /**
+     * 'layer': drawn by the video (size, ripple and `presses` apply); 'hidden': logged but
+     * turned off in video.json; 'filmed': part of the footage, nothing to set.
+     */
+    cursor: { state: 'layer' | 'hidden' | 'filmed'; size: number; ripple: boolean; presses: number[] }
     warnings: string[]
 }
 
@@ -124,6 +129,14 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
             narration: audio.narration ? { start: t.clipStart, end: t.clipEnd } : null,
             music: audio.music ? { start: 0, end: t.total } : null,
         },
+        cursor: t.cursor
+            ? { state: 'layer', size: t.cursor.size, ripple: t.cursor.ripple, presses: t.cursor.presses.map(([at]) => at) }
+            : {
+                  state: markers.cursor && !markers.cursor.drawn ? 'hidden' : 'filmed',
+                  size: spec.cursor ? (spec.cursor.size ?? 44) : 44,
+                  ripple: spec.cursor ? (spec.cursor.ripple ?? true) : true,
+                  presses: [],
+              },
         warnings,
     }
 }

@@ -322,6 +322,7 @@ const LANES = [
   ['handOffs', 'Hand-offs'],
   ['clicks', 'Clicks'],
   ['markers', 'Markers'],
+  ['cursor', 'Cursor'],
   ['audio', 'Audio'],
 ]
 
@@ -568,6 +569,20 @@ function renderTimeline() {
     hover(pin, `marker "${m.label}" at ${fmt(m.at)}s (recording ${fmt(m.recordingAt)}s)${m.used ? '' : ' — no callout uses it'}`)
     lanes.markers.append(pickable(pin, 'marker', i + 1, m.at))
   })
+
+  {
+    const rec = data.sections[1]
+    const c = data.cursor
+    const label = c.state === 'layer' ? `cursor layer · ${c.size}px${c.ripple ? '' : ' · no ripple'}` : c.state === 'hidden' ? 'cursor hidden' : 'cursor filmed in'
+    const node = span(el('div', `item cursor ${c.state}`, label), rec.start, rec.end)
+    hover(node, c.state === 'filmed' ? 'The cursor is part of the footage (recorded with record.cursor "recorded", or before reelkit 0.4)' : `${label} — click to change`)
+    lanes.cursor.append(pickable(node, 'cursor', 'cursor', rec.start))
+    for (const at of c.presses) {
+      const tick = el('div', 'press')
+      tick.style.left = `${at * s}px`
+      lanes.cursor.append(tick)
+    }
+  }
 
   const audio = [['narration', data.audio.narration], ['music', data.audio.music]].filter(([, a]) => a)
   audio.forEach(([name, a], i) => {
@@ -855,6 +870,22 @@ function inspect(kind, k) {
             commit(`Callout on "${m.label}"`, (sp) => sp.callouts.push({ marker: m.label, text: m.label }))
           }),
     ] }
+  }
+
+  if (kind === 'cursor') {
+    const c = data.cursor
+    if (c.state === 'filmed') {
+      return { label: 'cursor', color: 'var(--marker)', note: 'This recording has the cursor filmed in. Re-record with record.cursor "layer" (the default) to size it, restyle it or hide it here.', rows: [] }
+    }
+    const set = (label, mutate) => commit(label, (sp) => { const cur = sp.cursor && typeof sp.cursor === 'object' ? sp.cursor : {}; mutate(cur); sp.cursor = cur; if (!Object.keys(cur).length) delete sp.cursor })
+    if (c.state === 'hidden') {
+      return { label: 'cursor', color: 'var(--marker)', note: 'Hidden: video.json has "cursor": false.', rows: [], actions: [button('Show the cursor', () => commit('Cursor shown', (sp) => { delete sp.cursor }))] }
+    }
+    return { label: 'cursor', color: 'var(--click)', note: 'Drawn by the video from the recorder\u2019s log: it keeps its size during zooms.', rows: [
+      ['size', numberInput(spec.cursor?.size, (v) => set('Cursor size', (cur) => { if (v === undefined || v === 44) delete cur.size; else cur.size = clamp(v, 16, 120) }), { min: 16, max: 120, step: 2, placeholder: '44 (classic)' })],
+      ['ripple', dropdown(['on', 'off'], c.ripple ? 'on' : 'off', (v) => set(`Ripple ${v}`, (cur) => { if (v === 'on') delete cur.ripple; else cur.ripple = false }))],
+      ['presses', String(c.presses.length)],
+    ], actions: [button('Hide the cursor', () => commit('Cursor hidden', (sp) => { sp.cursor = false }), 'danger')] }
   }
 
   if (kind === 'audio') {

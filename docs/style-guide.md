@@ -24,7 +24,8 @@ accounts), but should not loosen them without a reason.
 3. **Background**: deep navy gradient with four soft glows (brand colour, blue, violet, teal)
    drifting and breathing on 4–6.5 s loops — slow but perceptible — plus a faint dot grid.
 4. **Cursor**: large black macOS-style arrow with a white outline, press squash, and a
-   brand-coloured double ring on click. It never jumps on click.
+   brand-coloured double ring on click. It never jumps on click, and it keeps its size
+   during zooms (the video draws it as a layer from the recorder's log).
 5. **Motion**: gently curved, eased mouse paths with a little tremor, landing slightly
    off-centre; typing with uneven per-key delays. Human, never slow. The recording opens with
    the cursor resting in the middle third of the screen, never jumping in from a corner.

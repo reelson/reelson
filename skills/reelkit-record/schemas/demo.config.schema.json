@@ -147,6 +147,13 @@
                     },
                     "description": "Sent with every request while recording. Default { \"X-Demo-Recording\": \"1\" }."
                 },
+                "cursor": {
+                    "enum": [
+                        "layer",
+                        "recorded"
+                    ],
+                    "description": "layer (default): the cursor is logged, not filmed, and the video draws it — same size under zooms, restyled without re-recording. recorded: drawn into the page and filmed (the pre-0.4 behaviour)."
+                },
                 "hideSelectors": {
                     "type": "array",
                     "items": {

@@ -61,6 +61,20 @@
                 }
             }
         },
+        "cursor": {
+            "description": "The cursor layer (recordings with record.cursor \"layer\", the default since reelkit 0.4): false hides it, or tune it. Has no effect when the cursor is filmed in.",
+            "anyOf": [
+                { "enum": [false] },
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "size": { "type": "number", "minimum": 16, "maximum": 120, "description": "Arrow size in recording CSS px. Default 44 (the classic macOS-style arrow)." },
+                        "ripple": { "type": "boolean", "description": "The brand-coloured ring on each press. Default true." }
+                    }
+                }
+            ]
+        },
         "zooms": {
             "type": "array",
             "description": "Zoom-ins on the framed recording. Prefer `clicks`: timing and focus are computed from the cursor so the zoom rides along with the glide.",

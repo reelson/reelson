@@ -70,6 +70,11 @@ export interface DemoConfig {
         hideSelectors: string[]
         /** Email domain for demo.persona(). Use one that resolves if a gateway validates emails. */
         personaDomain: string
+        /**
+         * 'layer': the cursor is logged, not filmed, and the video draws it (constant size under
+         * zooms, restyled without re-recording). 'recorded': drawn into the page and filmed.
+         */
+        cursor: 'layer' | 'recorded'
     }
 }
 
@@ -99,6 +104,7 @@ export const DEFAULTS: DemoConfig = {
         extraHTTPHeaders: { 'X-Demo-Recording': '1' },
         hideSelectors: [],
         personaDomain: 'example.com',
+        cursor: 'layer',
     },
 }
 

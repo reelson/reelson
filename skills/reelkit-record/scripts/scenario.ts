@@ -172,6 +172,8 @@ export interface Demo {
         card: Omit<Transition, 'at'>,
     ) => Promise<T>
     elapsedSeconds: () => number
+    /** Date.now() at the start of the recording clock (elapsedSeconds() = 0). */
+    startedAt: number
     /** Record the current time under a label (use for "callout here", "zoom here"). */
     marker: (label: string) => void
     pause: (ms: number) => Promise<void>
@@ -276,6 +278,23 @@ export function createDemo(
     }
 
     /**
+     * Clicks where the cursor landed, not at the element's exact centre (Playwright's
+     * default would snap the cursor there). If the element moved since the glide, the
+     * point is kept inside it.
+     */
+    const clickWhereLanded = async (target: Locator): Promise<void> => {
+        const el = target.first()
+        const box = await el.boundingBox()
+        if (!box) {
+            throw new Error(`click: target has no bounding box: ${target}`)
+        }
+        const inside = (v: number, size: number): number => Math.min(Math.max(v, Math.min(2, size / 2)), size - Math.min(2, size / 2))
+        const position = { x: inside(pos.x - box.x, box.width), y: inside(pos.y - box.y, box.height) }
+        pos = { x: box.x + position.x, y: box.y + position.y }
+        await el.click({ position })
+    }
+
+    /**
      * Human-like typing: uneven per-key delay, a beat after spaces and
      * punctuation, the odd longer hesitation — but never slow overall.
      */
@@ -336,6 +355,7 @@ export function createDemo(
             return result
         },
         elapsedSeconds,
+        startedAt,
         marker: (label) => {
             markers.push({ label, at: Number(elapsedSeconds().toFixed(2)) })
         },
@@ -354,28 +374,18 @@ export function createDemo(
         click: async (target, opts = {}) => {
             const move = stamp()
             await moveTo(target)
-            clicks.push({
-                move,
-                at: stamp(),
-                x: Math.round(pos.x),
-                y: Math.round(pos.y),
-                kind: 'click',
-            })
-            await target.first().click()
+            const at = stamp()
+            await clickWhereLanded(target)
+            clicks.push({ move, at, x: Math.round(pos.x), y: Math.round(pos.y), kind: 'click' })
             await page.waitForTimeout(opts.settleMs ?? 700)
         },
         type: async (target, text) => {
             const move = stamp()
             await moveTo(target)
-            const click: Click = {
-                move,
-                at: stamp(),
-                x: Math.round(pos.x),
-                y: Math.round(pos.y),
-                kind: 'type',
-            }
+            const at = stamp()
+            await clickWhereLanded(target)
+            const click: Click = { move, at, x: Math.round(pos.x), y: Math.round(pos.y), kind: 'type' }
             clicks.push(click)
-            await target.first().click()
             await typeNaturally(text)
             click.until = stamp()
             await page.waitForTimeout(300 + rng() * 200)

@@ -59,6 +59,7 @@ export function renderComposition(input: CompositionInput): string {
         sections: { intro: t.intro, recap: t.recap, outro: t.outro },
         callouts: t.callouts.map(({ source: _source, ...c }) => c),
         zooms: input.zooms,
+        cursor: t.cursor,
         transitions: t.transitions.map(({ at, gap }) => ({ at, gap })),
         chip: { steps: text.stepsChip, seconds: text.secondsChip },
     }
@@ -125,7 +126,11 @@ export function renderComposition(input: CompositionInput): string {
         AUDIO: input.narration ? renderNarration(t) : '',
         MUSIC: input.music ? renderMusic(t) : '',
         // JSON is valid JS; escaping "<" keeps "</script>" in a callout from closing the tag.
-        DEMO: JSON.stringify(demo, null, 2).replace(/</g, '\\u003c').replace(/\n/g, '\n      '),
+        DEMO: JSON.stringify(demo, null, 2)
+            // The cursor's [t, x, y] points one per line, not one number per line.
+            .replace(/\[\s+(-?[\d.]+),\s+(-?[\d.]+),\s+(-?[\d.]+)\s+\]/g, '[$1, $2, $3]')
+            .replace(/</g, '\\u003c')
+            .replace(/\n/g, '\n      '),
     })
     if (unfilled.size) {
         throw new Error(`template placeholders left unfilled: ${[...unfilled].join(', ')}`)
