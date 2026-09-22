@@ -3,5 +3,6 @@
     "timing": {
         "duration": 4.0
     },
-    "portrait": true
+    "portrait": true,
+    "square": true
 }

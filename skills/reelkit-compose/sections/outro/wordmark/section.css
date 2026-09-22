@@ -4,3 +4,8 @@
 #root.portrait #outro { padding: 0 60px; }
 #root.portrait #outro .wordmark { font-size: 150px; }
 #root.portrait #outro .brand-sub { font-size: 38px; }
+
+/* Square: a wordmark that fits the width */
+#root.square #outro { padding: 0 60px; }
+#root.square #outro .wordmark { font-size: 150px; }
+#root.square #outro .brand-sub { font-size: 38px; }

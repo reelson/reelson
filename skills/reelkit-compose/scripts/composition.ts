@@ -5,7 +5,7 @@
  */
 import type { Slot, Timeline } from './timeline.ts'
 import { round } from './timeline.ts'
-import { landscapeLayout, type Layout } from './portrait.ts'
+import { calloutsAtTop, landscapeLayout, type Layout } from './portrait.ts'
 import type { Zoom } from './zooms.ts'
 
 export interface CompositionText {
@@ -32,6 +32,8 @@ export interface SectionSource {
     assets: string
     /** Has its own portrait layout; otherwise its root gets class "band" (portrait zooms it). */
     portrait?: boolean
+    /** Has its own square layout; otherwise its root gets class "band" (square zooms it). */
+    square?: boolean
 }
 
 export interface CompositionInput {
@@ -45,9 +47,9 @@ export interface CompositionInput {
     narration: boolean
     /** assets/music.m4a exists. */
     music: boolean
-    /** Stage/frame/footage sizes and the portrait pan; default: the landscape stage. */
+    /** Stage/frame/footage sizes and the portrait camera; default: the landscape stage. */
     layout?: Layout
-    /** Overrides the timeline's cursor layer (portrait moves it into its own footage scale). */
+    /** Overrides the timeline's cursor layer (portrait and square move it into their footage scale). */
     cursor?: Timeline['cursor']
     /** The media files (default assets/recording.mp4, narration.m4a, music.m4a). */
     media?: { recording: string; narration: string; music: string }
@@ -61,6 +63,7 @@ const TRACKS: Record<Slot, number> = { intro: 3, recap: 2, outro: 3 }
 export function renderComposition(input: CompositionInput): string {
     const { timeline: t, text } = input
     const layout = input.layout ?? landscapeLayout(t)
+    const atTop = calloutsAtTop(t, layout)
 
     // Everything the stage and section scripts animate from. Times are composition seconds.
     const demo = {
@@ -69,7 +72,7 @@ export function renderComposition(input: CompositionInput): string {
         clipDuration: t.clipDuration,
         mediaStart: t.mediaStart,
         sections: { intro: t.intro, recap: t.recap, outro: t.outro },
-        callouts: t.callouts.map(({ source: _source, ...c }) => c),
+        callouts: t.callouts.map(({ source: _source, ...c }, i) => (atTop.has(i) ? { ...c, top: true } : c)),
         zooms: input.zooms,
         cursor: input.cursor !== undefined ? input.cursor : t.cursor,
         layout: { format: layout.format, stage: layout.stage, bandZoom: layout.bandZoom, camera: layout.camera },
@@ -124,7 +127,7 @@ export function renderComposition(input: CompositionInput): string {
         return {
             slot: s.slot,
             css: `      /* ── ${label} ── */\n${indent(fill(s.css, values).trim(), 6)}`,
-            html: `      <!-- ── ${label} ── -->\n${indent(band(fill(s.html, values).trim(), s.portrait), 6)}`,
+            html: `      <!-- ── ${label} ── -->\n${indent(band(fill(s.html, values).trim(), layout.format === 'landscape' || (layout.format === 'square' ? s.square : s.portrait)), 6)}`,
             js:
                 `      // ── ${label} ──\n      ;((section) => {\n${indent(fill(s.js, values).trim(), 8)}\n` +
                 `      })(DEMO.sections.${s.slot});`,
@@ -158,9 +161,12 @@ export function renderComposition(input: CompositionInput): string {
     return html
 }
 
-/** A section without its own portrait layout: mark its root so portrait zooms its 16:9 card. */
-function band(html: string, portrait = false): string {
-    return portrait ? html : html.replace(/^(<section\b[^>]*\bclass=")([^"]*)"/, '$1$2 band"')
+/**
+ * A section without its own layout for this format (portrait, square): mark its root so the
+ * stage zooms its 16:9 card to the width.
+ */
+function band(html: string, laidOut = false): string {
+    return laidOut ? html : html.replace(/^(<section\b[^>]*\bclass=")([^"]*)"/, '$1$2 band"')
 }
 
 function indent(block: string, spaces: number): string {

@@ -17,3 +17,11 @@
 #root.portrait #intro .title { font-size: 124px; max-width: 940px; }
 #root.portrait #intro .subtitle { font-size: 50px; max-width: 900px; }
 #root.portrait #intro .meta { font-size: 34px; padding: 16px 30px; }
+
+/* Square: one centred column that fits the height */
+#root.square #intro .stack { gap: 90px; padding: 0 70px; }
+#root.square #intro .wordmark { font-size: 112px; }
+#root.square #intro .brand-sub { font-size: 32px; }
+#root.square #intro .title { font-size: 88px; max-width: 940px; }
+#root.square #intro .subtitle { font-size: 38px; max-width: 900px; }
+#root.square #intro .meta { font-size: 26px; }

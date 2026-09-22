@@ -5,8 +5,8 @@
 // recording arrives from below on the same belt.
 // The from-states below ARE the poster — keep them sharp (no blur, no `later` at t=0).
 const c0 = section.start + 0.08;
-// Portrait has no room to spare at the sides: a gentler poster that still fits the width.
-const narrow = DEMO.layout.format === 'portrait';
+// Portrait and square have no room to spare at the sides: a gentler poster that still fits the width.
+const narrow = DEMO.layout.format !== 'landscape';
 const big = narrow ? 1.08 : 1.3;
 const spread = narrow ? 8 : 26;
 tl.fromTo('#intro .l', { scale: big, opacity: 0.6, x: (i, el, all) => (i - (all.length - 1) / 2) * spread },
@@ -19,7 +19,10 @@ tl.fromTo('#intro .top', { y: -24 }, { y: 0, duration: 1.3, ease: 'power2.out' }
 tl.fromTo('#intro .bottom', { y: 33 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0 + 0.15);
 tl.fromTo('#intro .subtitle', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, section.start + 0.9);
 tl.fromTo('#intro .meta', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, section.start + 1.05);
-tl.fromTo('#intro .stack', { y: -30 }, { y: -(DEMO.layout.stage.height + 70), duration: 0.9, ease: 'power3.inOut', ...later }, section.exit);
+// Off through the top of the stage (a zoomed 16:9 card, class "band", moves in its own px),
+// fading as it goes: its text never lingers over the recording riding in.
+const away = (DEMO.layout.stage.height + 70) / (document.getElementById('intro').classList.contains('band') ? DEMO.layout.bandZoom : 1);
+tl.fromTo('#intro .stack', { y: -30, opacity: 1 }, { y: -away, opacity: 0, duration: 0.9, ease: 'power3.inOut', ...later }, section.exit);
 stage.enter(section.exit, 'belt');
 
 gsap.set(['#intro .subtitle', '#intro .meta'], { opacity: 0 });

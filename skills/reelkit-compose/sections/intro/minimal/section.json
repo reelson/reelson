@@ -4,5 +4,6 @@
         "duration": 2.7,
         "exit": 2.6
     },
-    "portrait": true
+    "portrait": true,
+    "square": true
 }

@@ -70,12 +70,19 @@
                 "properties": {
                     "text": { "type": "string", "description": "Imperative step in the UI's language, ≤ 6 words." },
                     "marker": { "type": "string", "description": "markers.json label this callout is timed from." },
-                    "offset": { "type": "number", "description": "Seconds after the marker (negative: before). Keeps the callout tied to its marker when you nudge it." },
+                    "anchor": { "enum": ["step", "marker"], "description": "Where a marker callout starts: step (default) — as the step it names begins (the first glide/click after the previous marker; a marker comes right after its action); marker — on the marker itself." },
+                    "offset": { "type": "number", "description": "Seconds after that start (negative: before). Keeps the callout tied to its marker when you nudge it." },
                     "at": { "type": "number", "minimum": 0, "description": "Recording time instead of a marker (manual recordings)." },
-                    "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds on screen. Default: until the next callout, max 3 s." },
+                    "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds on screen. Default: through its step and 1.2 s past its marker (at least 3 s), ending before the next callout." },
                     "group": { "type": "string", "description": "Role tag (two-actor videos). Default: taken from the hand-off cards." }
                 }
             }
+        },
+        "formats": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["portrait", "square"] },
+            "description": "Versions every `reelkit render` adds besides the 16:9 one, as with --portrait / --square. A square version needs the square take (`reelkit record --square`); without one it is skipped with a note."
         },
         "portrait": {
             "enum": ["auto", "mobile", "desktop"],

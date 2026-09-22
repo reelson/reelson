@@ -16,3 +16,12 @@
 #root.portrait #intro .title { font-size: 116px; }
 #root.portrait #intro .subtitle { font-size: 44px; max-width: 900px; }
 #root.portrait #intro .meta { font-size: 30px; }
+
+/* Square: the same left-aligned block, narrower */
+#root.square #intro { padding: 0 80px; }
+#root.square #intro .block { gap: 28px; max-width: 920px; }
+#root.square #intro .wordmark { font-size: 48px; }
+#root.square #intro .brand-sub { font-size: 21px; }
+#root.square #intro .title { font-size: 96px; }
+#root.square #intro .subtitle { font-size: 38px; max-width: 920px; }
+#root.square #intro .meta { font-size: 26px; }

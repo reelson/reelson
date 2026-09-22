@@ -15,3 +15,11 @@
 #root.portrait #outro .title { font-size: 92px; max-width: 920px; }
 #root.portrait #outro .subtitle { font-size: 42px; max-width: 880px; }
 #root.portrait #outro .meta { font-size: 30px; }
+
+/* Square: the same card, narrower */
+#root.square #outro .card { gap: 64px; padding: 0 70px; }
+#root.square #outro .wordmark { font-size: 112px; }
+#root.square #outro .brand-sub { font-size: 30px; }
+#root.square #outro .title { font-size: 76px; max-width: 940px; }
+#root.square #outro .subtitle { font-size: 36px; max-width: 900px; }
+#root.square #outro .meta { font-size: 26px; }

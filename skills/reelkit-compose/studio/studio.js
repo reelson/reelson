@@ -837,7 +837,7 @@ function inspect(kind, k) {
     ]
     if (src.marker !== undefined) {
       rows.push(['marker', src.marker])
-      rows.push(['offset', numberInput(src.offset, (v) => commit(`Callout ${c.n} offset`, (sp) => { if (v) sp.callouts[c.source].offset = v; else delete sp.callouts[c.source].offset }), { step: 0.1, placeholder: '0 (on the marker)' })])
+      rows.push(['offset', numberInput(src.offset, (v) => commit(`Callout ${c.n} offset`, (sp) => { if (v) sp.callouts[c.source].offset = v; else delete sp.callouts[c.source].offset }), { step: 0.1, placeholder: src.anchor === 'marker' ? '0 (on the marker)' : '0 (as its step begins)' })])
     } else {
       rows.push(['at', numberInput(src.at, (v) => v !== undefined && commit(`Callout ${c.n} time`, (sp) => { sp.callouts[c.source].at = Math.max(0, v) }), { min: 0, placeholder: 'recording seconds' })])
     }
@@ -847,7 +847,12 @@ function inspect(kind, k) {
     }
     rows.push(['on screen', `${fmt(c.at)}–${fmt(c.end)}s`])
     return { label: `callout ${c.n}`, color: 'var(--callout)', rows, actions: [
-      ...(src.offset ? [button('Snap to marker', () => commit(`Callout ${c.n} back on its marker`, (sp) => { delete sp.callouts[c.source].offset }))] : []),
+      ...(src.offset ? [button(src.anchor === 'marker' ? 'Snap to marker' : 'Snap to its step', () => commit(`Callout ${c.n} back ${src.anchor === 'marker' ? 'on its marker' : 'on its step'}`, (sp) => { delete sp.callouts[c.source].offset }))] : []),
+      ...(src.marker !== undefined
+        ? [src.anchor === 'marker'
+          ? button('Start with its step', () => commit(`Callout ${c.n} starts with its step`, (sp) => { delete sp.callouts[c.source].anchor; delete sp.callouts[c.source].offset }))
+          : button('Start on the marker', () => commit(`Callout ${c.n} starts on its marker`, (sp) => { sp.callouts[c.source].anchor = 'marker'; delete sp.callouts[c.source].offset }))]
+        : []),
       button('Delete', removeSelected, 'danger'),
     ] }
   }

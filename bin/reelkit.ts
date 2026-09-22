@@ -13,12 +13,11 @@ import { doctor } from '../skills/reelkit-record/scripts/doctor.ts'
 import { build, plan, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
 import { captionCues, toSrt, toVtt } from '../skills/reelkit-compose/scripts/captions.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
-import { reframe, type Format } from '../skills/reelkit-compose/scripts/formats.ts'
 import { studio } from '../skills/reelkit-compose/scripts/studio.ts'
-import { verify } from '../skills/reelkit-compose/scripts/verify.ts'
-import { DRAFT_FLAGS, FPS, hyperframes, RENDER_FLAGS, renderIfChanged } from '../skills/reelkit-compose/scripts/hyperframes.ts'
+import { TAKES, verify } from '../skills/reelkit-compose/scripts/verify.ts'
+import { DRAFT_FLAGS, FPS, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelkit-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
-import { SLOTS, type SectionChoice } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { SLOTS, type SectionChoice, type Timeline } from '../skills/reelkit-compose/scripts/timeline.ts'
 
 const HELP = `reelkit — scripted walkthroughs → branded demo videos
 
@@ -27,27 +26,32 @@ Usage: reelkit <command> [options]
   init                          create demo.config.json in this directory
   doctor                        check the tools and that the cursor layer lines up here
   new <slug> [--url <origin>]   start <videosDir>/<slug>/scenario.ts
-  record <slug> [--headed] [--mobile]
+  record <slug> [--headed] [--mobile | --square | --all-takes]
                                 run the scenario → recording.mp4 + markers.json; --mobile: on a
-                                phone (record.mobile.device) → recording.mobile.mp4, for --portrait
+                                phone (record.mobile.device) → recording.mobile.mp4, for --portrait;
+                                --square: in a square browser (record.square.viewport) →
+                                recording.square.mp4, for --square; --all-takes: all three
   build <slug> [options]        video.json → video/ (HyperFrames project)
       --title, --subtitle, --template <name>
       --intro <name>, --recap <name|none>, --outro <name>
       --trim-start <s|auto>, --trim-end <s>, --music <file> | --no-music
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
   verify <slug...> | --all [--update]
-                                re-record headless into a scratch folder and check video.json
-                                still fits (markers, click numbers, zooms); --update keeps it
-  snapshot <slug> --at 1,3.5,8  PNG frames into video/snapshots/
+                                re-record every take (desktop, phone, square) headless into a
+                                scratch folder and check video.json still fits (markers, click
+                                numbers, zooms); --update keeps them
+  snapshot <slug> --at 1,3.5,8 [--portrait | --square]
+                                PNG frames into video/snapshots/ (…/portrait/, …/square/)
   studio <slug> [--port 4800] [--no-open]
                                 preview + edit on a timeline of every layer (saves video.json)
   preview <slug>                open the HyperFrames studio (raw composition)
   templates                     list templates and intro/recap/outro sections
-  render <slug...> | --all [--gif] [--square] [--portrait] [--draft] [--force] [--no-build]
+  render <slug...> | --all [--gif] [--square] [--portrait] [--all-formats] [--draft] [--force] [--no-build]
                                 build + render video/renders/<slug>.mp4 + .srt/.vtt captions;
                                 skips a video unchanged since its last render (--force);
-                                --gif, --square (1080², reframed), --portrait (1080x1920 phone
-                                layout: tall frame panning with the cursor) add versions;
+                                --gif, --square (1080², the square take filling the frame),
+                                --portrait (1080x1920 phone layout) add versions, --all-formats
+                                both (also video.json "formats": ["portrait", "square"]);
                                 --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
 
 <slug> is a folder under videosDir, or a path to a demo folder or its scenario.ts.
@@ -171,7 +175,8 @@ function create(argv: string[]): number {
  *   reelkit build ${slug} --title "..."
  *
  * Call demo.marker('Step text') right after the UI reaches each state worth a
- * callout (≤ 10); each becomes a timed callout in video.json.
+ * callout (≤ 10); each becomes a callout in video.json, shown from the start of
+ * that step (the first glide/click after the previous marker).
  */
 import type { Scenario } from '${importPath}'
 
@@ -197,23 +202,34 @@ function record(argv: string[]): number {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { headed: { type: 'boolean' }, mobile: { type: 'boolean' }, out: { type: 'string' } },
+        options: {
+            headed: { type: 'boolean' },
+            mobile: { type: 'boolean' },
+            square: { type: 'boolean' },
+            'all-takes': { type: 'boolean' },
+            out: { type: 'string' },
+        },
     })
-    const target = one(positionals, 'record <slug|scenario.ts> [--headed] [--mobile]')
+    if ([values.mobile, values.square, values['all-takes']].filter(Boolean).length > 1) {
+        throw new ReelkitError('record: --mobile, --square or --all-takes')
+    }
+    const target = one(positionals, 'record <slug|scenario.ts> [--headed] [--mobile | --square | --all-takes]')
     const scenario = target.endsWith('.ts') ? resolve(target) : resolve(resolveDemoDir(target, config()), 'scenario.ts')
     if (!existsSync(scenario)) {
         throw new ReelkitError(`no scenario at ${scenario} — create one with \`reelkit new\``)
     }
     const script = resolve(KIT_ROOT, 'skills/reelkit-record/scripts/record.ts')
-    const args = [
-        script,
-        scenario,
-        ...(values.headed ? ['--headed'] : []),
-        ...(values.mobile ? ['--mobile'] : []),
-        ...(values.out ? ['--out', values.out] : []),
-    ]
-
-    return spawnSync(process.execPath, args, { stdio: 'inherit' }).status ?? 1
+    const takes = values['all-takes']
+        ? TAKES.map((take) => take.flags)
+        : [[...(values.mobile ? ['--mobile'] : []), ...(values.square ? ['--square'] : [])]]
+    for (const flags of takes) {
+        const args = [script, scenario, ...(values.headed ? ['--headed'] : []), ...flags, ...(values.out ? ['--out', values.out] : [])]
+        const status = spawnSync(process.execPath, args, { stdio: 'inherit' }).status ?? 1
+        if (status !== 0) {
+            return status
+        }
+    }
+    return 0
 }
 
 function buildOptions(argv: string[]): { options: BuildOptions; positionals: string[] } {
@@ -327,15 +343,20 @@ function snapshot(argv: string[]): number {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { at: { type: 'string' } },
+        options: { at: { type: 'string' }, portrait: { type: 'boolean' }, square: { type: 'boolean' } },
     })
-    const slug = one(positionals, 'snapshot <slug> --at 1,3.5,8')
+    const slug = one(positionals, 'snapshot <slug> --at 1,3.5,8 [--portrait | --square]')
     const videoDir = builtVideoDir(slug)
+    const format = values.portrait ? 'portrait' : values.square ? 'square' : null
+    const composition = format ? `${format}.html` : 'index.html'
+    if (!existsSync(resolve(videoDir, composition))) {
+        throw new ReelkitError(`no ${composition} — ${format === 'square' ? `record the square take (\`reelkit record ${slug} --square\`) and ` : ''}run \`reelkit build ${slug}\``)
+    }
     let at = values.at
     if (at) {
         // There is no frame at the very end (it would come out blank): clamp to the last one.
-        const cfg = config()
-        const { total } = plan(resolveDemoDir(slug, cfg), cfg).timeline
+        const html = readFileSync(resolve(videoDir, composition), 'utf8')
+        const total = Number.parseFloat(/data-composition-id="main"[^>]*data-duration="([\d.]+)"/.exec(html)?.[1] ?? 'NaN')
         const last = Math.floor(total * FPS - 1e-6) / FPS
         at = at
             .split(',')
@@ -352,7 +373,8 @@ function snapshot(argv: string[]): number {
             })
             .join(',')
     }
-    return hyperframes(['snapshot', '.', ...(at ? ['--at', at] : [])], videoDir)
+    const out = resolve(videoDir, 'snapshots', ...(format ? [format] : []))
+    return hyperframesOn(videoDir, composition, ['snapshot', '.', '-o', out, ...(at ? ['--at', at] : [])])
 }
 
 async function studioCommand(argv: string[]): Promise<number> {
@@ -390,6 +412,7 @@ function render(argv: string[]): number {
             gif: { type: 'boolean' },
             square: { type: 'boolean' },
             portrait: { type: 'boolean' },
+            'all-formats': { type: 'boolean' },
             draft: { type: 'boolean' },
             force: { type: 'boolean' },
             'no-build': { type: 'boolean' },
@@ -404,41 +427,56 @@ function render(argv: string[]): number {
     let failures = 0
     for (const dir of dirs) {
         const slug = basename(dir)
-        const result = values['no-build'] ? plan(dir, cfg) : build(dir, cfg)
+        const result = values['no-build'] ? { ...plan(dir, cfg), versions: null } : build(dir, cfg)
         const videoDir = resolve(dir, 'video')
-        // Captions: the same words as the cards, timed to the video.
-        const cues = captionCues(result.timeline, result.spec.title, result.spec.subtitle)
         mkdirSync(resolve(videoDir, 'renders'), { recursive: true })
-        writeFileSync(resolve(videoDir, `renders/${slug}.srt`), toSrt(cues))
-        writeFileSync(resolve(videoDir, `renders/${slug}.vtt`), toVtt(cues))
+        // Captions: the same words as the cards, timed to each video (the phone and square
+        // takes have their own timing).
+        const captions = (timeline: Timeline, name: string) => {
+            const cues = captionCues(timeline, result.spec.title, result.spec.subtitle)
+            writeFileSync(resolve(videoDir, `renders/${name}.srt`), toSrt(cues))
+            writeFileSync(resolve(videoDir, `renders/${name}.vtt`), toVtt(cues))
+        }
+        captions(result.timeline, slug)
         const outputs: [string, string[]][] = values.draft
             ? [[`renders/${slug}.draft.mp4`, DRAFT_FLAGS]]
             : [[`renders/${slug}.mp4`, RENDER_FLAGS]]
         if (values.gif) {
             outputs.push([`renders/${slug}.gif`, [...RENDER_FLAGS, '--format', 'gif', '--fps', '15']])
         }
-        const report = (outcome: 'rendered' | 'unchanged' | 'failed', output: string): boolean => {
+        const report = (outcome: 'rendered' | 'unchanged' | 'failed', output: string): void => {
             if (outcome === 'failed') {
                 failures++
                 console.error(`reelkit: render failed for ${slug} (${output})`)
-                return false
+                return
             }
             console.log(`${outcome === 'unchanged' ? 'up to date' : 'rendered'} ${resolve(videoDir, output)}`)
-            return true
         }
-        let main = true
         for (const [output, flags] of outputs) {
-            main = report(renderIfChanged(videoDir, output, flags, values.force), output) && main
+            report(renderIfChanged(videoDir, output, flags, values.force), output)
         }
+        // Asked for here (--portrait, --square, --all-formats) or in video.json "formats".
+        const wanted = new Set(result.spec.formats ?? [])
+        const asked = (format: 'portrait' | 'square') => values[format] || values['all-formats'] || wanted.has(format)
         // Portrait: its own composition (tall frame, footage panning with the cursor).
-        if (values.portrait) {
+        if (asked('portrait')) {
+            if (result.versions) captions(result.versions.portrait, `${slug}.portrait`)
             const output = outputs[0][0].replace(/\.mp4$/, '.portrait.mp4')
             report(renderIfChanged(videoDir, output, outputs[0][1], values.force, 'portrait.html'), output)
         }
-        // Square: the finished landscape video, reframed over a blurred backdrop.
-        if (values.square && main) {
+        // Square: its own composition, from the square take (`reelkit record --square`).
+        if (asked('square')) {
             const output = outputs[0][0].replace(/\.mp4$/, '.square.mp4')
-            report(reframe(resolve(videoDir, outputs[0][0]), resolve(videoDir, output), 'square' as Format, values.force), output)
+            const hint = `run \`reelkit record ${slug} --square\` (a square browser), then render again`
+            if (existsSync(resolve(videoDir, 'square.html'))) {
+                if (result.versions?.square) captions(result.versions.square, `${slug}.square`)
+                report(renderIfChanged(videoDir, output, outputs[0][1], values.force, 'square.html'), output)
+            } else if (values.square) {
+                failures++
+                console.error(`reelkit: no square take for ${slug} — ${hint}`)
+            } else {
+                console.log(`skipped the square version of ${slug}: no square take — ${hint}`)
+            }
         }
     }
     return failures ? 1 : 0

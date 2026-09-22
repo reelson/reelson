@@ -59,7 +59,10 @@ reader could follow without the video. If you can't write the callouts, the vide
 
 **Recording**
 
-- `demo.marker()` right after the UI reaches the state, not before the click.
+- `demo.marker()` right after the UI reaches the state, not before the click. The marker ends
+  its step: the callout starts as the step begins (the first glide or click after the previous
+  marker), stays through it and a moment on its result, so the viewer reads "Type the name"
+  while the name is typed.
 - Pause 1–1.5 s after anything the viewer must read (a modal, a notification, results). The
   default settle after a click (0.7 s) is enough for menus only.
 - `demo.click` / `demo.type` / `demo.moveTo`, never raw `page.click` / `fill()`.

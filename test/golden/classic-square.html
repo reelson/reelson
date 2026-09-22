@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, height=1080" />
+    <meta name="viewport" content="width=1080, height=1080" />
     <!-- Vendored (assets/vendor/, copied by reelkit build): renders work offline and never drift. -->
     <script src="assets/vendor/gsap.min.js"></script>
     <style>
@@ -14,7 +14,7 @@
         src: url(assets/vendor/inter-latin-wght-normal.woff2) format('woff2-variations');
         unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b1220; }
+      html, body { width: 1080px; height: 1080px; overflow: hidden; background: #0b1220; }
       /* Design tokens: the ONLY things sections may assume about the stage (templates/README.md). */
       :root {
         --brand: #6366f1;          /* demo.config.json brand.color */
@@ -26,9 +26,9 @@
         --bg: #0b1220;
         --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
         --stage-h: 1080px;
-        --band-zoom: 1;  /* portrait, square: 16:9 cards zoomed to the stage width */
+        --band-zoom: 0.5625;  /* portrait, square: 16:9 cards zoomed to the stage width */
       }
-      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
+      #root { position: relative; width: 1080px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
         background: linear-gradient(160deg, #0b1220 0%, #101a2e 50%, #0c1424 100%); }
       .clip { position: absolute; inset: 0; }
 
@@ -72,7 +72,7 @@
 
       /* Framed recording */
       #screen { display: grid; place-items: center; }
-      #frame { position: relative; width: 1504px; height: 940px; border-radius: 20px; overflow: hidden;
+      #frame { position: relative; width: 1080px; height: 1080px; border-radius: 20px; overflow: hidden;
         /* No will-change here: it makes Chrome rasterize the frame once at 1x and stretch that
            bitmap during zooms, which blurs the 2x capture. */
         background: #fff; border: 1px solid rgba(255, 255, 255, 0.14);
@@ -80,7 +80,7 @@
       /* The footage: fills the frame in landscape and square; in portrait it can be bigger than
          the frame and moves with the camera (DEMO.layout.camera). Videos and the cursor layer ride inside it. */
       #footage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-      #root.portrait #footage { width: 1504px; height: 940px; }
+      #root.portrait #footage { width: 1080px; height: 1080px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
       /* Portrait (1080x1920): sections lay themselves out for the tall stage (their
@@ -103,7 +103,7 @@
       /* Square (1080x1080): the square take fills the stage edge to edge — no bands, no margin.
          The callouts ride over the bottom of the footage, as in landscape. */
       #root.square #frame { border: 0; border-radius: 0; box-shadow: none; }
-      #root.square #footage { width: 1504px; height: 940px; left: 50%; top: 50%; translate: -50% -50%; }
+      #root.square #footage { width: 1080px; height: 1080px; left: 50%; top: 50%; translate: -50% -50%; }
       #root.square .callout { bottom: 40px; font-size: 34px; max-width: 1000px; white-space: normal; text-align: left; }
       #root.square .transition-card .stack { gap: 48px; padding: 0 70px; }
       #root.square .transition-card .title { font-size: 84px; max-width: 940px; }
@@ -233,7 +233,7 @@
     </style>
   </head>
   <body>
-    <div id="root" class="landscape" data-composition-id="main" data-start="0" data-duration="26.53" data-width="1920" data-height="1080">
+    <div id="root" class="square" data-composition-id="main" data-start="0" data-duration="26.53" data-width="1080" data-height="1080">
 
       <!-- Background (untimed, always on) -->
       <div id="bg" class="clip">
@@ -360,22 +360,12 @@
             "text": "Filter what is left"
           }
         ],
-        "zooms": [
-          {
-            "at": 11.28,
-            "duration": 5.18,
-            "x": 0.399,
-            "y": 0.392,
-            "scale": 1.7,
-            "in": 0.8,
-            "out": 0.8
-          }
-        ],
+        "zooms": [],
         "cursor": {
           "size": 44,
           "ripple": true,
           "idle": 0,
-          "scale": 1.0444,
+          "scale": 1,
           "path": [
             [3, 720, 470],
             [3.65, 720.4, 418.2],
@@ -407,12 +397,12 @@
           ]
         },
         "layout": {
-          "format": "landscape",
+          "format": "square",
           "stage": {
-            "width": 1920,
+            "width": 1080,
             "height": 1080
           },
-          "bandZoom": 1,
+          "bandZoom": 0.5625,
           "camera": []
         },
         "transitions": [],

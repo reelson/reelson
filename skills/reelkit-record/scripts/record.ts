@@ -1,8 +1,8 @@
 /**
  * Records a scripted browser walkthrough of the app as a video.
  *
- *   reelkit record <slug> [--headed]
- *   node <skills>/reelkit-record/scripts/record.ts <scenario.ts> [--out <dir>] [--headed]
+ *   reelkit record <slug> [--headed] [--mobile | --square]
+ *   node <skills>/reelkit-record/scripts/record.ts <scenario.ts> [--out <dir>] [--headed] [--mobile | --square]
  *
  * The scenario module default-exports a `Scenario` (see ./scenario.ts). The
  * recorder drives it with Playwright, logs the cursor (or draws it, record.cursor
@@ -50,7 +50,10 @@ const headed = args.includes('--headed')
 // --mobile: the same scenario on a phone (record.mobile.device), next to the desktop take —
 // recording.mobile.mp4 + markers.mobile.json, for the portrait video.
 const mobile = args.includes('--mobile')
-const suffix = mobile ? '.mobile' : ''
+// --square: the same scenario in a square browser (record.square.viewport) —
+// recording.square.mp4 + markers.square.json, for the square video.
+const square = !mobile && args.includes('--square')
+const suffix = mobile ? '.mobile' : square ? '.square' : ''
 
 function flag(name: string): string | undefined {
     const i = args.indexOf(name)
@@ -75,7 +78,7 @@ if (mobile && !device) {
     console.error(`reelkit: record.mobile.device "${config.record.mobile.device}" is not a Playwright device (e.g. "Pixel 7", "iPhone 14")`)
     process.exit(1)
 }
-const viewport = device ? device.viewport : (scenario.viewport ?? config.record.viewport)
+const viewport = device ? device.viewport : square ? config.record.square.viewport : (scenario.viewport ?? config.record.viewport)
 const captureScale = device ? device.deviceScaleFactor : (scenario.deviceScaleFactor ?? config.record.deviceScaleFactor)
 const rawDir = resolve(outDir, `.raw${suffix}`)
 const screencast = config.record.capture === 'screencast'
@@ -160,7 +163,7 @@ const demo = createDemo(
     page,
     hashSeed(scenario.name),
     { domain: config.record.personaDomain, language: config.language },
-    { onSwitch: (p) => camera.push({ t: Date.now(), page: idOf(p) }), mobile },
+    { onSwitch: (p) => camera.push({ t: Date.now(), page: idOf(p) }), mobile, square },
 )
 camera.push({ t: demo.startedAt, page: 0 })
 

@@ -16,6 +16,10 @@
 export const STAGE_TIMING = {
     overlap: 0.4, // recording → recap → outro cross-fades
     calloutDuration: 3.0,
+    /** A step's callout stays this long after its marker (the result), next step permitting. */
+    calloutHold: 1.2,
+    /** The least a step's callout is up before the next step's may replace it. */
+    calloutMinimum: 1.8,
     transitionGap: 2.6, // seconds a hand-off card holds between the two belts
     belt: 0.9, // the recording's exit before a hand-off card (matches the stage)
     maxW: 1600, // the framed recording's box inside the 1920x1080 stage
@@ -111,7 +115,13 @@ export interface CursorSpec {
 export interface CalloutSpec {
     text: string
     marker?: string
-    /** Seconds after (or, negative, before) the marker. */
+    /**
+     * Where a marker callout starts: "step" (default) — as its step begins, i.e. the first
+     * glide or click after the previous marker (the marker comes after the action it names);
+     * "marker" — on the marker itself.
+     */
+    anchor?: 'step' | 'marker'
+    /** Seconds after (or, negative, before) that start. */
     offset?: number
     at?: number
     duration?: number
@@ -161,6 +171,8 @@ export interface VideoSpec {
      * (default) — the phone take when there is one.
      */
     portrait?: 'auto' | 'mobile' | 'desktop'
+    /** Versions every `reelkit render` adds besides the 16:9 one (as --portrait / --square). */
+    formats?: ('portrait' | 'square')[]
 }
 
 export interface Callout {
@@ -266,9 +278,15 @@ export function computeTimeline(
             if (c.offset !== undefined && c.marker === undefined) {
                 throw new TimelineError(`callout "${c.text}": \`offset\` shifts a \`marker\`; with \`at\`, change \`at\` instead`)
             }
-            const recordingAt =
-                c.at ?? round((markers.markers.find((m) => m.label === c.marker) as { at: number }).at + (c.offset ?? 0))
-            return { ...c, recordingAt, source }
+            if (c.anchor !== undefined && c.marker === undefined) {
+                throw new TimelineError(`callout "${c.text}": \`anchor\` needs a \`marker\``)
+            }
+            if (c.at !== undefined) {
+                return { ...c, recordingAt: c.at, shownUntil: c.at, source }
+            }
+            const marker = (markers.markers.find((m) => m.label === c.marker) as { at: number }).at
+            const start = c.anchor === 'marker' ? marker : stepStart(markers, marker, mediaStart)
+            return { ...c, recordingAt: round(start + (c.offset ?? 0)), shownUntil: marker, source }
         })
         .filter((c) => {
             const inside = c.recordingAt >= mediaStart && c.recordingAt <= mediaEnd
@@ -280,17 +298,31 @@ export function computeTimeline(
         .sort((a, b) => a.recordingAt - b.recordingAt)
 
     const transitionTimes = transitions.map((t) => t.at)
-    const callouts: Callout[] = timed.map((c, i) => {
+    // When each shows. A step that starts as the footage does waits for the recording to
+    // arrive; one that starts right after the previous (a step that was only a page load) waits
+    // until that one has been up long enough to read. An explicit `at` is kept as given.
+    const starts: number[] = []
+    timed.forEach((c, i) => {
         const at = toComposition(c.recordingAt)
-        const next = timed[i + 1]
+        starts.push(
+            c.at === undefined
+                ? round(Math.max(at, clipStart + stage.belt, i ? starts[i - 1] + stage.calloutMinimum : 0))
+                : at,
+        )
+    })
+    const callouts: Callout[] = timed.map((c, i) => {
+        const at = starts[i]
+        const next = starts[i + 1]
         const nextTransition = transitionTimes.find((t) => t > at)
         // Never overlap the next callout or a hand-off card; never outlive the recording.
         const cap = Math.min(
-            next ? toComposition(next.recordingAt) - 0.2 : Infinity,
+            next !== undefined ? next - 0.2 : Infinity,
             nextTransition !== undefined ? nextTransition - stage.belt - 0.1 : Infinity,
             clipEnd - 0.3,
         )
-        const duration = round(c.duration ?? Math.max(1, Math.min(stage.calloutDuration, cap - at)))
+        // Through its step, and a moment on its result (the marker), at least calloutDuration.
+        const wanted = Math.max(stage.calloutDuration, toComposition(c.shownUntil) - at + stage.calloutHold)
+        const duration = round(c.duration ?? Math.max(1, Math.min(wanted, cap - at)))
         if (c.duration !== undefined && at + c.duration > cap + 0.01) {
             warnings.push(`callout "${c.text}" (${c.duration}s) overlaps the next step or the end of the recording`)
         }
@@ -383,6 +415,20 @@ export function computeTimeline(
 }
 
 /** A trim edge in recording seconds (undefined: not set). */
+/**
+ * When the step that ends at `marker` began: the first glide (or click) after the previous
+ * marker — and after `from`, the trim — else the marker itself (nothing logged in between,
+ * e.g. a page load).
+ */
+export function stepStart(markers: Markers, marker: number, from: number): number {
+    const previous = Math.max(from, ...markers.markers.map((m) => m.at).filter((at) => at < marker - 1e-6))
+    const first = (markers.clicks ?? [])
+        .map((c) => c.move ?? c.at)
+        .filter((t) => t >= previous - 1e-6 && t < marker)
+        .sort((a, b) => a - b)[0]
+    return first ?? marker
+}
+
 export function resolveTrimPoint(point: TrimPoint | undefined, markers: Markers, edge: 'start' | 'end'): number | undefined {
     if (point === undefined || typeof point === 'number') {
         return point

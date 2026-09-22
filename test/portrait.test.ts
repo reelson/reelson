@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { landscapeLayout, PORTRAIT, phoneLayout, portraitLayout } from '../skills/reelkit-compose/scripts/portrait.ts'
+import { calloutsAtTop, landscapeLayout, PORTRAIT, phoneLayout, portraitLayout, SQUARE, squareLayout } from '../skills/reelkit-compose/scripts/portrait.ts'
 import { computeTimeline, type Markers } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
@@ -47,6 +47,32 @@ describe('layouts', () => {
         // After a quiet stretch it eases back to the full width.
         const end = layout.camera.at(-1)!
         assert.equal(end[1], 1)
+    })
+
+    it('moves a callout to the top while the demo works under it (landscape, square — not portrait)', () => {
+        const take = { ...fixture('todo'), viewport: { width: 1080, height: 1080 } }
+        const { timeline } = computeTimeline(take, { title: 'T', trim: { start: 2.6 } })
+        const second = timeline.callouts[1]
+        const low = { ...timeline, cursor: { ...timeline.cursor!, presses: [[second.at + 0.5, 500, 1040]] as [number, number, number][] } }
+        const none = { ...timeline, cursor: { ...timeline.cursor!, path: [], presses: [] }, focus: [] }
+        assert.deepEqual([...calloutsAtTop(none, squareLayout(none).layout)], [])
+        assert.deepEqual([...calloutsAtTop({ ...low, cursor: { ...low.cursor, path: [] } }, squareLayout(low).layout)], [1])
+        assert.deepEqual([...calloutsAtTop({ ...low, cursor: { ...low.cursor, path: [] } }, portraitLayout(low).layout)], [])
+        // Higher up the screen, it stays at the bottom.
+        const high = { ...low, cursor: { ...low.cursor, path: [], presses: [[second.at + 0.5, 500, 600]] as [number, number, number][] } }
+        assert.deepEqual([...calloutsAtTop(high, squareLayout(high).layout)], [])
+    })
+
+    it('square: the square take fills the whole stage, cursor at its scale', () => {
+        const take = { ...fixture('todo'), viewport: { width: 900, height: 900 } }
+        const { timeline } = computeTimeline(take, { title: 'T', trim: { start: 2.6 } })
+        const { layout, cursor } = squareLayout(timeline)
+        assert.equal(layout.format, 'square')
+        assert.deepEqual(layout.stage, SQUARE.stage)
+        assert.deepEqual(layout.frame, SQUARE.stage)
+        assert.deepEqual(layout.footage, SQUARE.stage)
+        assert.deepEqual(layout.camera, [])
+        assert.equal(cursor?.scale, 1.2)
     })
 
     it('shows a mobile recording whole, in a phone-shaped frame', () => {

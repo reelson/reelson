@@ -5,7 +5,8 @@
  */
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 
 export const HYPERFRAMES_VERSION = '0.8.46'
@@ -18,6 +19,28 @@ export function hyperframes(args: string[], cwd: string): number {
     })
 
     return run.status ?? 1
+}
+
+/**
+ * Runs `hyperframes <args>` on one composition of a built video (index.html, portrait.html,
+ * square.html). `check` and `snapshot` only look at index.html, and lint a project with several
+ * root compositions as an error — so the composition runs alone, as the index.html of a scratch
+ * project that links the built assets. Output paths in `args` must be absolute.
+ */
+export function hyperframesOn(videoDir: string, composition: string, args: string[]): number {
+    if (composition === 'index.html' && args[0] !== 'check') {
+        return hyperframes(args, videoDir)
+    }
+    const scratch = mkdtempSync(resolve(tmpdir(), 'reelkit-hf-'))
+    try {
+        symlinkSync(resolve(videoDir, 'assets'), resolve(scratch, 'assets'))
+        copyFileSync(resolve(videoDir, 'hyperframes.json'), resolve(scratch, 'hyperframes.json'))
+        copyFileSync(resolve(videoDir, composition), resolve(scratch, 'index.html'))
+        writeFileSync(resolve(scratch, 'package.json'), '{ "private": true }\n')
+        return hyperframes(args, scratch)
+    } finally {
+        rmSync(scratch, { recursive: true, force: true })
+    }
 }
 
 /** HyperFrames' default frame rate (renders and snapshots): a video's last frame is at total − 1/FPS. */

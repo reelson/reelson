@@ -83,6 +83,8 @@ export interface DemoConfig {
         capture: 'screencast' | 'playwright'
         /** `reelkit record --mobile`: the Playwright device the phone take uses. */
         mobile: { device: string }
+        /** `reelkit record --square`: the browser the square take uses (CSS px). */
+        square: { viewport: { width: number; height: number } }
     }
 }
 
@@ -115,6 +117,7 @@ export const DEFAULTS: DemoConfig = {
         cursor: 'layer',
         capture: 'screencast',
         mobile: { device: 'Pixel 7' },
+        square: { viewport: { width: 1080, height: 1080 } },
     },
 }
 

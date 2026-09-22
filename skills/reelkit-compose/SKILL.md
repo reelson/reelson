@@ -55,8 +55,11 @@ changing the trim or the template never re-times anything. Validated against
   takes the same anchors; leave it out to keep the recording to its end. Plain seconds work too
   but go stale when the demo is re-recorded (`reelkit check` warns).
 - **Callouts** point at a `marker` label (or give an `at` for manual recordings). Word them as
-  imperative steps in the UI's language, ≤ 6 words. `duration` is automatic (until the next
-  step, max 3 s) unless given. `offset` (seconds, may be negative) nudges a marker callout and
+  imperative steps in the UI's language, ≤ 6 words. A marker callout starts **with its step** —
+  the first glide or click after the previous marker (the marker comes after the action) — and
+  `duration` is automatic (through the step and 1.2 s past its marker, at least 3 s, ending
+  before the next callout) unless given. `"anchor": "marker"` starts it on the marker instead
+  (for a callout about the result). `offset` (seconds, may be negative) nudges it from there and
   keeps it tied to the marker, so it still follows a re-recording.
 - **Zooms**: use `clicks: [first, last]` (1-based positions in markers.json `clicks`, which
   `demo.click`/`demo.type` log). reelkit computes the focus point and the timing from the
@@ -113,8 +116,8 @@ reelkit build <slug> --title "Find a customer" --subtitle "..."   # first run cr
 reelkit build <slug>                  # regenerate video/ from video.json
 reelkit check <slug>                  # schemas, zoom timing, `hyperframes check`
 reelkit studio <slug>                 # for the user: preview + edit on a layer timeline
-reelkit snapshot <slug> --at 1.2,3.5,6,10   # PNGs in video/snapshots/ — read them
-reelkit render <slug> [--gif] [--draft]   # build + render video/renders/<slug>.mp4
+reelkit snapshot <slug> --at 1.2,3.5,6,10 [--portrait | --square]   # PNGs in video/snapshots/ — read them
+reelkit render <slug> [--gif] [--draft] [--portrait] [--square] [--all-formats]   # build + render video/renders/<slug>.mp4
 ```
 
 1. **First build.** It creates video.json with one callout per marker (the label as text), a
@@ -138,9 +141,17 @@ reelkit render <slug> [--gif] [--draft]   # build + render video/renders/<slug>.
    recording that frames each element the demo works on (with its label/row) as close as it
    fits, never cutting it — readable for compact UIs, small for wide admin screens; `"auto"`
    (default) — the phone take when there is one. The intro, recap, outro and hand-off cards use
-   their portrait layouts: stacked, with bigger type. `--square` adds a 1080x1080 version (the landscape
-   video over a blurred, darkened copy of itself). Every render also writes `renders/<slug>.srt` and `.vtt`: the title
-   and the callouts as captions, timed to the video. For a quick look, `--draft` renders
+   their portrait layouts: stacked, with bigger type. `--square` adds a 1080x1080 version (its own
+   composition, video/square.html) from the square take (`reelkit record <slug> --square`: the app
+   in a square browser, `record.square.viewport`, default 1080x1080), filling the whole frame —
+   no bands; zooms carry over while the take has the same clicks as the desktop one; the cards
+   use their square layouts. Without a square take `--square` fails and says to record one.
+   `--all-formats` adds both (a missing square take is skipped with a note), and video.json
+   `"formats": ["portrait", "square"]` makes every plain `reelkit render` add them. In landscape
+   and square the callouts sit over the bottom of the footage; one that would cover what the
+   cursor works on there moves to the top by itself. Every render also writes
+   `renders/<slug>.srt` and `.vtt` (and `<slug>.portrait.*` / `<slug>.square.*` for those
+   versions, timed to their takes): the title and the callouts as captions, timed to the video. For a quick look, `--draft` renders
    15 fps at draft quality (about 2x faster) to `renders/<slug>.draft.mp4` — or skip rendering
    altogether and scrub in `reelkit studio`.
 5. **Verify the artifact**, not the log: `ffprobe` duration ≈ the printed total; extract frames
@@ -148,7 +159,7 @@ reelkit render <slug> [--gif] [--draft]   # build + render video/renders/<slug>.
    zoom, the recap, the end. Look at them. Then report the file path.
 
 After the app changes (a release, a redesign), run `reelkit verify --all`: it re-records every
-demo into a scratch folder and reports scenarios that no longer run, callouts/trims whose
+demo — each of its takes: desktop, and the phone and square ones when it has them — into a scratch folder and reports scenarios that no longer run, callouts/trims whose
 marker is gone, and zoom/trim click numbers that now point at a different click. Fix those in
 scenario.ts / video.json, then `reelkit verify <slug> --update` keeps the new take.
 

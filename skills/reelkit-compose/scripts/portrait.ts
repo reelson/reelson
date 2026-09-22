@@ -12,14 +12,18 @@
  *     still fits, and eases between framings. It never crops the element in use; with nothing
  *     to frame it shows the full width. The frame grows and shrinks with the camera, so it
  *     never shows empty space.
- * Either way the intro, recap, outro and hand-off cards keep their 16:9 design, zoomed to the
- * stage width. Pure.
+ *
+ * Square (1080x1080) comes from a square take (`reelkit record --square`: the app in a square
+ * browser), which fills the whole stage: no bands above or below it.
+ *
+ * Sections lay themselves out per format (`#root.portrait …`, `#root.square …`); one without
+ * its own layout keeps its 16:9 card, zoomed to the stage width. Pure.
  */
 import type { Box, Timeline } from './timeline.ts'
 import { round } from './timeline.ts'
 import type { Zoom } from './zooms.ts'
 
-export type LayoutFormat = 'landscape' | 'portrait'
+export type LayoutFormat = 'landscape' | 'portrait' | 'square'
 
 export interface Layout {
     format: LayoutFormat
@@ -61,6 +65,19 @@ export function landscapeLayout(t: Timeline): Layout {
 }
 
 const bandZoom = PORTRAIT.stage.width / 1920
+
+export const SQUARE = { stage: { width: 1080, height: 1080 } }
+
+/** Square from a square take: the recording fills the stage, edge to edge. */
+export function squareLayout(t: Timeline): { layout: Layout; cursor: Timeline['cursor'] } {
+    const { width, height } = SQUARE.stage
+    const scale = Math.max(width / t.viewport.width, height / t.viewport.height)
+    const footage = { width: Math.round(t.viewport.width * scale), height: Math.round(t.viewport.height * scale) }
+    return {
+        layout: { format: 'square', stage: SQUARE.stage, frame: SQUARE.stage, footage, bandZoom: width / 1920, camera: [] },
+        cursor: t.cursor ? { ...t.cursor, scale: Math.round(scale * 10000) / 10000 } : null,
+    }
+}
 
 /** Portrait from a mobile recording: the whole phone screen in a tall frame. */
 export function phoneLayout(t: Timeline): { layout: Layout; cursor: Timeline['cursor']; zooms: Zoom[] } {
@@ -168,4 +185,34 @@ function easeInOut(u: number): number {
 
 function clamp(n: number, lo: number, hi: number): number {
     return Math.min(hi, Math.max(lo, n))
+}
+
+/** Stage px a bottom callout covers (its 34–40 px margin, a line or two of pill). */
+export const CALLOUT_BAND = 150
+
+/**
+ * Callouts that would cover what the demo works on while they show: the cursor (moves and
+ * presses) or the focused area reaching into the band a bottom callout covers. The stage
+ * shows those at the top instead. Only where callouts sit over the footage (landscape,
+ * square); portrait puts them below the frame.
+ */
+export function calloutsAtTop(t: Timeline, layout: Layout): Set<number> {
+    const top = new Set<number>()
+    if (layout.format === 'portrait') {
+        return top
+    }
+    // Where the band starts, as recording CSS px (the frame is centred on the stage).
+    const frameTop = (layout.stage.height - layout.frame.height) / 2
+    const scale = layout.footage.height / t.viewport.height
+    const footageTop = frameTop + (layout.frame.height - layout.footage.height) / 2
+    const limit = (layout.stage.height - CALLOUT_BAND - footageTop) / scale
+    const points = [...(t.cursor?.path ?? []), ...(t.cursor?.presses ?? [])]
+    t.callouts.forEach((c, i) => {
+        const during = (at: number) => at >= c.at && at <= c.at + c.duration
+        const low =
+            points.some(([at, , y]) => during(at) && y > limit) ||
+            t.focus.some((f) => during(f.at) && f.area.y + f.area.height > limit)
+        if (low) top.add(i)
+    })
+    return top
 }

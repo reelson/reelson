@@ -26,7 +26,7 @@
         --bg: #0b1220;
         --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
         --stage-h: 1080px;
-        --band-zoom: 1;  /* portrait: 16:9 cards zoomed to the stage width */
+        --band-zoom: 1;  /* portrait, square: 16:9 cards zoomed to the stage width */
       }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
         background: linear-gradient(160deg, #0b1220 0%, #101a2e 50%, #0c1424 100%); }
@@ -77,8 +77,8 @@
            bitmap during zooms, which blurs the 2x capture. */
         background: #fff; border: 1px solid rgba(255, 255, 255, 0.14);
         box-shadow: 0 50px 140px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
-      /* The footage: fills the frame in landscape; in portrait it is wider than the frame and
-         pans with the cursor (DEMO.layout.pan). Videos and the cursor layer ride inside it. */
+      /* The footage: fills the frame in landscape and square; in portrait it can be bigger than
+         the frame and moves with the camera (DEMO.layout.camera). Videos and the cursor layer ride inside it. */
       #footage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
       #root.portrait #footage { width: 1504px; height: 940px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -86,7 +86,7 @@
       /* Portrait (1080x1920): sections lay themselves out for the tall stage (their
          `#root.portrait …` rules); one without (class "band") keeps its 16:9 layout, zoomed to
          the stage width and centred. The callouts sit below the tall recording frame. */
-      #root.portrait > .band {
+      #root.portrait > .band, #root.square > .band {
         inset: auto; left: 0; top: calc((var(--stage-h) - 1080px * var(--band-zoom)) / 2 / var(--band-zoom));
         width: 1920px; height: 1080px; zoom: var(--band-zoom); }
       #root.portrait .transition-card .stack { gap: 56px; padding: 0 80px; }
@@ -99,6 +99,17 @@
       #root.portrait.phone #screen { place-items: start center; padding: 40px 0 0; }
       #root.portrait.phone .callout { bottom: 56px; }
       #root.portrait .callout { bottom: 70px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
+
+      /* Square (1080x1080): the square take fills the stage edge to edge — no bands, no margin.
+         The callouts ride over the bottom of the footage, as in landscape. */
+      #root.square #frame { border: 0; border-radius: 0; box-shadow: none; }
+      #root.square #footage { width: 1504px; height: 940px; left: 50%; top: 50%; translate: -50% -50%; }
+      #root.square .callout { bottom: 40px; font-size: 34px; max-width: 1000px; white-space: normal; text-align: left; }
+      #root.square .transition-card .stack { gap: 48px; padding: 0 70px; }
+      #root.square .transition-card .title { font-size: 84px; max-width: 940px; }
+      #root.square .transition-card .subtitle { font-size: 36px; max-width: 900px; }
+      #root.square .role { font-size: 32px; padding: 16px 30px; }
+      #root.square .roles .arrow { width: 90px; }
 
       /* Cursor layer (DEMO.cursor): the recorder logs the cursor instead of filming it, and
          the stage draws it — inside #frame, so it rides with the footage. */
@@ -132,6 +143,9 @@
         gap: 18px; padding: 18px 34px 18px 22px; border-radius: 999px; background: rgba(11, 18, 32, 0.94); color: var(--ink);
         font-size: 34px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap;
         border: 1px solid var(--line); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); opacity: 0; }
+      /* Over what the demo works on at the bottom (DEMO.callouts[].top): at the top instead */
+      .callout.top { top: 34px; bottom: auto; }
+      #root.square .callout.top { top: 40px; bottom: auto; }
       /* Who is acting (two-actor videos): a small role tag before the step text */
       .callout .who { font-size: 20px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
         padding-right: 18px; border-right: 1px solid var(--line); }
@@ -157,6 +171,14 @@
       #root.portrait #intro .title { font-size: 124px; max-width: 940px; }
       #root.portrait #intro .subtitle { font-size: 50px; max-width: 900px; }
       #root.portrait #intro .meta { font-size: 34px; padding: 16px 30px; }
+
+      /* Square: one centred column that fits the height */
+      #root.square #intro .stack { gap: 90px; padding: 0 70px; }
+      #root.square #intro .wordmark { font-size: 112px; }
+      #root.square #intro .brand-sub { font-size: 32px; }
+      #root.square #intro .title { font-size: 88px; max-width: 940px; }
+      #root.square #intro .subtitle { font-size: 38px; max-width: 900px; }
+      #root.square #intro .meta { font-size: 26px; }
 
       /* ── recap: steps ── */
       #recap { display: grid; grid-template-columns: 640px 1fr; align-items: center; column-gap: 120px; padding: 0 160px; }
@@ -185,6 +207,17 @@
       #root.portrait #recap .steps.dense .step .n { width: 50px; height: 50px; font-size: 24px; }
       #root.portrait #recap .group { font-size: 28px; margin: 26px 0 4px; }
 
+      /* Square: the title above the steps, one column */
+      #root.square #recap { grid-template-columns: 1fr; align-content: center; row-gap: 56px; padding: 0 80px; }
+      #root.square #recap .title { font-size: 100px; }
+      #root.square #recap .steps { gap: 18px; }
+      #root.square #recap .step { font-size: 36px; gap: 20px; white-space: normal; align-items: flex-start; line-height: 1.25; }
+      #root.square #recap .step .n { width: 50px; height: 50px; font-size: 24px; }
+      #root.square #recap .steps.dense { gap: 12px; }
+      #root.square #recap .steps.dense .step { font-size: 30px; }
+      #root.square #recap .steps.dense .step .n { width: 42px; height: 42px; font-size: 20px; }
+      #root.square #recap .group { font-size: 24px; margin: 18px 0 2px; }
+
       /* ── outro: wordmark ── */
       #outro { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; }
 
@@ -192,6 +225,11 @@
       #root.portrait #outro { padding: 0 60px; }
       #root.portrait #outro .wordmark { font-size: 150px; }
       #root.portrait #outro .brand-sub { font-size: 38px; }
+
+      /* Square: a wordmark that fits the width */
+      #root.square #outro { padding: 0 60px; }
+      #root.square #outro .wordmark { font-size: 150px; }
+      #root.square #outro .brand-sub { font-size: 38px; }
     </style>
   </head>
   <body>
@@ -282,12 +320,14 @@
        * seconds (intro included):
        *   sections: { intro: { start, duration, exit }, recap: { start, duration, maxSteps } | null,
        *               outro: { start, duration } }
-       *   callouts: [{ at, duration, text, group? }]   numbered step pills
+       *   callouts: [{ at, duration, text, group?, top? }]   numbered step pills (top: shown at the
+       *           top — at the bottom it would cover what the demo works on)
        *   zooms: [{ at, duration, x, y, scale, in, out, path? }]   x/y = 0..1 focus; path = [[t, x, y]] follow
        *   cursor: { size, ripple, idle, scale, path: [[t, x, y]], presses: [[t, x, y]] } | null
        *           the logged cursor (x/y recording px, × scale = frame px); null = filmed in
        *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
-       *   layout: { format, stage: { width, height }, bandZoom, camera: [[t, k, x, y, h]] }   portrait camera
+       *   layout: { format, stage: { width, height }, bandZoom, camera: [[t, k, x, y, h]] }
+       *           format: landscape | portrait | square; camera: the portrait camera (else [])
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
       const DEMO = {
@@ -313,19 +353,19 @@
         },
         "callouts": [
           {
-            "at": 5,
-            "duration": 3,
+            "at": 4,
+            "duration": 1.8,
             "text": "Open the document",
             "group": "Manager"
           },
           {
-            "at": 10,
-            "duration": 1,
+            "at": 6,
+            "duration": 5,
             "text": "Send it",
             "group": "Manager"
           },
           {
-            "at": 17.6,
+            "at": 16.6,
             "duration": 3,
             "text": "Accept it",
             "group": "Employee"
@@ -448,13 +488,13 @@
       const host = document.getElementById('callouts');
       DEMO.callouts.forEach((c, i) => {
         const el = document.createElement('div');
-        el.className = 'callout';
+        el.className = c.top ? 'callout top' : 'callout';
         el.id = 'callout-' + i;
         el.append(node('span', 'n', String(i + 1)));
         if (c.group) el.append(node('span', 'who', c.group));
         el.append(node('span', '', c.text));
         host.appendChild(el);
-        tl.fromTo(el, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', ...later }, c.at);
+        tl.fromTo(el, { opacity: 0, y: c.top ? -24 : 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', ...later }, c.at);
         tl.fromTo(el, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in', ...later }, c.at + c.duration - 0.3);
       });
 
@@ -585,8 +625,8 @@
         // recording arrives from below on the same belt.
         // The from-states below ARE the poster — keep them sharp (no blur, no `later` at t=0).
         const c0 = section.start + 0.08;
-        // Portrait has no room to spare at the sides: a gentler poster that still fits the width.
-        const narrow = DEMO.layout.format === 'portrait';
+        // Portrait and square have no room to spare at the sides: a gentler poster that still fits the width.
+        const narrow = DEMO.layout.format !== 'landscape';
         const big = narrow ? 1.08 : 1.3;
         const spread = narrow ? 8 : 26;
         tl.fromTo('#intro .l', { scale: big, opacity: 0.6, x: (i, el, all) => (i - (all.length - 1) / 2) * spread },
@@ -599,7 +639,10 @@
         tl.fromTo('#intro .bottom', { y: 33 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0 + 0.15);
         tl.fromTo('#intro .subtitle', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, section.start + 0.9);
         tl.fromTo('#intro .meta', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, section.start + 1.05);
-        tl.fromTo('#intro .stack', { y: -30 }, { y: -(DEMO.layout.stage.height + 70), duration: 0.9, ease: 'power3.inOut', ...later }, section.exit);
+        // Off through the top of the stage (a zoomed 16:9 card, class "band", moves in its own px),
+        // fading as it goes: its text never lingers over the recording riding in.
+        const away = (DEMO.layout.stage.height + 70) / (document.getElementById('intro').classList.contains('band') ? DEMO.layout.bandZoom : 1);
+        tl.fromTo('#intro .stack', { y: -30, opacity: 1 }, { y: -away, opacity: 0, duration: 0.9, ease: 'power3.inOut', ...later }, section.exit);
         stage.enter(section.exit, 'belt');
 
         gsap.set(['#intro .subtitle', '#intro .meta'], { opacity: 0 });
@@ -642,7 +685,7 @@
         // then everything zooms out gently at the very end and settles at 15% opacity: the last
         // frame still shows the wordmark (house rule), never empty.
         const b0 = section.start;
-        tl.fromTo('#outro .l', { opacity: 0, x: (i, el, all) => (i - all.length / 2) * (DEMO.layout.format === 'portrait' ? 16 : 44), scale: 0.88, filter: 'blur(12px)' },
+        tl.fromTo('#outro .l', { opacity: 0, x: (i, el, all) => (i - all.length / 2) * (DEMO.layout.format === 'landscape' ? 44 : 16), scale: 0.88, filter: 'blur(12px)' },
           { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)', duration: 1.1, ease: 'power3.out', stagger: { each: 0.06, from: 'center' }, ...later }, b0 + 0.1);
         tl.fromTo('#outro .brand-line', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.9, ease: 'power3.inOut', ...later }, b0 + 0.7);
         tl.fromTo('#outro .brand-sub', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', ...later }, b0 + 0.95);

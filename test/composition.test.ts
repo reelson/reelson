@@ -3,7 +3,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it } from 'node:test'
 import { renderComposition, type CompositionInput } from '../skills/reelkit-compose/scripts/composition.ts'
-import { portraitLayout } from '../skills/reelkit-compose/scripts/portrait.ts'
+import { portraitLayout, squareLayout } from '../skills/reelkit-compose/scripts/portrait.ts'
+import type { Markers } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { readSection, resolveDesign } from '../skills/reelkit-compose/scripts/project.ts'
 import { computeTimeline, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { compositionClicks, planZoom } from '../skills/reelkit-compose/scripts/zooms.ts'
@@ -75,12 +76,27 @@ describe('renderComposition', () => {
         golden('classic-portrait.html', renderComposition({ ...t, layout: portrait.layout, cursor: portrait.cursor, zooms: portrait.zooms }))
     })
 
-    it('zooms only sections without their own portrait layout (class "band")', () => {
+    it('renders the square take, filling the stage (square golden)', () => {
+        const markers: Markers = { ...fixture('todo'), viewport: { width: 1080, height: 1080 } }
         const t = input('todo', example)
-        const html = renderComposition(t)
-        assert.doesNotMatch(html, /class="clip band"/, 'every kit section has a portrait layout')
-        const own = { ...t, sections: t.sections.map((s) => (s.slot === 'outro' ? { ...s, portrait: false } : s)) }
-        assert.match(renderComposition(own), /<section id="outro" class="clip band"/)
+        const { timeline } = computeTimeline(markers, example, resolveDesign('classic', [], kitConfig()).timing)
+        const square = squareLayout(timeline)
+        golden('classic-square.html', renderComposition({ ...t, timeline, layout: square.layout, cursor: square.cursor, zooms: [] }))
+    })
+
+    it('zooms only sections without their own portrait / square layout (class "band")', () => {
+        const t = input('todo', example)
+        const portrait = { ...t, layout: portraitLayout(t.timeline).layout }
+        const square = { ...t, layout: squareLayout(t.timeline).layout }
+        for (const layout of [portrait, square]) {
+            assert.doesNotMatch(renderComposition(layout), /class="clip band"/, `every kit section has a ${layout.layout.format} layout`)
+        }
+        assert.doesNotMatch(renderComposition(t), /class="clip band"/, 'landscape never zooms a card')
+        const noPortrait = t.sections.map((s) => (s.slot === 'outro' ? { ...s, portrait: false } : s))
+        assert.match(renderComposition({ ...portrait, sections: noPortrait }), /<section id="outro" class="clip band"/)
+        assert.doesNotMatch(renderComposition({ ...square, sections: noPortrait }), /class="clip band"/)
+        const noSquare = t.sections.map((s) => (s.slot === 'outro' ? { ...s, square: false } : s))
+        assert.match(renderComposition({ ...square, sections: noSquare }), /<section id="outro" class="clip band"/)
     })
 
     it('places each slot in the stage and scopes it under its id', () => {

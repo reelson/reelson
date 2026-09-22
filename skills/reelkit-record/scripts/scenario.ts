@@ -219,6 +219,11 @@ export interface Demo {
      * mobile UI differs, e.g. open the menu behind the hamburger button first.
      */
     mobile: boolean
+    /**
+     * True when recording the square version (`reelkit record --square`, a square browser):
+     * branch where the narrower window changes the UI.
+     */
+    square: boolean
 }
 
 /** What the recorder tells the demo, and hears from it. */
@@ -227,6 +232,8 @@ export interface DemoHooks {
     onSwitch?: (page: Page) => void
     /** Recording on a phone (`reelkit record --mobile`). */
     mobile?: boolean
+    /** Recording in a square browser (`reelkit record --square`). */
+    square?: boolean
 }
 
 export function createDemo(
@@ -454,6 +461,7 @@ export function createDemo(
         },
         switchTo,
         mobile: hooks.mobile ?? false,
+        square: hooks.square ?? false,
         popup: async (action) => {
             const [opened] = await Promise.all([page.context().waitForEvent('page'), action()])
             await switchTo(opened)

@@ -3,7 +3,8 @@
  *   1. demo.config.json and video.json match their schemas (typos are errors);
  *   2. the timeline resolves (callouts point at real markers, trims make sense);
  *   3. every zoom rides along with the cursor (style guide #13) — see zooms.ts;
- *   4. `hyperframes check` on the built project (lint, runtime, layout, contrast).
+ *   4. `hyperframes check` on each built composition — landscape, portrait, square (lint,
+ *      runtime, layout, contrast).
  *
  *   reelkit check <slug|dir> [--no-hyperframes]
  */
@@ -11,7 +12,7 @@ import { existsSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { plan } from './build.ts'
-import { hyperframes } from './hyperframes.ts'
+import { hyperframesOn } from './hyperframes.ts'
 import { round } from './timeline.ts'
 import { checkZoom, zoomOverlaps } from './zooms.ts'
 
@@ -74,13 +75,19 @@ export function check(demoDir: string, config: LoadedConfig, options: CheckOptio
         log('! video.json changed since the last build — run `reelkit build` (render does it for you)')
     }
     if (options.hyperframes !== false) {
-        const status = hyperframes(['check', '.'], videoDir)
-        if (status !== 0) {
-            log('✗ hyperframes check failed')
-            problems++
+        for (const composition of ['index.html', 'portrait.html', 'square.html']) {
+            if (!existsSync(resolve(videoDir, composition))) {
+                continue
+            }
+            log(`\n${composition}:`)
+            if (hyperframesOn(videoDir, composition, ['check', '.']) !== 0) {
+                log(`✗ hyperframes check failed (${composition})`)
+                problems++
+            }
         }
     }
 
     log(problems ? `\n${problems} problem(s)` : '\nready to render')
     return problems
 }
+

@@ -124,7 +124,7 @@ In `stage.html` and every section file:
 | `{{BRAND_COLOR}}`, `{{BRAND_COLOR_SOFT}}`     | `brand.color`, `brand.colorSoft` (sections use `var(--brand)` instead) |
 | `{{TITLE}}`, `{{SUBTITLE}}`, `{{OUTRO_TITLE}}`| video.json title/subtitle, recap title                  |
 | `{{TOTAL}}`, `{{FRAME_W}}`, `{{FRAME_H}}`     | composition length, framed recording size in px         |
-| `{{STAGE_W}}`, `{{STAGE_H}}`, `{{FORMAT}}`, `{{FOOTAGE_W}}`, `{{FOOTAGE_H}}`, `{{BAND_ZOOM}}` | the layout (see **Layouts**): stage size, `landscape` / `portrait`, footage size, card zoom |
+| `{{STAGE_W}}`, `{{STAGE_H}}`, `{{FORMAT}}`, `{{FOOTAGE_W}}`, `{{FOOTAGE_H}}`, `{{BAND_ZOOM}}` | the layout (see **Layouts**): stage size, `landscape` / `portrait` / `square`, footage size, card zoom |
 
 Only in sections: `{{START}}`, `{{DURATION}}`, `{{TRACK}}` (put all three on the root
 `<section id="<slot>" class="clip" data-start data-duration data-track-index>`) and `{{ASSETS}}`
@@ -148,19 +148,23 @@ that gets a `cursor` must draw it — the recording has none. The classic stage 
 `#frame` (so it rides with the footage), tweens between consecutive points (≤ 0.1 s apart; a
 longer gap is a jump), counter-scales it during zooms and plays a ripple + squash per press.
 
-**Layouts.** The build fills the stage twice: `index.html` (landscape, 1920x1080) and
-`portrait.html` (1080x1920, `reelkit render --portrait`). A stage sizes itself from
-`{{STAGE_W}}`/`{{STAGE_H}}`, puts `{{FORMAT}}` (`landscape` | `portrait`) as a class on
+**Layouts.** The build fills the stage up to three times: `index.html` (landscape, 1920x1080),
+`portrait.html` (1080x1920, `reelkit render --portrait`) and, when there is a square take,
+`square.html` (1080x1080, `reelkit render --square`: the square take fills the whole stage,
+`#frame` is the stage). A stage sizes itself from
+`{{STAGE_W}}`/`{{STAGE_H}}`, puts `{{FORMAT}}` (`landscape` | `portrait` | `square`) as a class on
 `#root`, wraps `{{VIDEOS}}` and the cursor layer in `#footage` (`{{FOOTAGE_W}}`/`{{FOOTAGE_H}}`
-in portrait, filling `#frame` in landscape), tweens `#footage` along `DEMO.layout.pan`
-(`[[t, x, y]]`, px, empty in landscape), and moves the recording and hand-off cards by
+in portrait and square, filling `#frame` in landscape), moves `#footage` with the portrait
+camera `DEMO.layout.camera` (`[[t, k, x, y, h]]`, empty otherwise), and moves the recording and hand-off cards by
 `DEMO.layout.stage.height` (cards inside the band: divided by `DEMO.layout.bandZoom`). In
 portrait a section lays itself out for the tall 1080x1920 stage with `#root.portrait #<slot> …`
 rules in its section.css (stack what sits side by side, bigger type) and says so with
-`"portrait": true` in section.json — every kit section does. A section without it gets class
+`"portrait": true` in section.json — every kit section does. Square works the same way:
+`#root.square #<slot> …` rules for the 1080x1080 stage (stacked, fitting the height) and
+`"square": true`. A section without its own layout for a format gets class
 `band` and the classic stage shows its 16:9 layout zoomed to the width (`zoom: {{BAND_ZOOM}}`):
-it works, but its text is small. A script can check `DEMO.layout.format === 'portrait'` (the
-poster uses a gentler frame-0 scale there) and should move things off stage by
+it works, but its text is small and it leaves bands above and below. A script can check
+`DEMO.layout.format` (the poster uses a gentler frame-0 scale when it is not `'landscape'`) and should move things off stage by
 `DEMO.layout.stage.height`, not a fixed 1080. `#root.portrait.phone` is a phone take.
 
 Placeholders are filled in one pass, so text from video.json is never read as one. The build

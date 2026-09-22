@@ -90,7 +90,9 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 2. **Write `<videosDir>/<slug>/scenario.ts`.** `reelkit new <slug> --url <origin>` creates a
    stub with the right type import; the kit's `examples/todo-add-item/scenario.ts` is a full
    example. Rules:
-   - `demo.marker('...')` right **after** the UI reaches each state worth a callout. Labels
+   - `demo.marker('...')` right **after** the UI reaches each state worth a callout: it ends
+     that step, and its callout is shown from the step's first glide/click (after the previous
+     marker) until just past the marker — so it names what the viewer is watching. Labels
      become the callouts in video.json (and its `marker` keys) — write them in the UI language
      as imperative steps, and keep them stable: video.json refers to them by label.
      **At most 10 markers** (the recap holds ten); fold small steps together.
@@ -177,6 +179,17 @@ so video.json's callouts fit both takes; branch on `demo.mobile` where the mobil
 (`if (demo.mobile) await demo.click(page.getByRole('button', { name: 'Menu' }))`). The page
 needs `<meta name="viewport" content="width=device-width">` — without it a phone lays it out
 at desktop width, tiny.
+
+**Square take (for the square video)**: `reelkit record <slug> --square` runs the same scenario
+in a square browser (`record.square.viewport`, default 1080x1080 — shown 1:1 on the square
+stage) into `recording.square.mp4` + `markers.square.json` (commit the markers). `render --square`
+fills the whole 1080x1080 frame with it. Branch on `demo.square` where the narrower window
+changes the UI; keep the same clicks where you can, so video.json's zooms (anchored by click
+number) carry over. Go below 1080 (for bigger text) only if the app keeps its desktop layout at
+that width — many collapse their sidebar under ~1024 px, which loses the menu steps.
+
+`reelkit record <slug> --all-takes` records the desktop, phone and square takes one after the
+other; `reelkit verify` re-records and checks every take a demo has.
 
 **Pop-ups and new tabs** (target="_blank", OAuth, a PDF preview): `const tab = await
 demo.popup(() => demo.click(link))`. From then on `demo.page` and every demo action use the new

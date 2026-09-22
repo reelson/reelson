@@ -16,3 +16,11 @@
 #root.portrait #recap .chip { font-size: 38px; white-space: normal; text-align: left; padding: 14px 34px 14px 14px; }
 #root.portrait #recap .chip .n { width: 54px; height: 54px; font-size: 26px; }
 #root.portrait #recap .chip .who { font-size: 22px; }
+
+/* Square: the chips stack one per row */
+#root.square #recap { gap: 56px; padding: 0 70px; }
+#root.square #recap .title { font-size: 96px; }
+#root.square #recap .chips { flex-direction: column; align-items: center; gap: 16px; max-width: 940px; }
+#root.square #recap .chip { font-size: 32px; white-space: normal; text-align: left; padding: 12px 30px 12px 12px; }
+#root.square #recap .chip .n { width: 46px; height: 46px; font-size: 22px; }
+#root.square #recap .chip .who { font-size: 19px; }

@@ -18,3 +18,13 @@
 #root.portrait #intro .title { font-size: 100px; }
 #root.portrait #intro .subtitle { font-size: 42px; }
 #root.portrait #intro .meta { font-size: 30px; }
+
+/* Square: the brand panel on top, the text below */
+#root.square #intro { grid-template-columns: 1fr; grid-template-rows: 400px 1fr; align-items: stretch; }
+#root.square #intro .panel { gap: 20px; box-shadow: 0 30px 120px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12); }
+#root.square #intro .wordmark { font-size: 96px; }
+#root.square #intro .brand-sub { font-size: 26px; }
+#root.square #intro .text { justify-content: center; gap: 24px; padding: 0 80px 20px; }
+#root.square #intro .title { font-size: 78px; }
+#root.square #intro .subtitle { font-size: 34px; }
+#root.square #intro .meta { font-size: 24px; }

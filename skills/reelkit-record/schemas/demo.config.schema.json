@@ -164,6 +164,31 @@
                         }
                     }
                 },
+                "square": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "viewport": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "width",
+                                "height"
+                            ],
+                            "properties": {
+                                "width": {
+                                    "type": "integer",
+                                    "minimum": 320
+                                },
+                                "height": {
+                                    "type": "integer",
+                                    "minimum": 320
+                                }
+                            },
+                            "description": "Browser size (CSS px) for `reelkit record --square` (the take behind the square video). Default 1080x1080: shown at 1:1 on the 1080x1080 stage. Keep it square; go smaller (e.g. 900x900) for bigger text if the app still shows its desktop layout at that width."
+                        }
+                    }
+                },
                 "capture": {
                     "enum": [
                         "screencast",

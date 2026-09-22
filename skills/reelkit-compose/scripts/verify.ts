@@ -6,7 +6,9 @@
  * markers.json stay untouched — and checks the new take against video.json: the scenario
  * ran to the end, every marker a callout or trim uses still exists, every click a zoom or
  * trim refers to by number is still the same kind of click in the same place, and the plan
- * (timeline, zoom checks) still holds. `--update` puts a take that passes in place.
+ * (timeline, zoom checks) still holds. `--update` puts a take that passes in place. A demo
+ * with a phone or square take (markers.mobile.json, markers.square.json) gets those
+ * re-recorded and checked too.
  *
  *   reelkit verify <slug...> | --all [--update]
  */
@@ -102,41 +104,76 @@ export function compareRecordings(before: Markers | null, after: Markers, spec: 
 }
 
 export interface VerifyOptions {
-    /** Put a take that passes in place of the committed recording + markers.json. */
+    /** Put a take that passes in place of the committed recording + markers. */
     update?: boolean
     log?: (line: string) => void
 }
 
-/** Re-records one demo and checks it; returns the number of problems. */
+/** The recordings a demo can have: the desktop one, and the takes behind portrait and square. */
+export const TAKES = [
+    { name: 'desktop', suffix: '', flags: [] as string[] },
+    { name: 'phone', suffix: '.mobile', flags: ['--mobile'] },
+    { name: 'square', suffix: '.square', flags: ['--square'] },
+] as const
+export type Take = (typeof TAKES)[number]
+
+/** The takes this demo has (its markers are there): desktop always, phone and square if recorded. */
+export function takesOf(demoDir: string): Take[] {
+    return TAKES.filter((take) => take.suffix === '' || existsSync(resolve(demoDir, `markers${take.suffix}.json`)))
+}
+
+/** Re-records each take of one demo and checks it; returns the number of problems. */
 export function verify(demoDir: string, config: LoadedConfig, options: VerifyOptions = {}): number {
     const log = options.log ?? console.log
-    const slug = basename(demoDir)
     const scenario = resolve(demoDir, 'scenario.ts')
     if (!existsSync(scenario)) {
         throw new ReelkitError(`${demoDir} has no scenario.ts`)
     }
-    const take = mkdtempSync(join(tmpdir(), `reelkit-verify-${slug}-`))
+    let problems = 0
+    for (const take of takesOf(demoDir)) {
+        problems += verifyTake(demoDir, scenario, take, config, options, log)
+    }
+    return problems
+}
+
+function verifyTake(demoDir: string, scenario: string, take: Take, config: LoadedConfig, options: VerifyOptions, log: (line: string) => void): number {
+    const slug = take.suffix ? `${basename(demoDir)} (${take.name})` : basename(demoDir)
+    const recording = `recording${take.suffix}.mp4`
+    const markersFile = `markers${take.suffix}.json`
+    const dir = mkdtempSync(join(tmpdir(), `reelkit-verify-${basename(demoDir)}${take.suffix}-`))
     log(`${slug}: recording…`)
-    const run = spawnSync(process.execPath, [resolve(KIT_ROOT, 'skills/reelkit-record/scripts/record.ts'), scenario, '--out', take], {
+    const run = spawnSync(process.execPath, [resolve(KIT_ROOT, 'skills/reelkit-record/scripts/record.ts'), scenario, '--out', dir, ...take.flags], {
         encoding: 'utf8',
     })
     if (run.status !== 0) {
         const output = `${run.stdout}${run.stderr}`.trim().split('\n').filter((l) => !/^\s+at /.test(l))
         log(`✗ ${slug}: the scenario failed`)
         output.slice(-8).forEach((line) => log(`    ${line}`))
-        const failed = resolve(take, 'recording.failed.mp4')
+        const failed = resolve(dir, `recording${take.suffix}.failed.mp4`)
         if (existsSync(failed)) log(`    partial take: ${failed}`)
         return 1
     }
 
-    const after = JSON.parse(readFileSync(resolve(take, 'markers.json'), 'utf8')) as Markers
-    const before = existsSync(resolve(demoDir, 'markers.json')) ? readMarkers(demoDir) : null
-    const spec = readVideoSpec(demoDir)
+    const after = JSON.parse(readFileSync(resolve(dir, markersFile), 'utf8')) as Markers
+    const before = existsSync(resolve(demoDir, markersFile)) ? (JSON.parse(readFileSync(resolve(demoDir, markersFile), 'utf8')) as Markers) : null
+    const video = readVideoSpec(demoDir)
     const problems: string[] = []
     const notes: string[] = []
-    if (!spec) {
+    if (!video) {
         notes.push('no video.json yet — nothing to check against (run `reelkit build`)')
     } else {
+        // As the build uses it: the phone take never zooms; the square one zooms while its clicks
+        // match the desktop take's (video.json numbers them by the desktop clicks).
+        let spec = video
+        if (take.name === 'phone') {
+            spec = { ...video, zooms: [] }
+        } else if (take.name === 'square' && video.zooms?.length) {
+            const desktop = existsSync(resolve(demoDir, 'markers.json')) ? readMarkers(demoDir) : null
+            if (desktop && (desktop.clicks?.length ?? 0) !== (after.clicks?.length ?? 0)) {
+                notes.push(`${count(after.clicks?.length ?? 0, 'click')}, the desktop take ${desktop.clicks?.length ?? 0} — the square video leaves out the zooms`)
+                spec = { ...video, zooms: [] }
+            }
+        }
         const drift = compareRecordings(before, after, spec)
         problems.push(...drift.problems)
         notes.push(...drift.notes)
@@ -159,13 +196,13 @@ export function verify(demoDir: string, config: LoadedConfig, options: VerifyOpt
     if (!problems.length) {
         log(`✓ ${slug}: records fine and video.json still fits (${after.durationSeconds.toFixed(1)}s, ${count(after.markers.length, 'marker')}, ${count(after.clicks?.length ?? 0, 'click')})`)
         if (options.update) {
-            copyFileSync(resolve(take, 'recording.mp4'), resolve(demoDir, 'recording.mp4'))
-            copyFileSync(resolve(take, 'markers.json'), resolve(demoDir, 'markers.json'))
-            log(`  updated ${slug}/recording.mp4 and markers.json — rebuild to use them`)
+            copyFileSync(resolve(dir, recording), resolve(demoDir, recording))
+            copyFileSync(resolve(dir, markersFile), resolve(demoDir, markersFile))
+            log(`  updated ${basename(demoDir)}/${recording} and ${markersFile} — rebuild to use them`)
         }
-        rmSync(take, { recursive: true, force: true })
+        rmSync(dir, { recursive: true, force: true })
     } else {
-        log(`  new take kept for a look: ${take}`)
+        log(`  new take kept for a look: ${dir}`)
     }
 
     return problems.length

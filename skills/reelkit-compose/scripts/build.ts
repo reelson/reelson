@@ -16,11 +16,11 @@
  * faded; cached between builds).
  */
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, extname, resolve } from 'node:path'
 import { countLabel, fromRoot, type LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { renderComposition, type CompositionInput } from './composition.ts'
-import { phoneLayout, portraitLayout } from './portrait.ts'
+import { phoneLayout, portraitLayout, squareLayout } from './portrait.ts'
 import { HYPERFRAMES_VERSION, RENDER_FLAGS } from './hyperframes.ts'
 import {
     readMarkers,
@@ -116,7 +116,12 @@ export function planSpec(demoDir: string, spec: VideoSpec, markers: Markers, con
     return { spec, markers, design, timeline, clicks, zooms, warnings }
 }
 
-export function build(demoDir: string, config: LoadedConfig, options: BuildOptions = {}): Plan {
+/** What `build` made: the plan, plus the timelines of the portrait and square versions (their takes' own timing). */
+export interface Built extends Plan {
+    versions: { portrait: Timeline; square: Timeline | null }
+}
+
+export function build(demoDir: string, config: LoadedConfig, options: BuildOptions = {}): Built {
     const log = options.log ?? console.log
     const recording = resolve(demoDir, 'recording.mp4')
     if (!existsSync(recording)) {
@@ -177,7 +182,15 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     writeFileSync(resolve(videoDir, 'index.html'), html)
     // The same video for phones (`reelkit render --portrait`): from the phone take when there
     // is one (video.json "portrait"), else a camera framing each element on this recording.
-    writeFileSync(resolve(videoDir, 'portrait.html'), renderPortrait(demoDir, config, spec, composition, result, assets, log))
+    const portrait = renderPortrait(demoDir, config, spec, composition, result, assets, log)
+    writeFileSync(resolve(videoDir, 'portrait.html'), portrait.html)
+    // The square video (`reelkit render --square`): only from a square take, which fills it.
+    const square = renderSquare(demoDir, config, spec, composition, result, assets, log)
+    if (square) {
+        writeFileSync(resolve(videoDir, 'square.html'), square.html)
+    } else {
+        rmSync(resolve(videoDir, 'square.html'), { force: true })
+    }
     writeFileSync(
         resolve(videoDir, 'hyperframes.json'),
         JSON.stringify(
@@ -222,7 +235,7 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
         log(`  warning: ${w}`)
     }
 
-    return result
+    return { ...result, versions: { portrait: portrait.timeline, square: square?.timeline ?? null } }
 }
 
 /** The portrait composition (see `build`). */
@@ -234,7 +247,7 @@ function renderPortrait(
     result: Omit<Plan, 'created'>,
     assets: string,
     log: (line: string) => void,
-): string {
+): { html: string; timeline: Timeline } {
     const source = spec.portrait ?? 'auto'
     const phoneTake = resolve(demoDir, 'recording.mobile.mp4')
     const phoneMarkers = resolve(demoDir, 'markers.mobile.json')
@@ -253,7 +266,7 @@ function renderPortrait(
             const music = renderMusicBed(spec, config, phone.timeline, resolve(assets, 'music.mobile.m4a'), narration, () => {})
             const layout = phoneLayout(phone.timeline)
             log(`  portrait: the phone take (${markers.viewport.width}x${markers.viewport.height}), ${phone.timeline.total}s`)
-            return renderComposition({
+            const html = renderComposition({
                 ...composition,
                 timeline: phone.timeline,
                 layout: layout.layout,
@@ -268,12 +281,69 @@ function renderPortrait(
                     secondsChip: countLabel(Math.round(phone.timeline.total), config.strings.secondsLabel, config.language),
                 },
             })
+            return { html, timeline: phone.timeline }
         } catch (error) {
             log(`  warning: the phone take does not fit video.json (${(error as Error).message}) — portrait uses the desktop camera`)
         }
     }
     const camera = portraitLayout(result.timeline)
-    return renderComposition({ ...composition, layout: camera.layout, cursor: camera.cursor, zooms: camera.zooms })
+    return { html: renderComposition({ ...composition, layout: camera.layout, cursor: camera.cursor, zooms: camera.zooms }), timeline: result.timeline }
+}
+
+/**
+ * The square composition (see `build`), or null without a square take (or one that no longer
+ * fits video.json).
+ */
+function renderSquare(
+    demoDir: string,
+    config: LoadedConfig,
+    spec: VideoSpec,
+    composition: CompositionInput,
+    result: Omit<Plan, 'created'>,
+    assets: string,
+    log: (line: string) => void,
+): { html: string; timeline: Timeline } | null {
+    const take = resolve(demoDir, 'recording.square.mp4')
+    const takeMarkers = resolve(demoDir, 'markers.square.json')
+    if (!existsSync(take) || !existsSync(takeMarkers)) {
+        return null
+    }
+    try {
+        // The same video.json on the square take: callouts follow their markers. Zooms are
+        // anchored by click number, so they carry over only while the clicks match.
+        const markers = JSON.parse(readFileSync(takeMarkers, 'utf8')) as Markers
+        const clicks = markers.clicks?.length ?? 0
+        const desktopClicks = result.markers.clicks?.length ?? 0
+        const sameClicks = clicks === desktopClicks
+        if (!sameClicks && spec.zooms?.length) {
+            log(`  warning: the square take has ${clicks} click(s), the desktop take ${desktopClicks} — the square video leaves out the zooms`)
+        }
+        const plan = planSpec(demoDir, sameClicks ? spec : { ...spec, zooms: [] }, markers, config)
+        copyIfChanged(take, resolve(assets, 'recording.square.mp4'))
+        const narration = extractNarration(take, resolve(assets, 'narration.square.m4a'), plan.timeline, () => {})
+        const music = renderMusicBed(spec, config, plan.timeline, resolve(assets, 'music.square.m4a'), narration, () => {})
+        const layout = squareLayout(plan.timeline)
+        log(`  square: the square take (${markers.viewport.width}x${markers.viewport.height}), ${plan.timeline.total}s`)
+        const html = renderComposition({
+            ...composition,
+            timeline: plan.timeline,
+            layout: layout.layout,
+            cursor: layout.cursor,
+            zooms: plan.zooms,
+            narration,
+            music,
+            media: { recording: 'assets/recording.square.mp4', narration: 'assets/narration.square.m4a', music: 'assets/music.square.m4a' },
+            text: {
+                ...composition.text,
+                stepsChip: countLabel(plan.timeline.callouts.length, config.strings.stepsLabel, config.language),
+                secondsChip: countLabel(Math.round(plan.timeline.total), config.strings.secondsLabel, config.language),
+            },
+        })
+        return { html, timeline: plan.timeline }
+    } catch (error) {
+        log(`  warning: the square take does not fit video.json (${(error as Error).message}) — re-record it: \`reelkit record ${basename(demoDir)} --square\``)
+        return null
+    }
 }
 
 function applyOptions(spec: VideoSpec, o: BuildOptions): void {
@@ -299,7 +369,7 @@ export function serializeVideoSpec(spec: VideoSpec, demoDir: string, config: Loa
 /** video.json in a stable, readable key order, without `$schema` (re-added on write). */
 function withoutSchema(spec: VideoSpec): VideoSpec {
     const { $schema: _ignored, ...rest } = spec as VideoSpec & { $schema?: string }
-    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms', 'cursor', 'portrait']
+    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms', 'cursor', 'portrait', 'formats']
     const known = order.filter((k) => rest[k] !== undefined).map((k) => [k, rest[k]])
     const others = Object.entries(rest).filter(([k]) => !order.includes(k as keyof VideoSpec))
 

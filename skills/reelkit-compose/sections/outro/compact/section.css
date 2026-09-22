@@ -13,3 +13,11 @@
 #root.portrait #outro .right { align-items: center; max-width: 920px; }
 #root.portrait #outro .title { font-size: 64px; }
 #root.portrait #outro .brand-sub { font-size: 30px; }
+
+/* Square: wordmark, a short line, then the title — stacked */
+#root.square #outro .row { flex-direction: column; gap: 40px; padding: 0 70px; text-align: center; }
+#root.square #outro .wordmark { font-size: 120px; }
+#root.square #outro .divider { width: 160px; height: 6px; background: linear-gradient(90deg, var(--brand), var(--brand-soft)); }
+#root.square #outro .right { align-items: center; max-width: 940px; }
+#root.square #outro .title { font-size: 58px; }
+#root.square #outro .brand-sub { font-size: 26px; }

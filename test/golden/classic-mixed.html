@@ -26,7 +26,7 @@
         --bg: #0b1220;
         --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
         --stage-h: 1080px;
-        --band-zoom: 1;  /* portrait: 16:9 cards zoomed to the stage width */
+        --band-zoom: 1;  /* portrait, square: 16:9 cards zoomed to the stage width */
       }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
         background: linear-gradient(160deg, #0b1220 0%, #101a2e 50%, #0c1424 100%); }
@@ -77,8 +77,8 @@
            bitmap during zooms, which blurs the 2x capture. */
         background: #fff; border: 1px solid rgba(255, 255, 255, 0.14);
         box-shadow: 0 50px 140px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
-      /* The footage: fills the frame in landscape; in portrait it is wider than the frame and
-         pans with the cursor (DEMO.layout.pan). Videos and the cursor layer ride inside it. */
+      /* The footage: fills the frame in landscape and square; in portrait it can be bigger than
+         the frame and moves with the camera (DEMO.layout.camera). Videos and the cursor layer ride inside it. */
       #footage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
       #root.portrait #footage { width: 1504px; height: 940px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -86,7 +86,7 @@
       /* Portrait (1080x1920): sections lay themselves out for the tall stage (their
          `#root.portrait …` rules); one without (class "band") keeps its 16:9 layout, zoomed to
          the stage width and centred. The callouts sit below the tall recording frame. */
-      #root.portrait > .band {
+      #root.portrait > .band, #root.square > .band {
         inset: auto; left: 0; top: calc((var(--stage-h) - 1080px * var(--band-zoom)) / 2 / var(--band-zoom));
         width: 1920px; height: 1080px; zoom: var(--band-zoom); }
       #root.portrait .transition-card .stack { gap: 56px; padding: 0 80px; }
@@ -99,6 +99,17 @@
       #root.portrait.phone #screen { place-items: start center; padding: 40px 0 0; }
       #root.portrait.phone .callout { bottom: 56px; }
       #root.portrait .callout { bottom: 70px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
+
+      /* Square (1080x1080): the square take fills the stage edge to edge — no bands, no margin.
+         The callouts ride over the bottom of the footage, as in landscape. */
+      #root.square #frame { border: 0; border-radius: 0; box-shadow: none; }
+      #root.square #footage { width: 1504px; height: 940px; left: 50%; top: 50%; translate: -50% -50%; }
+      #root.square .callout { bottom: 40px; font-size: 34px; max-width: 1000px; white-space: normal; text-align: left; }
+      #root.square .transition-card .stack { gap: 48px; padding: 0 70px; }
+      #root.square .transition-card .title { font-size: 84px; max-width: 940px; }
+      #root.square .transition-card .subtitle { font-size: 36px; max-width: 900px; }
+      #root.square .role { font-size: 32px; padding: 16px 30px; }
+      #root.square .roles .arrow { width: 90px; }
 
       /* Cursor layer (DEMO.cursor): the recorder logs the cursor instead of filming it, and
          the stage draws it — inside #frame, so it rides with the footage. */
@@ -132,6 +143,9 @@
         gap: 18px; padding: 18px 34px 18px 22px; border-radius: 999px; background: rgba(11, 18, 32, 0.94); color: var(--ink);
         font-size: 34px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap;
         border: 1px solid var(--line); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); opacity: 0; }
+      /* Over what the demo works on at the bottom (DEMO.callouts[].top): at the top instead */
+      .callout.top { top: 34px; bottom: auto; }
+      #root.square .callout.top { top: 40px; bottom: auto; }
       /* Who is acting (two-actor videos): a small role tag before the step text */
       .callout .who { font-size: 20px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
         padding-right: 18px; border-right: 1px solid var(--line); }
@@ -159,6 +173,16 @@
       #root.portrait #intro .subtitle { font-size: 42px; }
       #root.portrait #intro .meta { font-size: 30px; }
 
+      /* Square: the brand panel on top, the text below */
+      #root.square #intro { grid-template-columns: 1fr; grid-template-rows: 400px 1fr; align-items: stretch; }
+      #root.square #intro .panel { gap: 20px; box-shadow: 0 30px 120px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12); }
+      #root.square #intro .wordmark { font-size: 96px; }
+      #root.square #intro .brand-sub { font-size: 26px; }
+      #root.square #intro .text { justify-content: center; gap: 24px; padding: 0 80px 20px; }
+      #root.square #intro .title { font-size: 78px; }
+      #root.square #intro .subtitle { font-size: 34px; }
+      #root.square #intro .meta { font-size: 24px; }
+
       /* ── recap: compact ── */
       #recap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 64px; padding: 0 140px; text-align: center; }
       #recap .head { display: flex; flex-direction: column; align-items: center; gap: 22px; }
@@ -179,6 +203,14 @@
       #root.portrait #recap .chip .n { width: 54px; height: 54px; font-size: 26px; }
       #root.portrait #recap .chip .who { font-size: 22px; }
 
+      /* Square: the chips stack one per row */
+      #root.square #recap { gap: 56px; padding: 0 70px; }
+      #root.square #recap .title { font-size: 96px; }
+      #root.square #recap .chips { flex-direction: column; align-items: center; gap: 16px; max-width: 940px; }
+      #root.square #recap .chip { font-size: 32px; white-space: normal; text-align: left; padding: 12px 30px 12px 12px; }
+      #root.square #recap .chip .n { width: 46px; height: 46px; font-size: 22px; }
+      #root.square #recap .chip .who { font-size: 19px; }
+
       /* ── outro: endcard ── */
       #outro { display: grid; place-items: center; }
       #outro .card { display: flex; flex-direction: column; align-items: center; gap: 72px; text-align: center; will-change: transform; }
@@ -197,6 +229,14 @@
       #root.portrait #outro .title { font-size: 92px; max-width: 920px; }
       #root.portrait #outro .subtitle { font-size: 42px; max-width: 880px; }
       #root.portrait #outro .meta { font-size: 30px; }
+
+      /* Square: the same card, narrower */
+      #root.square #outro .card { gap: 64px; padding: 0 70px; }
+      #root.square #outro .wordmark { font-size: 112px; }
+      #root.square #outro .brand-sub { font-size: 30px; }
+      #root.square #outro .title { font-size: 76px; max-width: 940px; }
+      #root.square #outro .subtitle { font-size: 36px; max-width: 900px; }
+      #root.square #outro .meta { font-size: 26px; }
     </style>
   </head>
   <body>
@@ -280,12 +320,14 @@
        * seconds (intro included):
        *   sections: { intro: { start, duration, exit }, recap: { start, duration, maxSteps } | null,
        *               outro: { start, duration } }
-       *   callouts: [{ at, duration, text, group? }]   numbered step pills
+       *   callouts: [{ at, duration, text, group?, top? }]   numbered step pills (top: shown at the
+       *           top — at the bottom it would cover what the demo works on)
        *   zooms: [{ at, duration, x, y, scale, in, out, path? }]   x/y = 0..1 focus; path = [[t, x, y]] follow
        *   cursor: { size, ripple, idle, scale, path: [[t, x, y]], presses: [[t, x, y]] } | null
        *           the logged cursor (x/y recording px, × scale = frame px); null = filmed in
        *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
-       *   layout: { format, stage: { width, height }, bandZoom, camera: [[t, k, x, y, h]] }   portrait camera
+       *   layout: { format, stage: { width, height }, bandZoom, camera: [[t, k, x, y, h]] }
+       *           format: landscape | portrait | square; camera: the portrait camera (else [])
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
       const DEMO = {
@@ -311,23 +353,23 @@
         },
         "callouts": [
           {
-            "at": 7.14,
-            "duration": 3,
+            "at": 3.9,
+            "duration": 3.04,
             "text": "Type a task and press Enter"
+          },
+          {
+            "at": 7.14,
+            "duration": 4.23,
+            "text": "Add as many as you need"
           },
           {
             "at": 11.57,
             "duration": 2.04,
-            "text": "Add as many as you need"
-          },
-          {
-            "at": 13.81,
-            "duration": 2.36,
             "text": "Tick a task when it is done"
           },
           {
-            "at": 16.37,
-            "duration": 3,
+            "at": 13.81,
+            "duration": 3.76,
             "text": "Filter what is left"
           }
         ],
@@ -487,13 +529,13 @@
       const host = document.getElementById('callouts');
       DEMO.callouts.forEach((c, i) => {
         const el = document.createElement('div');
-        el.className = 'callout';
+        el.className = c.top ? 'callout top' : 'callout';
         el.id = 'callout-' + i;
         el.append(node('span', 'n', String(i + 1)));
         if (c.group) el.append(node('span', 'who', c.group));
         el.append(node('span', '', c.text));
         host.appendChild(el);
-        tl.fromTo(el, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', ...later }, c.at);
+        tl.fromTo(el, { opacity: 0, y: c.top ? -24 : 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', ...later }, c.at);
         tl.fromTo(el, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in', ...later }, c.at + c.duration - 0.3);
       });
 

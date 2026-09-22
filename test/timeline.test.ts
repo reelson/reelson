@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { computeTimeline, round, suggestTrimStart, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { computeTimeline, round, stepStart, suggestTrimStart, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
 const spec = (extra: Partial<VideoSpec> = {}): VideoSpec => ({ title: 'T', trim: { start: 1 }, ...extra })
@@ -56,9 +56,39 @@ describe('computeTimeline', () => {
             t.callouts.map((c) => [c.text, c.at, c.duration]),
             [
                 ['Manual', 7, 2],
-                ['Filter', t.toComposition(15.97), 3],
+                // From its step (the glide at 13.41) through 1.2 s past its marker (15.97).
+                ['Filter', t.toComposition(13.41), 3.76],
             ],
         )
+    })
+
+    it('starts each marker callout as its step begins, not after it (anchor "marker": on the marker)', () => {
+        const { timeline: t } = computeTimeline(fixture('todo'), spec())
+        // Each marker follows its action: the callout starts with the glide after the previous marker.
+        assert.deepEqual(t.callouts.map((c) => c.at), [3.13, 6.74, 11.17, 13.41].map(t.toComposition))
+        t.callouts.slice(0, -1).forEach((c, i) => {
+            assert.ok(round(c.at + c.duration) <= round(t.callouts[i + 1].at - 0.2), `callout ${i + 1} ends before the next step`)
+        })
+        const onMarker = computeTimeline(fixture('todo'), spec({ callouts: [{ marker: 'Filter what is left', text: 'x', anchor: 'marker' }] })).timeline
+        assert.equal(onMarker.callouts[0].at, t.toComposition(15.97))
+        // Nothing logged between two markers (a page load): the callout stays on its marker.
+        assert.equal(stepStart({ ...fixture('todo'), clicks: [] }, 11.17, 0), 11.17)
+        // The first step starts no earlier than the trim.
+        assert.equal(stepStart(fixture('todo'), 6.74, 3.5), 6.74)
+        assert.throws(() => computeTimeline(fixture('todo'), spec({ callouts: [{ at: 5, anchor: 'marker', text: 'x' }] })), /`anchor` needs a `marker`/)
+    })
+
+    it('gives a step that was only a page load time to be read before the next one', () => {
+        // "Open the list" is a page load; the next step's glide starts right after it.
+        const m = {
+            ...fixture('todo'),
+            markers: [{ label: 'Open the list', at: 5 }, { label: 'Search', at: 9 }],
+            clicks: [{ move: 5.05, at: 5.6, x: 100, y: 100, kind: 'type' as const }],
+        }
+        const { timeline: t } = computeTimeline(m, spec({ trim: { start: 4.5 }, callouts: undefined }))
+        const [open, search] = t.callouts
+        assert.equal(search.at, round(open.at + TIMING_DEFAULTS.stage.calloutMinimum))
+        assert.ok(open.at + open.duration <= search.at - 0.2 + 1e-9)
     })
 
     it('drops callouts outside the trim window with a warning', () => {
@@ -134,7 +164,8 @@ describe('hand-offs (demo.transition)', () => {
 
     it('ends a callout before the recording leaves for the card', () => {
         const sendIt = t.callouts.find((c) => c.text === 'Send it')
-        assert.deepEqual(sendIt && [sendIt.at, sendIt.duration], [10, 1])
+        // Its step starts at the glide at 4 s (composition 6); the card is fully in at 12.
+        assert.deepEqual(sendIt && [sendIt.at, sendIt.duration], [6, 5])
     })
 
     it('tags steps with the acting role', () => {
