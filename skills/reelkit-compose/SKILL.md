@@ -51,13 +51,16 @@ changing the trim or the template never re-times anything. Validated against
 
 - **Callouts** point at a `marker` label (or give an `at` for manual recordings). Word them as
   imperative steps in the UI's language, ≤ 6 words. `duration` is automatic (until the next
-  step, max 3 s) unless given.
+  step, max 3 s) unless given. `offset` (seconds, may be negative) nudges a marker callout and
+  keeps it tied to the marker, so it still follows a re-recording.
 - **Zooms**: use `clicks: [first, last]` (1-based positions in markers.json `clicks`, which
   `demo.click`/`demo.type` log). reelkit computes the focus point and the timing from the
   cursor — in with the glide to the first click, out with the glide to the next target,
   never easing during a click or typing (style guide #13). `scale` 1.5–2.0; `x`/`y` (0..1)
   override the focus; `in`/`out` override the eases. A manual zoom (`at`, `duration`, `x`, `y`)
-  is possible but rarely needed. Never add pauses to the scenario for a zoom.
+  is possible but rarely needed. Never add pauses to the scenario for a zoom. Two zooms must
+  not be on screen at once (`reelkit check` flags it): a zoom holds while later clicks stay in
+  view, so one zoom over the whole range is usually the fix.
 - To find click numbers, read `clicks` in markers.json (each has `at`, `x`, `y`, `kind`).
 
 ## Templates and sections
@@ -97,7 +100,7 @@ reelkit build <slug> --title "Find a customer" --subtitle "..."   # first run cr
 #   edit video.json: word the callouts, add zooms (by click number), adjust trim
 reelkit build <slug>                  # regenerate video/ from video.json
 reelkit check <slug>                  # schemas, zoom timing, `hyperframes check`
-reelkit studio <slug>                 # for the user: preview + layer timeline, rebuilds on save
+reelkit studio <slug>                 # for the user: preview + edit on a layer timeline
 reelkit snapshot <slug> --at 1.2,3.5,6,10   # PNGs in video/snapshots/ — read them
 reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
 ```
@@ -110,8 +113,10 @@ reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
 3. **Check and look.** `reelkit check` must report "ready to render" (0 problems). Layout
    `info` items about the recap/brand cross-fade overlap and off-canvas glows are expected.
    Then snapshot the poster (t=0), the intro's hand-over, a callout, a zoom and the recap, and
-   look at them. When the user wants to review it themselves, run `reelkit studio <slug> --no-open`
-   in the background and give them the URL: it follows your video.json edits live.
+   look at them. When the user wants to review or adjust it themselves, run `reelkit studio <slug>
+   --no-open` in the background and give them the URL: it follows your video.json edits live,
+   and the user's edits there (drag callouts, trim, zooms, sections, titles) are saved to
+   video.json — so re-read video.json before each of your own edits while it runs.
 4. **Render.** `reelkit render` rebuilds first. ~30–60 s per 12 s of video. `--all` renders
    every demo in the project; `--gif` adds a 15 fps GIF for READMEs.
 5. **Verify the artifact**, not the log: `ffprobe` duration ≈ the printed total; extract frames

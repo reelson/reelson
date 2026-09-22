@@ -13,7 +13,7 @@ import type { LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { plan } from './build.ts'
 import { hyperframes } from './hyperframes.ts'
 import { round } from './timeline.ts'
-import { checkZoom } from './zooms.ts'
+import { checkZoom, zoomOverlaps } from './zooms.ts'
 
 export interface CheckOptions {
     hyperframes?: boolean
@@ -38,8 +38,10 @@ export function check(demoDir: string, config: LoadedConfig, options: CheckOptio
         problems++
     }
 
+    const overlaps = zoomOverlaps(result.zooms)
     result.zooms.forEach((z, i) => {
-        const { problems: found, framed } = checkZoom(z, result.clicks, result.timeline)
+        const { problems: checked, framed } = checkZoom(z, result.clicks, result.timeline)
+        const found = [...checked, ...overlaps.filter((o) => o.index === i).map((o) => o.message)]
         const label = `zoom ${i + 1} (${z.at}–${round(z.at + z.duration)}s, in ${z.in}s / out ${z.out}s, ${z.scale}x at ${z.x},${z.y})`
         if (found.length) {
             problems += found.length

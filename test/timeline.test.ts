@@ -143,4 +143,16 @@ describe('hand-offs (demo.transition)', () => {
             ['Manager', 'Manager', 'Employee'],
         )
     })
+
+    it('shifts a marker callout by its offset and remembers where each callout came from', () => {
+        const callouts = [
+            { marker: 'Add as many as you need', text: 'second' },
+            { marker: 'Type a task and press Enter', text: 'first', offset: 0.5 },
+        ]
+        const plain = computeTimeline(fixture('todo'), spec({ callouts: [{ marker: 'Type a task and press Enter', text: 'x' }] })).timeline
+        const { timeline: t } = computeTimeline(fixture('todo'), spec({ callouts }))
+        assert.deepEqual(t.callouts.map((c) => [c.text, c.source]), [['first', 1], ['second', 0]])
+        assert.equal(t.callouts[0].at, round(plain.callouts[0].at + 0.5))
+        assert.throws(() => computeTimeline(fixture('todo'), spec({ callouts: [{ at: 5, offset: 1, text: 'x' }] })), /`offset` shifts a `marker`/)
+    })
 })

@@ -83,6 +83,8 @@ export interface Markers {
 export interface CalloutSpec {
     text: string
     marker?: string
+    /** Seconds after (or, negative, before) the marker. */
+    offset?: number
     at?: number
     duration?: number
     group?: string
@@ -121,6 +123,8 @@ export interface Callout {
     duration: number
     text: string
     group?: string
+    /** Index in video.json `callouts` (or in the default callouts when it has none). */
+    source: number
 }
 
 export interface Timeline {
@@ -193,12 +197,16 @@ export function computeTimeline(
         )
     }
     const timed = specs
-        .map((c) => {
+        .map((c, source) => {
             if ((c.marker === undefined) === (c.at === undefined)) {
                 throw new TimelineError(`callout "${c.text}" needs exactly one of \`marker\` or \`at\``)
             }
-            const recordingAt = c.at ?? (markers.markers.find((m) => m.label === c.marker) as { at: number }).at
-            return { ...c, recordingAt }
+            if (c.offset !== undefined && c.marker === undefined) {
+                throw new TimelineError(`callout "${c.text}": \`offset\` shifts a \`marker\`; with \`at\`, change \`at\` instead`)
+            }
+            const recordingAt =
+                c.at ?? round((markers.markers.find((m) => m.label === c.marker) as { at: number }).at + (c.offset ?? 0))
+            return { ...c, recordingAt, source }
         })
         .filter((c) => {
             const inside = c.recordingAt >= mediaStart && c.recordingAt <= mediaEnd
@@ -228,7 +236,7 @@ export function computeTimeline(
         const before = handOffs.filter((t) => t.at <= c.recordingAt)
         const group = c.group ?? (before.length ? before.at(-1)?.to : handOffs[0]?.from)
 
-        return { at, duration, text: c.text, ...(group ? { group } : {}) }
+        return { at, duration, text: c.text, ...(group ? { group } : {}), source: c.source }
     })
     const recapTiming = timing.recap
     if (recapTiming && callouts.length > recapTiming.maxSteps) {

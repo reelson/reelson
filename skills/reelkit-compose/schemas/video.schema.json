@@ -54,6 +54,7 @@
                 "properties": {
                     "text": { "type": "string", "description": "Imperative step in the UI's language, ≤ 6 words." },
                     "marker": { "type": "string", "description": "markers.json label this callout is timed from." },
+                    "offset": { "type": "number", "description": "Seconds after the marker (negative: before). Keeps the callout tied to its marker when you nudge it." },
                     "at": { "type": "number", "minimum": 0, "description": "Recording time instead of a marker (manual recordings)." },
                     "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds on screen. Default: until the next callout, max 3 s." },
                     "group": { "type": "string", "description": "Role tag (two-actor videos). Default: taken from the hand-off cards." }

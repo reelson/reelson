@@ -161,6 +161,25 @@ export interface ZoomCheck {
     framed: CompClick[]
 }
 
+/**
+ * Zooms on screen at the same time (they would fight over the frame): one message per
+ * overlapping pair, keyed by the 0-based index of the later zoom in video.json order.
+ */
+export function zoomOverlaps(zooms: Zoom[]): { index: number; message: string }[] {
+    const found: { index: number; message: string }[] = []
+    zooms.forEach((z, j) => {
+        zooms.forEach((other, i) => {
+            if (i < j && z.at < round(other.at + other.duration) && other.at < round(z.at + z.duration)) {
+                found.push({
+                    index: j,
+                    message: `overlaps zoom ${i + 1} (${other.at}–${round(other.at + other.duration)}s) — one zoom over both click ranges, or drop one`,
+                })
+            }
+        })
+    })
+    return found
+}
+
 /** Verifies a zoom against the clicks; problems carry a copy-paste fix. */
 export function checkZoom(z: Zoom, clicks: CompClick[], timeline: Timeline): ZoomCheck {
     const end = round(z.at + z.duration)

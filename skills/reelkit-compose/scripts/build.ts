@@ -79,6 +79,11 @@ export function plan(demoDir: string, config: LoadedConfig, options: BuildOption
     }
     applyOptions(spec, options)
 
+    return { ...planSpec(demoDir, spec, markers, config), created: existing === null }
+}
+
+/** The plan for a given video.json (validated elsewhere), without reading it from disk. */
+export function planSpec(demoDir: string, spec: VideoSpec, markers: Markers, config: LoadedConfig): Omit<Plan, 'created'> {
     const design = resolveDesign(spec.template ?? config.template, [config.sections, spec.sections], config)
     let computed
     try {
@@ -99,7 +104,7 @@ export function plan(demoDir: string, config: LoadedConfig, options: BuildOption
         }
     })
 
-    return { spec, markers, design, timeline, clicks, zooms, warnings, created: existing === null }
+    return { spec, markers, design, timeline, clicks, zooms, warnings }
 }
 
 export function build(demoDir: string, config: LoadedConfig, options: BuildOptions = {}): Plan {
@@ -114,8 +119,7 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
 
     // video.json first: it is the source of truth even if a later step fails.
     const specPath = resolve(demoDir, 'video.json')
-    const serialized =
-        JSON.stringify({ $schema: videoSchemaRef(demoDir, config), ...withoutSchema(spec) }, null, 4) + '\n'
+    const serialized = serializeVideoSpec(spec, demoDir, config)
     if (!existsSync(specPath) || readFileSync(specPath, 'utf8') !== serialized) {
         writeFileSync(specPath, serialized)
         log(result.created ? `created ${specPath} — word the callouts and add zooms there` : `updated ${specPath}`)
@@ -233,6 +237,11 @@ export function suggestTrimStart(markers: Markers): number {
 function humanize(slug: string): string {
     const words = slug.replace(/[-_]+/g, ' ').trim()
     return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+/** video.json as the build writes it: `$schema` first, then a stable, readable key order. */
+export function serializeVideoSpec(spec: VideoSpec, demoDir: string, config: LoadedConfig): string {
+    return JSON.stringify({ $schema: videoSchemaRef(demoDir, config), ...withoutSchema(spec) }, null, 4) + '\n'
 }
 
 /** video.json in a stable, readable key order, without `$schema` (re-added on write). */

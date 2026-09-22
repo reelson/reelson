@@ -57,7 +57,7 @@ export function renderComposition(input: CompositionInput): string {
         clipDuration: t.clipDuration,
         mediaStart: t.mediaStart,
         sections: { intro: t.intro, recap: t.recap, outro: t.outro },
-        callouts: t.callouts,
+        callouts: t.callouts.map(({ source: _source, ...c }) => c),
         zooms: input.zooms,
         transitions: t.transitions.map(({ at, gap }) => ({ at, gap })),
         chip: { steps: text.stepsChip, seconds: text.secondsChip },

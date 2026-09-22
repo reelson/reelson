@@ -1,24 +1,29 @@
 /**
- * `reelkit studio <slug>`: a local, read-only preview of a demo. The built
+ * `reelkit studio <slug>`: a local preview and editor for a demo. The built
  * composition plays in the HyperFrames player above a timeline drawn from the
  * same plan the build uses (sections, callouts, zooms, hand-offs, clicks,
  * markers, audio). video.json, markers.json, the recording and every
  * template/section folder are watched: a change rebuilds and the page reloads
  * in place, at the same time.
  *
+ * Edits made on the page come back as a whole video.json (PUT /api/video): it
+ * is validated and planned before it is written, and refused if video.json
+ * changed on disk since the page loaded it.
+ *
  *   reelkit studio <slug|dir> [--port 4800] [--no-open]
  */
-import { existsSync, readFileSync, statSync, watch, type FSWatcher } from 'node:fs'
-import { createServer, type ServerResponse } from 'node:http'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, statSync, watch, writeFileSync, type FSWatcher } from 'node:fs'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { basename, extname, resolve, sep } from 'node:path'
 import { fromRoot, type LoadedConfig } from '../../reelkit-record/scripts/config.ts'
-import { build, type Plan } from './build.ts'
+import { build, planSpec, serializeVideoSpec, type Plan } from './build.ts'
 import { hyperframesDist } from './hyperframes.ts'
-import { BUILTIN_SECTIONS, BUILTIN_TEMPLATES, ReelkitError } from './project.ts'
-import { defaultCallouts, round } from './timeline.ts'
-import { checkZoom } from './zooms.ts'
+import { BUILTIN_SECTIONS, BUILTIN_TEMPLATES, catalog, readMarkers, ReelkitError, validateVideoSpec } from './project.ts'
+import { defaultCallouts, round, SLOTS, type VideoSpec } from './timeline.ts'
+import { checkZoom, zoomOverlaps } from './zooms.ts'
 
-const STUDIO_PAGE = resolve(import.meta.dirname, '../studio/index.html')
+const STUDIO_DIR = resolve(import.meta.dirname, '../studio')
 
 /** What the studio page draws: the plan, flattened to plain JSON in composition seconds. */
 export interface StudioData {
@@ -27,8 +32,15 @@ export interface StudioData {
     total: number
     frame: { width: number; height: number }
     template: string
+    /** video.json as on disk (without `$schema`): what the page edits. */
+    spec: VideoSpec
+    /** The trim window and the recording's length, in recording seconds. */
+    media: { start: number; end: number; duration: number }
+    /** Composition ↔ recording time: one entry per stretch of footage between hand-offs. */
+    segments: { start: number; duration: number; mediaStart: number }[]
     sections: { slot: 'intro' | 'recording' | 'recap' | 'outro'; name: string; start: number; end: number; detail: string }[]
-    callouts: { n: number; at: number; end: number; text: string; group?: string }[]
+    /** `source`: index in `spec.callouts` (or in the default callouts when it has none). */
+    callouts: { n: number; source: number; at: number; end: number; text: string; group?: string }[]
     zooms: { n: number; at: number; end: number; in: number; out: number; scale: number; x: number; y: number; problems: string[] }[]
     handOffs: { at: number; end: number; belt: number; title: string; subtitle?: string; from?: string; to?: string }[]
     clicks: { n: number; kind: 'click' | 'type'; glide: number; at: number; until: number }[]
@@ -62,6 +74,7 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
     sections.push({ slot: 'outro', name: outro.name, start: t.outro.start, end: t.total, detail: '' })
 
     // Without callouts in video.json the build makes one per marker, so all of them are used.
+    const overlaps = zoomOverlaps(zooms)
     const used = new Set((spec.callouts ?? defaultCallouts(markers)).map((c) => c.marker).filter(Boolean))
 
     return {
@@ -70,9 +83,14 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
         total: t.total,
         frame: t.frame,
         template: design.template.name,
+        // The page edits callouts by index, so the default ones are spelled out.
+        spec: { ...withoutSchema(spec), callouts: spec.callouts ?? defaultCallouts(markers) },
+        media: { start: t.mediaStart, end: t.mediaEnd, duration: markers.durationSeconds },
+        segments: t.segments,
         sections,
         callouts: t.callouts.map((c, i) => ({
             n: i + 1,
+            source: c.source,
             at: c.at,
             end: round(c.at + c.duration),
             text: c.text,
@@ -87,7 +105,7 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
             scale: z.scale,
             x: z.x,
             y: z.y,
-            problems: checkZoom(z, clicks, t).problems,
+            problems: [...checkZoom(z, clicks, t).problems, ...overlaps.filter((o) => o.index === i).map((o) => o.message)],
         })),
         handOffs: t.transitions.map((tr) => ({
             at: tr.at,
@@ -108,6 +126,11 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
         },
         warnings,
     }
+}
+
+function withoutSchema(spec: VideoSpec): VideoSpec {
+    const { $schema: _schema, ...rest } = spec as VideoSpec & { $schema?: string }
+    return rest
 }
 
 export interface StudioOptions {
@@ -146,14 +169,66 @@ export async function studio(demoDir: string, config: LoadedConfig, options: Stu
         throw new ReelkitError(error ?? 'build failed')
     }
 
+    const specPath = resolve(demoDir, 'video.json')
+    const revision = (): string =>
+        existsSync(specPath) ? createHash('sha1').update(readFileSync(specPath)).digest('hex').slice(0, 12) : ''
+    // What the page can pick from: re-read per request, so a new section shows up without a restart.
+    const choices = () => {
+        const found = catalog(config)
+        return {
+            templates: found.templates.map((t) => t.name),
+            ...Object.fromEntries(SLOTS.map((slot) => [slot, found.sections[slot].map((s) => s.name)])),
+        }
+    }
+    /** The page's edit: checked like a build would, then written and built. */
+    let written: string | null = null
+    const edit = (body: { base?: string; spec?: unknown }): { status: number; body: object } => {
+        if (body.base !== revision()) {
+            return { status: 409, body: { error: 'video.json changed on disk since the page loaded it — reloaded; redo the edit' } }
+        }
+        try {
+            const spec = validateVideoSpec(body.spec, 'the edit')
+            const { warnings } = planSpec(demoDir, spec, readMarkers(demoDir), config)
+            written = serializeVideoSpec(spec, demoDir, config)
+            writeFileSync(specPath, written)
+            rebuild()
+            // Written either way; a failed build shows on the page like any other.
+            return { status: 200, body: { error, warnings, revision: revision() } }
+        } catch (e) {
+            return { status: 422, body: { error: (e as Error).message } }
+        }
+    }
+
     const server = createServer((req, res) => {
         const url = new URL(req.url ?? '/', 'http://localhost')
         const path = decodeURIComponent(url.pathname)
         if (path === '/') {
-            return send(res, 200, 'text/html', readFileSync(STUDIO_PAGE))
+            return sendFile(res, resolve(STUDIO_DIR, 'index.html'))
+        }
+        if (path.startsWith('/studio/')) {
+            const file = resolve(STUDIO_DIR, `.${path.slice('/studio'.length)}`)
+            if (file.startsWith(STUDIO_DIR + sep)) {
+                return sendFile(res, file)
+            }
         }
         if (path === '/api/plan') {
-            return send(res, 200, 'application/json', JSON.stringify({ version, error, data }))
+            return send(res, 200, 'application/json', JSON.stringify({ version, error, revision: revision(), choices: choices(), data }))
+        }
+        if (path === '/api/video' && req.method === 'PUT') {
+            readBody(req).then(
+                (raw) => {
+                    let body
+                    try {
+                        body = JSON.parse(raw)
+                    } catch {
+                        return send(res, 400, 'application/json', JSON.stringify({ error: 'the edit is not JSON' }))
+                    }
+                    const result = edit(body)
+                    send(res, result.status, 'application/json', JSON.stringify(result.body))
+                },
+                () => send(res, 400, 'application/json', JSON.stringify({ error: 'unreadable request' })),
+            )
+            return
         }
         if (path === '/api/events') {
             res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
@@ -195,8 +270,11 @@ export async function studio(demoDir: string, config: LoadedConfig, options: Stu
         }, 250)
     }
     const inputs = new Set(['video.json', 'markers.json', 'recording.mp4'])
+    // The page's own writes are already built; only a change from elsewhere rebuilds.
+    const ownWrite = (file: string): boolean =>
+        file === 'video.json' && written !== null && existsSync(specPath) && readFileSync(specPath, 'utf8') === written
     const watchers: FSWatcher[] = [
-        watch(demoDir, (_event, file) => file && inputs.has(file.toString()) && schedule()),
+        watch(demoDir, (_event, file) => file && inputs.has(file.toString()) && !ownWrite(file.toString()) && schedule()),
         ...[
             BUILTIN_TEMPLATES,
             BUILTIN_SECTIONS,
@@ -220,6 +298,15 @@ export async function studio(demoDir: string, config: LoadedConfig, options: Stu
     })
 
     return `http://localhost:${port}/`
+}
+
+function readBody(req: IncomingMessage): Promise<string> {
+    return new Promise((done, fail) => {
+        const chunks: Buffer[] = []
+        req.on('data', (chunk: Buffer) => chunks.push(chunk))
+        req.on('end', () => done(Buffer.concat(chunks).toString('utf8')))
+        req.on('error', fail)
+    })
 }
 
 const TYPES: Record<string, string> = {

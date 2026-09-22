@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { computeTimeline } from '../skills/reelkit-compose/scripts/timeline.ts'
-import { checkZoom, compositionClicks, planZoom, ZoomError, type Zoom } from '../skills/reelkit-compose/scripts/zooms.ts'
+import { checkZoom, compositionClicks, planZoom, zoomOverlaps, ZoomError, type Zoom } from '../skills/reelkit-compose/scripts/zooms.ts'
 import { fixture } from './helpers.ts'
 
 function setup(name: 'todo' | 'handoff' = 'todo', trimStart = 2.6) {
@@ -98,5 +98,17 @@ describe('checkZoom', () => {
         const { timeline, clicks } = setup()
         const zoom = { ...planZoom({ clicks: [3], scale: 1.7 }, clicks, timeline), in: 0.2 }
         assert.ok(checkZoom(zoom, clicks, timeline).problems.some((p) => /reads as a jump/.test(p)))
+    })
+})
+
+describe('zoomOverlaps', () => {
+    it('flags two zooms on screen at once, and only those', () => {
+        const { timeline, clicks } = setup()
+        const late = planZoom({ clicks: [3, 4], scale: 1.7 }, clicks, timeline)
+        const early = planZoom({ at: 3, duration: 1.5, x: 0.5, y: 0.5, scale: 1.5 }, clicks, timeline)
+        assert.deepEqual(zoomOverlaps([late, early]), [])
+        const clash = { ...late, at: late.at - 1 }
+        assert.deepEqual(zoomOverlaps([late, clash]).map((o) => o.index), [1])
+        assert.match(zoomOverlaps([late, clash])[0].message, /overlaps zoom 1/)
     })
 })

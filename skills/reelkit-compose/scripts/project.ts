@@ -85,9 +85,15 @@ export function readVideoSpec(demoDir: string): VideoSpec | null {
     } catch (error) {
         throw new ReelkitError(`${path} is not valid JSON: ${(error as Error).message}`)
     }
+
+    return validateVideoSpec(raw, path)
+}
+
+/** `raw` checked against the video.json schema; `where` names it in the error. */
+export function validateVideoSpec(raw: unknown, where: string): VideoSpec {
     const problems = validate(raw, loadSchema(VIDEO_SCHEMA_PATH))
     if (problems.length) {
-        throw new ReelkitError(`${path} is invalid:\n  ${problems.join('\n  ')}`)
+        throw new ReelkitError(`${where} is invalid:\n  ${problems.join('\n  ')}`)
     }
 
     return raw as VideoSpec

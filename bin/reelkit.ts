@@ -30,7 +30,7 @@ Usage: reelkit <command> [options]
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
   snapshot <slug> --at 1,3.5,8  PNG frames into video/snapshots/
   studio <slug> [--port 4800] [--no-open]
-                                preview + timeline of every layer; rebuilds on save
+                                preview + edit on a timeline of every layer (saves video.json)
   preview <slug>                open the HyperFrames studio (raw composition)
   templates                     list templates and intro/recap/outro sections
   render <slug...> | --all [--gif] [--no-build]
