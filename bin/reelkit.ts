@@ -12,7 +12,7 @@ import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfi
 import { build, plan, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
 import { studio } from '../skills/reelkit-compose/scripts/studio.ts'
-import { FPS, hyperframes, RENDER_FLAGS } from '../skills/reelkit-compose/scripts/hyperframes.ts'
+import { DRAFT_FLAGS, FPS, hyperframes, RENDER_FLAGS, renderIfChanged } from '../skills/reelkit-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice } from '../skills/reelkit-compose/scripts/timeline.ts'
 
@@ -33,8 +33,10 @@ Usage: reelkit <command> [options]
                                 preview + edit on a timeline of every layer (saves video.json)
   preview <slug>                open the HyperFrames studio (raw composition)
   templates                     list templates and intro/recap/outro sections
-  render <slug...> | --all [--gif] [--no-build]
-                                build + render video/renders/<slug>.mp4 (and .gif)
+  render <slug...> | --all [--gif] [--draft] [--force] [--no-build]
+                                build + render video/renders/<slug>.mp4 (and .gif); skips a
+                                video that has not changed since its last render (--force);
+                                --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
 
 <slug> is a folder under videosDir, or a path to a demo folder or its scenario.ts.
 Docs: ${KIT_ROOT}/README.md`
@@ -340,7 +342,13 @@ function render(argv: string[]): number {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { all: { type: 'boolean' }, gif: { type: 'boolean' }, 'no-build': { type: 'boolean' } },
+        options: {
+            all: { type: 'boolean' },
+            gif: { type: 'boolean' },
+            draft: { type: 'boolean' },
+            force: { type: 'boolean' },
+            'no-build': { type: 'boolean' },
+        },
     })
     const cfg = config()
     const dirs = values.all ? listDemos(cfg) : positionals.map((p) => resolveDemoDir(p, cfg))
@@ -355,17 +363,19 @@ function render(argv: string[]): number {
             build(dir, cfg)
         }
         const videoDir = resolve(dir, 'video')
-        const outputs = [['-o', `renders/${slug}.mp4`]]
+        const outputs: [string, string[]][] = values.draft
+            ? [[`renders/${slug}.draft.mp4`, DRAFT_FLAGS]]
+            : [[`renders/${slug}.mp4`, RENDER_FLAGS]]
         if (values.gif) {
-            outputs.push(['--format', 'gif', '--fps', '15', '-o', `renders/${slug}.gif`])
+            outputs.push([`renders/${slug}.gif`, [...RENDER_FLAGS, '--format', 'gif', '--fps', '15']])
         }
-        for (const output of outputs) {
-            const status = hyperframes(['render', '.', ...RENDER_FLAGS, ...output], videoDir)
-            if (status !== 0) {
+        for (const [output, flags] of outputs) {
+            const result = renderIfChanged(videoDir, output, flags, values.force)
+            if (result === 'failed') {
                 failures++
-                console.error(`reelkit: render failed for ${slug} (${output.at(-1)})`)
+                console.error(`reelkit: render failed for ${slug} (${output})`)
             } else {
-                console.log(`rendered ${resolve(videoDir, output.at(-1) as string)}`)
+                console.log(`${result === 'unchanged' ? 'up to date' : 'rendered'} ${resolve(videoDir, output)}`)
             }
         }
     }

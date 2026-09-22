@@ -137,14 +137,14 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     const assets = resolve(videoDir, 'assets')
     mkdirSync(assets, { recursive: true })
     if (existsSync(resolve(template.dir, 'assets'))) {
-        cpSync(resolve(template.dir, 'assets'), assets, { recursive: true })
+        cpSync(resolve(template.dir, 'assets'), assets, { recursive: true, preserveTimestamps: true })
     }
     const sections = Object.values(design.sections)
         .filter((section): section is Section => section !== null)
         .map((section) => {
             const source = readSection(section)
             if (source.assets) {
-                cpSync(resolve(section.dir, 'assets'), resolve(videoDir, source.assets), { recursive: true })
+                cpSync(resolve(section.dir, 'assets'), resolve(videoDir, source.assets), { recursive: true, preserveTimestamps: true })
             }
             return source
         })

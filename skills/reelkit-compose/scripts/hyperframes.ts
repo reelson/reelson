@@ -4,7 +4,8 @@
  * (verified by the CI smoke test).
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, realpathSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 export const HYPERFRAMES_VERSION = '0.8.46'
@@ -24,6 +25,48 @@ export const FPS = 30
 
 /** Render flags that keep the 2x capture sharp (see the reelkit-compose skill). */
 export const RENDER_FLAGS = ['--video-frame-format', 'jpg', '-q', 'delivery']
+
+/** A quick look: half the frames, draft encoding — about twice as fast. */
+export const DRAFT_FLAGS = ['--video-frame-format', 'jpg', '-q', 'draft', '--fps', '15']
+
+/**
+ * Renders `videoDir` to `output` (relative to it) with `flags`, unless nothing it depends on
+ * changed since the last render there: index.html, every asset (by size and mtime), the
+ * flags and the pinned HyperFrames version. Returns 'rendered' | 'unchanged' | 'failed'.
+ */
+export function renderIfChanged(videoDir: string, output: string, flags: string[], force = false): 'rendered' | 'unchanged' | 'failed' {
+    const target = resolve(videoDir, output)
+    const stamp = `${target}.key`
+    const key = renderKey(videoDir, [...flags, output])
+    if (!force && existsSync(target) && existsSync(stamp) && readFileSync(stamp, 'utf8') === key) {
+        return 'unchanged'
+    }
+    if (hyperframes(['render', '.', ...flags, '-o', output], videoDir) !== 0) {
+        return 'failed'
+    }
+    writeFileSync(stamp, key)
+    return 'rendered'
+}
+
+export function renderKey(videoDir: string, args: string[]): string {
+    const hash = createHash('sha1').update(HYPERFRAMES_VERSION).update(JSON.stringify(args))
+    hash.update(readFileSync(resolve(videoDir, 'index.html')))
+    const walk = (dir: string): void => {
+        for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+            const path = resolve(dir, entry.name)
+            if (entry.isDirectory()) {
+                walk(path)
+            } else if (!entry.name.endsWith('.key')) {
+                const { size, mtimeMs } = statSync(path)
+                hash.update(`${path}:${size}:${mtimeMs}\n`)
+            }
+        }
+    }
+    if (existsSync(resolve(videoDir, 'assets'))) {
+        walk(resolve(videoDir, 'assets'))
+    }
+    return hash.digest('hex')
+}
 
 let dist: string | null = null
 

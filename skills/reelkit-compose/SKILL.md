@@ -114,7 +114,7 @@ reelkit build <slug>                  # regenerate video/ from video.json
 reelkit check <slug>                  # schemas, zoom timing, `hyperframes check`
 reelkit studio <slug>                 # for the user: preview + edit on a layer timeline
 reelkit snapshot <slug> --at 1.2,3.5,6,10   # PNGs in video/snapshots/ — read them
-reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
+reelkit render <slug> [--gif] [--draft]   # build + render video/renders/<slug>.mp4
 ```
 
 1. **First build.** It creates video.json with one callout per marker (the label as text), a
@@ -130,7 +130,10 @@ reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
    and the user's edits there (drag callouts, trim, zooms, sections, titles) are saved to
    video.json — so re-read video.json before each of your own edits while it runs.
 4. **Render.** `reelkit render` rebuilds first. ~30–60 s per 12 s of video. `--all` renders
-   every demo in the project; `--gif` adds a 15 fps GIF for READMEs.
+   every demo in the project, skipping the ones unchanged since their last render (`--force`
+   renders anyway); `--gif` adds a 15 fps GIF for READMEs. For a quick look, `--draft` renders
+   15 fps at draft quality (about 2x faster) to `renders/<slug>.draft.mp4` — or skip rendering
+   altogether and scrub in `reelkit studio`.
 5. **Verify the artifact**, not the log: `ffprobe` duration ≈ the printed total; extract frames
    (`ffmpeg -ss <t> -i video/renders/<slug>.mp4 -frames:v 1 f.png`) at t=0, ~2 s, a callout, a
    zoom, the recap, the end. Look at them. Then report the file path.
