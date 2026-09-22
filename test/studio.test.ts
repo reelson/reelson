@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { plan } from '../skills/reelkit-compose/scripts/build.ts'
-import { studioData } from '../skills/reelkit-compose/scripts/studio.ts'
+import { applyEdit, specRevision, studioData } from '../skills/reelkit-compose/scripts/studio.ts'
 import type { VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { fixture, kitConfig } from './helpers.ts'
 
@@ -59,5 +59,40 @@ describe('studioData', () => {
         assert.deepEqual(d.audio.music, { start: 0, end: d.total })
         // No cursor log in this fixture: the cursor is part of the footage.
         assert.equal(d.cursor.state, 'filmed')
+    })
+})
+
+describe('applyEdit (the studio saving video.json)', () => {
+    const spec: VideoSpec = { title: 'Plan your day', trim: { start: 'auto' }, callouts: [{ marker: 'Type a task and press Enter', text: 'Type' }] }
+    const read = (dir: string) => JSON.parse(readFileSync(join(dir, 'video.json'), 'utf8'))
+
+    it('writes a valid edit the way the build would, $schema first', () => {
+        const dir = demo('todo', spec)
+        const result = applyEdit(dir, kitConfig(), { base: specRevision(dir), spec: { ...spec, title: 'New title' } })
+        assert.equal(result.status, 200)
+        assert.equal(read(dir).title, 'New title')
+        assert.equal(Object.keys(read(dir))[0], '$schema')
+        assert.equal(result.written, readFileSync(join(dir, 'video.json'), 'utf8'))
+    })
+
+    it('refuses an edit made on a stale copy (someone else saved first)', () => {
+        const dir = demo('todo', spec)
+        const base = specRevision(dir)
+        writeFileSync(join(dir, 'video.json'), JSON.stringify({ ...spec, title: 'Edited elsewhere' }))
+        const result = applyEdit(dir, kitConfig(), { base, spec: { ...spec, title: 'Mine' } })
+        assert.equal(result.status, 409)
+        assert.equal(read(dir).title, 'Edited elsewhere')
+    })
+
+    it('refuses what the schema or the plan rejects, and writes nothing', () => {
+        const dir = demo('todo', spec)
+        const before = readFileSync(join(dir, 'video.json'), 'utf8')
+        const badSchema = applyEdit(dir, kitConfig(), { base: specRevision(dir), spec: { ...spec, title: 42 } })
+        assert.equal(badSchema.status, 422)
+        assert.match(badSchema.body.error ?? '', /title: expected string/)
+        const badPlan = applyEdit(dir, kitConfig(), { base: specRevision(dir), spec: { ...spec, callouts: [{ marker: 'nope', text: 'x' }] } })
+        assert.equal(badPlan.status, 422)
+        assert.match(badPlan.body.error ?? '', /unknown markers/)
+        assert.equal(readFileSync(join(dir, 'video.json'), 'utf8'), before)
     })
 })

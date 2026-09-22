@@ -80,6 +80,7 @@ More prompts in [docs/prompting.md](docs/prompting.md); the rules every video fo
 [docs/style-guide.md](docs/style-guide.md). By hand:
 
 ```bash
+reelkit doctor                                          # tools + cursor/footage sync on this machine
 reelkit new customers-search --url https://app.test    # scenario stub
 reelkit record customers-search [--headed]
 reelkit build customers-search --title "Find a customer"   # creates video.json on first run

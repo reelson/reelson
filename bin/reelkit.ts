@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, relative, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfig } from '../skills/reelkit-record/scripts/config.ts'
+import { doctor } from '../skills/reelkit-record/scripts/doctor.ts'
 import { build, plan, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
 import { captionCues, toSrt, toVtt } from '../skills/reelkit-compose/scripts/captions.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
@@ -23,6 +24,7 @@ const HELP = `reelkit — scripted walkthroughs → branded demo videos
 Usage: reelkit <command> [options]
 
   init                          create demo.config.json in this directory
+  doctor                        check the tools and that the cursor layer lines up here
   new <slug> [--url <origin>]   start <videosDir>/<slug>/scenario.ts
   record <slug> [--headed]      run the scenario → recording.mp4 + markers.json
   build <slug> [options]        video.json → video/ (HyperFrames project)
@@ -71,6 +73,8 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             return 0
         case 'init':
             return init()
+        case 'doctor':
+            return (await doctor()) ? 1 : 0
         case 'new':
             return create(argv)
         case 'record':

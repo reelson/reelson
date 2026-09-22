@@ -147,6 +147,36 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
     }
 }
 
+/** A short hash of video.json as it is on disk ('' when there is none). */
+export function specRevision(demoDir: string): string {
+    const path = resolve(demoDir, 'video.json')
+    return existsSync(path) ? createHash('sha1').update(readFileSync(path)).digest('hex').slice(0, 12) : ''
+}
+
+/**
+ * The page's edit (PUT /api/video): refused (409) if video.json changed since the page read
+ * it (`base` is the revision it read), refused (422) if it fails the schema or the plan —
+ * nothing is written then — else written as the build would write it. The caller rebuilds.
+ */
+export function applyEdit(
+    demoDir: string,
+    config: LoadedConfig,
+    body: { base?: string; spec?: unknown },
+): { status: number; body: { error?: string; warnings?: string[] }; written?: string } {
+    if (body.base !== specRevision(demoDir)) {
+        return { status: 409, body: { error: 'video.json changed on disk since the page loaded it — reloaded; redo the edit' } }
+    }
+    try {
+        const spec = validateVideoSpec(body.spec, 'the edit')
+        const { warnings } = planSpec(demoDir, spec, readMarkers(demoDir), config)
+        const written = serializeVideoSpec(spec, demoDir, config)
+        writeFileSync(resolve(demoDir, 'video.json'), written)
+        return { status: 200, body: { warnings }, written }
+    } catch (e) {
+        return { status: 422, body: { error: (e as Error).message } }
+    }
+}
+
 function withoutSchema(spec: VideoSpec): VideoSpec {
     const { $schema: _schema, ...rest } = spec as VideoSpec & { $schema?: string }
     return rest
@@ -189,8 +219,7 @@ export async function studio(demoDir: string, config: LoadedConfig, options: Stu
     }
 
     const specPath = resolve(demoDir, 'video.json')
-    const revision = (): string =>
-        existsSync(specPath) ? createHash('sha1').update(readFileSync(specPath)).digest('hex').slice(0, 12) : ''
+    const revision = (): string => specRevision(demoDir)
     // What the page can pick from: re-read per request, so a new section shows up without a restart.
     const choices = () => {
         const found = catalog(config)
@@ -202,20 +231,14 @@ export async function studio(demoDir: string, config: LoadedConfig, options: Stu
     /** The page's edit: checked like a build would, then written and built. */
     let written: string | null = null
     const edit = (body: { base?: string; spec?: unknown }): { status: number; body: object } => {
-        if (body.base !== revision()) {
-            return { status: 409, body: { error: 'video.json changed on disk since the page loaded it — reloaded; redo the edit' } }
+        const result = applyEdit(demoDir, config, body)
+        if (result.written === undefined) {
+            return result
         }
-        try {
-            const spec = validateVideoSpec(body.spec, 'the edit')
-            const { warnings } = planSpec(demoDir, spec, readMarkers(demoDir), config)
-            written = serializeVideoSpec(spec, demoDir, config)
-            writeFileSync(specPath, written)
-            rebuild()
-            // Written either way; a failed build shows on the page like any other.
-            return { status: 200, body: { error, warnings, revision: revision() } }
-        } catch (e) {
-            return { status: 422, body: { error: (e as Error).message } }
-        }
+        written = result.written
+        rebuild()
+        // Written either way; a failed build shows on the page like any other.
+        return { status: 200, body: { ...result.body, error, revision: revision() } }
     }
 
     const server = createServer((req, res) => {

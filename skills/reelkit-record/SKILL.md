@@ -78,6 +78,8 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 - reelkit installed once per machine (`install.sh` in the kit: Playwright + Chromium, the
   `reelkit` command, the skill links).
 - `ffmpeg` on PATH (`brew install ffmpeg`). Node 22.18+ (TypeScript runs directly).
+- `reelkit doctor` checks the tools and films a local test page to confirm the cursor layer
+  lines up with the footage on this machine (offset and px error; run it on a new machine).
 
 ## Workflow
 
