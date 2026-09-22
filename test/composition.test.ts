@@ -75,6 +75,14 @@ describe('renderComposition', () => {
         golden('classic-portrait.html', renderComposition({ ...t, layout: portrait.layout, cursor: portrait.cursor, zooms: portrait.zooms }))
     })
 
+    it('zooms only sections without their own portrait layout (class "band")', () => {
+        const t = input('todo', example)
+        const html = renderComposition(t)
+        assert.doesNotMatch(html, /class="clip band"/, 'every kit section has a portrait layout')
+        const own = { ...t, sections: t.sections.map((s) => (s.slot === 'outro' ? { ...s, portrait: false } : s)) }
+        assert.match(renderComposition(own), /<section id="outro" class="clip band"/)
+    })
+
     it('places each slot in the stage and scopes it under its id', () => {
         const html = renderComposition(input('todo', { ...example, sections: { intro: 'minimal', outro: 'compact' } }))
         const at = (s: string) => html.indexOf(s)
