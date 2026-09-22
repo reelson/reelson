@@ -34,9 +34,25 @@
         "trim": {
             "type": "object",
             "additionalProperties": false,
+            "description": "The part of the recording the video uses. Prefer \"auto\" or a marker/click anchor: a plain number goes stale when the demo is re-recorded.",
             "properties": {
-                "start": { "type": "number", "minimum": 0, "description": "Recording seconds to skip (usually the login)." },
-                "end": { "type": "number", "exclusiveMinimum": 0, "description": "Recording second to stop at. Default: the end." }
+                "start": {
+                    "description": "Where the footage starts: \"auto\" (just before the first glide or marker, i.e. after the login), { \"marker\": label, \"offset\"?: s }, { \"click\": n, \"offset\"?: s } (from the glide towards click n), or recording seconds.",
+                    "anyOf": [
+                        { "type": "number", "minimum": 0 },
+                        { "enum": ["auto"] },
+                        { "$ref": "#/definitions/markerPoint" },
+                        { "$ref": "#/definitions/clickPoint" }
+                    ]
+                },
+                "end": {
+                    "description": "Where the footage stops: { \"marker\": label, \"offset\"?: s }, { \"click\": n, \"offset\"?: s }, or recording seconds. Default: the end of the recording.",
+                    "anyOf": [
+                        { "type": "number", "exclusiveMinimum": 0 },
+                        { "$ref": "#/definitions/markerPoint" },
+                        { "$ref": "#/definitions/clickPoint" }
+                    ]
+                }
             }
         },
         "music": {
@@ -98,6 +114,26 @@
                     "in": { "type": "number", "minimum": 0.4, "description": "Zoom-in ease seconds (default 0.8)." },
                     "out": { "type": "number", "minimum": 0.4, "description": "Zoom-out ease seconds (default 0.8)." }
                 }
+            }
+        }
+    },
+    "definitions": {
+        "markerPoint": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["marker"],
+            "properties": {
+                "marker": { "type": "string", "description": "markers.json label." },
+                "offset": { "type": "number", "description": "Seconds after the marker (negative: before)." }
+            }
+        },
+        "clickPoint": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["click"],
+            "properties": {
+                "click": { "type": "integer", "minimum": 1, "description": "1-based click in markers.json `clicks`: the time the cursor starts gliding towards it." },
+                "offset": { "type": "number", "description": "Seconds after that (negative: before)." }
             }
         }
     }

@@ -38,6 +38,7 @@ import {
     type Markers,
     type SectionChoice,
     type Timeline,
+    type TrimPoint,
     type VideoSpec,
 } from './timeline.ts'
 import { compositionClicks, planZoom, ZoomError, type CompClick, type Zoom } from './zooms.ts'
@@ -45,8 +46,8 @@ import { compositionClicks, planZoom, ZoomError, type CompClick, type Zoom } fro
 export interface BuildOptions {
     title?: string
     subtitle?: string
-    trimStart?: number
-    trimEnd?: number
+    trimStart?: TrimPoint
+    trimEnd?: TrimPoint
     template?: string
     /** Section per slot; stored in video.json `sections`. */
     sections?: SectionChoice
@@ -73,7 +74,8 @@ export function plan(demoDir: string, config: LoadedConfig, options: BuildOption
     const existing = readVideoSpec(demoDir)
     const spec: VideoSpec = existing ?? {
         title: options.title ?? humanize(basename(demoDir)),
-        trim: { start: suggestTrimStart(markers) },
+        // Follows the recording: a re-record never leaves a stale trim behind.
+        trim: { start: 'auto' },
         callouts: defaultCallouts(markers),
         zooms: [],
     }
@@ -220,18 +222,6 @@ function applyOptions(spec: VideoSpec, o: BuildOptions): void {
     if (o.trimStart !== undefined) spec.trim = { ...spec.trim, start: o.trimStart }
     if (o.trimEnd !== undefined) spec.trim = { ...spec.trim, end: o.trimEnd }
     if (o.music !== undefined) spec.music = o.music
-}
-
-/** Where the footage should start: just before the first logged glide (after the login). */
-export function suggestTrimStart(markers: Markers): number {
-    const candidates = [
-        ...(markers.clicks ?? []).map((c) => (c.move ?? c.at) - 0.5),
-        ...markers.markers.map((m) => m.at - 0.8),
-    ]
-    if (!candidates.length) {
-        return 0
-    }
-    return Math.max(0, round(Math.min(...candidates)))
 }
 
 function humanize(slug: string): string {

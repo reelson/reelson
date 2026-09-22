@@ -36,6 +36,8 @@ export interface StudioData {
     spec: VideoSpec
     /** The trim window and the recording's length, in recording seconds. */
     media: { start: number; end: number; duration: number }
+    /** What a trim edge can be tied to, in recording seconds (click: when its glide starts). */
+    anchors: { markers: { label: string; at: number }[]; clicks: { n: number; at: number }[] }
     /** Composition ↔ recording time: one entry per stretch of footage between hand-offs. */
     segments: { start: number; duration: number; mediaStart: number }[]
     sections: { slot: 'intro' | 'recording' | 'recap' | 'outro'; name: string; start: number; end: number; detail: string }[]
@@ -91,6 +93,10 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
         // The page edits callouts by index, so the default ones are spelled out.
         spec: { ...withoutSchema(spec), callouts: spec.callouts ?? defaultCallouts(markers) },
         media: { start: t.mediaStart, end: t.mediaEnd, duration: markers.durationSeconds },
+        anchors: {
+            markers: markers.markers.map((m) => ({ label: m.label, at: m.at })),
+            clicks: (markers.clicks ?? []).map((c, i) => ({ n: i + 1, at: c.move ?? c.at })),
+        },
         segments: t.segments,
         sections,
         callouts: t.callouts.map((c, i) => ({

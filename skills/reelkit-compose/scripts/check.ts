@@ -33,6 +33,15 @@ export function check(demoDir: string, config: LoadedConfig, options: CheckOptio
     for (const w of result.warnings) {
         log(`! ${w}`)
     }
+    for (const edge of ['start', 'end'] as const) {
+        if (typeof result.spec.trim?.[edge] === 'number') {
+            log(
+                `! trim.${edge} is a fixed time — after a re-record it cuts in the wrong place; ` +
+                    (edge === 'start' ? 'use "auto" or ' : 'use ') +
+                    '{ "marker": "…", "offset": … } / { "click": n, "offset": … } instead',
+            )
+        }
+    }
     if ((result.spec.zooms ?? []).length && !result.clicks.length) {
         log('✗ zooms need logged clicks — re-record with the current reelkit-record scripts')
         problems++

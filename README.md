@@ -82,7 +82,7 @@ More prompts in [docs/prompting.md](docs/prompting.md); the rules every video fo
 reelkit new customers-search --url https://app.test    # scenario stub
 reelkit record customers-search [--headed]
 reelkit build customers-search --title "Find a customer"   # creates video.json on first run
-#   edit video.json: callout wording, { "clicks": [2, 3], "scale": 1.8 } zooms, trim
+#   edit video.json: callout wording, { "clicks": [2, 3], "scale": 1.8 } zooms, trim ("auto" or a marker)
 reelkit check customers-search                          # schemas, zoom timing, hyperframes lint
 reelkit studio customers-search                         # preview + edit on a layer timeline (saves video.json)
 reelkit templates                                       # templates and intro/recap/outro sections

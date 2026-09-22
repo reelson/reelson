@@ -36,7 +36,7 @@ changing the trim or the template never re-times anything. Validated against
 {
     "title": "Find a customer",                 // cover title = the task
     "subtitle": "Search any customer from the list",
-    "trim": { "start": 4.3 },                   // skip the login; optional "end"
+    "trim": { "start": "auto" },                // skip the login; optional "end"
     "callouts": [                               // numbered steps; also the recap
         { "marker": "customers-list", "text": "Open Customers" },
         { "marker": "search-results", "text": "Type the name in Search" }
@@ -49,6 +49,11 @@ changing the trim or the template never re-times anything. Validated against
 }
 ```
 
+- **Trim**: `start` is `"auto"` (just before the first logged glide or marker, i.e. after the
+  login — what a new video.json gets), or tied to the footage: `{ "marker": "customers-list",
+  "offset": -0.8 }`, `{ "click": 3, "offset": -0.5 }` (from the glide towards click 3). `end`
+  takes the same anchors; leave it out to keep the recording to its end. Plain seconds work too
+  but go stale when the demo is re-recorded (`reelkit check` warns).
 - **Callouts** point at a `marker` label (or give an `at` for manual recordings). Word them as
   imperative steps in the UI's language, ≤ 6 words. `duration` is automatic (until the next
   step, max 3 s) unless given. `offset` (seconds, may be negative) nudges a marker callout and
@@ -59,8 +64,9 @@ changing the trim or the template never re-times anything. Validated against
   never easing during a click or typing (style guide #13). `scale` 1.5–2.0; `x`/`y` (0..1)
   override the focus; `in`/`out` override the eases. A manual zoom (`at`, `duration`, `x`, `y`)
   is possible but rarely needed. Never add pauses to the scenario for a zoom. Two zooms must
-  not be on screen at once (`reelkit check` flags it): a zoom holds while later clicks stay in
-  view, so one zoom over the whole range is usually the fix.
+  not be on screen at once (`reelkit check` flags it). A zoom holds its own clicks and ends at
+  the next pause (a click still in view < 1 s later joins it; > 3 s of nothing, it lingers and
+  leaves): to hold longer, widen `clicks`; for two overlapping zooms, use one over both ranges.
 - To find click numbers, read `clicks` in markers.json (each has `at`, `x`, `y`, `kind`).
 - **Cursor**: recordings made with `record.cursor: "layer"` (the default) have their cursor
   drawn by the video. `"cursor": { "size": 56, "ripple": false }` restyles it, `"cursor": false`
@@ -110,8 +116,8 @@ reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
 ```
 
 1. **First build.** It creates video.json with one callout per marker (the label as text), a
-   suggested `trim.start` (just before the first logged glide, i.e. after the login) and no
-   zooms, then prints the timeline. `--title/--subtitle/--trim-start/--trim-end/--template/
+   `"trim": { "start": "auto" }` (just before the first logged glide, i.e. after the login) and no
+   zooms, then prints the timeline. `--title/--subtitle/--trim-start (s or auto)/--trim-end/--template/
    --intro/--recap/--outro/--music/--no-music` edit video.json in place on any build.
 2. **Edit video.json**, rebuild. Nothing in `video/` is edited by hand; it is overwritten.
 3. **Check and look.** `reelkit check` must report "ready to render" (0 problems). Layout

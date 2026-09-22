@@ -192,6 +192,44 @@ function updateHistory() {
   $('add-callout').disabled = !inRecording
 }
 
+/**
+ * A trim edge moved to `next` (recording s). An anchored edge keeps its anchor and changes
+ * its offset; "auto" or an unset edge is tied to the nearest marker or click, so the trim
+ * still follows the footage after a re-record; a plain number stays a number.
+ */
+function movedTrim(point, next) {
+  if (point && typeof point === 'object') {
+    const resolved = anchorTime(point)
+    const moved = { ...point, offset: r2((point.offset ?? 0) + next - resolved) }
+    if (Math.abs(moved.offset) < 0.005) delete moved.offset
+    return moved
+  }
+  if (typeof point === 'number') return next
+  const candidates = [
+    ...data.anchors.markers.map((m) => ({ key: { marker: m.label }, at: m.at })),
+    ...data.anchors.clicks.map((c) => ({ key: { click: c.n }, at: c.at })),
+  ]
+  if (!candidates.length) return next
+  const near = candidates.reduce((best, c) => (Math.abs(c.at - next) < Math.abs(best.at - next) ? c : best))
+  const offset = r2(next - near.at)
+  return Math.abs(offset) < 0.005 ? near.key : { ...near.key, offset }
+}
+
+function anchorTime(point) {
+  const base = 'marker' in point
+    ? data.anchors.markers.find((m) => m.label === point.marker)?.at
+    : data.anchors.clicks.find((c) => c.n === point.click)?.at
+  return r2((base ?? 0) + (point.offset ?? 0))
+}
+
+function describeTrim(point, edge) {
+  if (point === undefined) return edge === 'start' ? 'the beginning' : 'the end of the recording'
+  if (point === 'auto') return 'auto — just before the first action'
+  if (typeof point === 'number') return 'a fixed time (goes stale when you re-record)'
+  const off = point.offset ? `${point.offset > 0 ? '+' : ''}${point.offset}s from ` : ''
+  return 'marker' in point ? `${off}marker “${point.marker}”` : `${off}the glide to click ${point.click}`
+}
+
 /** Composition time → recording time (footage pauses while a hand-off card is on screen). */
 function toRecording(t) {
   let seg = data.segments[0]
@@ -481,13 +519,13 @@ function renderTimeline() {
           if (mode === 'start') {
             const next = clamp(r2(start + ds), 0, end - 1)
             commit(`Trim start: ${next}s`, (spec) => {
-              spec.trim = { ...spec.trim, start: next }
+              spec.trim = { ...spec.trim, start: movedTrim(spec.trim?.start, next) }
               if (next === 0) delete spec.trim.start
             })
           } else {
             const next = clamp(r2(end + ds), start + 1, duration)
             commit(`Trim end: ${next >= duration - 0.01 ? 'the end' : `${next}s`}`, (spec) => {
-              spec.trim = { ...spec.trim, end: next }
+              spec.trim = { ...spec.trim, end: movedTrim(spec.trim?.end, next) }
               if (next >= duration - 0.01) delete spec.trim.end
             })
           }
@@ -760,11 +798,21 @@ function inspect(kind, k) {
     }
     if (s.slot === 'recording') {
       const { start, end, duration } = data.media
-      return { label: 'recording', color: 'var(--recording)', note: 'Drag the recording’s edges on the timeline to trim.', rows: [
-        ['trim start', numberInput(spec.trim?.start, (v) => commit('Trim start', (sp) => { sp.trim = { ...sp.trim, start: v }; if (!v) delete sp.trim.start }), { min: 0, max: end - 1, placeholder: '0' })],
-        ['trim end', numberInput(spec.trim?.end, (v) => commit('Trim end', (sp) => { sp.trim = { ...sp.trim, end: v }; if (v === undefined || v >= duration) delete sp.trim.end }), { min: start + 1, max: duration, placeholder: `${duration} (the end)` })],
+      const setEdge = (edge, v) => commit(`Trim ${edge}`, (sp) => {
+        const next = v === undefined ? undefined : clamp(v, edge === 'start' ? 0 : start + 1, edge === 'start' ? end - 1 : duration)
+        sp.trim = { ...sp.trim, [edge]: next === undefined ? undefined : movedTrim(sp.trim?.[edge], next) }
+        if (next === undefined || (edge === 'start' && next === 0) || (edge === 'end' && next >= duration - 0.01)) delete sp.trim[edge]
+      })
+      return { label: 'recording', color: 'var(--recording)', note: 'Drag the recording’s edges on the timeline to trim. A trim tied to a marker or click follows the footage when you re-record.', rows: [
+        ['start', numberInput(start, (v) => setEdge('start', v), { min: 0, max: end - 1 })],
+        ['', describeTrim(spec.trim?.start, 'start')],
+        ['end', numberInput(end, (v) => setEdge('end', v), { min: start + 1, max: duration })],
+        ['', describeTrim(spec.trim?.end, 'end')],
         ['uses', `${fmt(start)}–${fmt(end)}s of ${fmt(duration)}s`],
         ...base,
+      ], actions: [
+        ...(spec.trim?.start !== 'auto' ? [button('Auto start', () => commit('Trim start: auto', (sp) => { sp.trim = { ...sp.trim, start: 'auto' } }))] : []),
+        ...(spec.trim?.end !== undefined ? [button('Full length', () => commit('Trim end: the end', (sp) => { sp.trim = { ...sp.trim }; delete sp.trim.end }))] : []),
       ] }
     }
     if (s.slot === 'recap') {

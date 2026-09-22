@@ -26,7 +26,7 @@ Usage: reelkit <command> [options]
   build <slug> [options]        video.json → video/ (HyperFrames project)
       --title, --subtitle, --template <name>
       --intro <name>, --recap <name|none>, --outro <name>
-      --trim-start <s>, --trim-end <s>, --music <file> | --no-music
+      --trim-start <s|auto>, --trim-end <s>, --music <file> | --no-music
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
   snapshot <slug> --at 1,3.5,8  PNG frames into video/snapshots/
   studio <slug> [--port 4800] [--no-open]
@@ -219,13 +219,14 @@ function buildOptions(argv: string[]): { options: BuildOptions; positionals: str
         }
         return n
     }
+    const trimPoint = (v: string | undefined, name: string) => (v === 'auto' ? 'auto' : seconds(v, name))
     const cfg = config()
     const options: BuildOptions = {
         title: values.title,
         subtitle: values.subtitle,
         template: values.template,
         sections: Object.fromEntries(SLOTS.filter((slot) => values[slot] !== undefined).map((slot) => [slot, values[slot]])) as SectionChoice,
-        trimStart: seconds(values['trim-start'], 'trim-start'),
+        trimStart: trimPoint(values['trim-start'], 'trim-start'),
         trimEnd: seconds(values['trim-end'], 'trim-end'),
         // video.json stores the path relative to the project root.
         music: values['no-music'] ? false : values.music ? relative(cfg.root, resolve(values.music)) : undefined,

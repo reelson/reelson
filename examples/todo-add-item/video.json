@@ -3,7 +3,7 @@
     "title": "Plan your day",
     "subtitle": "Add tasks and tick them off",
     "trim": {
-        "start": 2.63
+        "start": "auto"
     },
     "callouts": [
         {

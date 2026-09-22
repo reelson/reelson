@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { computeTimeline } from '../skills/reelkit-compose/scripts/timeline.ts'
-import { checkZoom, compositionClicks, planZoom, zoomOverlaps, ZoomError, type Zoom } from '../skills/reelkit-compose/scripts/zooms.ts'
+import { checkZoom, compositionClicks, planZoom, zoomOverlaps, ZoomError, type CompClick, type Zoom } from '../skills/reelkit-compose/scripts/zooms.ts'
 import { fixture } from './helpers.ts'
 
 function setup(name: 'todo' | 'handoff' = 'todo', trimStart = 2.6) {
@@ -110,5 +110,31 @@ describe('zoomOverlaps', () => {
         const clash = { ...late, at: late.at - 1 }
         assert.deepEqual(zoomOverlaps([late, clash]).map((o) => o.index), [1])
         assert.match(zoomOverlaps([late, clash])[0].message, /overlaps zoom 1/)
+    })
+})
+
+describe('zoom hold', () => {
+    // Three clicks close together on screen: #2 follows #1 at once, #3 comes after a pause.
+    const click = (index: number, comp: number, glide: number): CompClick => ({ index, kind: 'click', comp, glide, until: comp, fx: 0.5, fy: 0.5 })
+    const clicks = [click(1, 5, 4.4), click(2, 6.4, 5.9), click(3, 12, 11.4)]
+    const { timeline } = setup()
+    const end = (z: Zoom) => z.at + z.duration
+
+    it('holds a later click in view that follows right away', () => {
+        const z = planZoom({ clicks: [1], scale: 1.6 }, clicks, timeline)
+        assert.ok(end(z) > 6.4, 'click #2 is inside the hold')
+        assert.ok(end(z) <= 12 - 0.1 + 1e-9, 'out before click #3')
+    })
+
+    it('ends at a pause instead of holding every click still in view', () => {
+        const z = planZoom({ clicks: [1, 2], scale: 1.6 }, clicks, timeline)
+        assert.ok(end(z) < 11.4 + 0.01, `zooms out with the glide to #3, not after it (ends ${end(z)})`)
+        assert.ok(end(z) - z.at < 7.5)
+        assert.deepEqual(checkZoom(z, clicks, timeline).problems, [])
+    })
+
+    it('holds through the pause when the range asks for it', () => {
+        const z = planZoom({ clicks: [1, 3], scale: 1.6 }, clicks, timeline)
+        assert.ok(end(z) > 12)
     })
 })

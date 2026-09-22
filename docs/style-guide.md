@@ -46,8 +46,9 @@ accounts), but should not loosen them without a reason.
     recording, a callout, a zoom, the recap, the last frame of a real render.
 13. **Zooms ride along with the cursor and finish before the click**: zoom in while the cursor
     glides to the first click it frames (starting ≤ 0.35 s before the glide), fully in 0.1 s
-    before that click; zoom out while it glides to the next target outside the zoom, done
-    before that click. No easing during a click. No extra pauses in the scenario to make room
+    before that click; zoom out while it glides to the next target, done before that click.
+    A zoom holds its own clicks (plus a click in view right after them, < 1 s), not everything
+    still on screen; when the next glide is > 3 s away it lingers 1.2 s and leaves. No easing during a click. No extra pauses in the scenario to make room
     for zooms — shorten the ease (≥ 0.4 s) instead. A zoom anchored with `clicks` in video.json
     is timed this way automatically; `reelkit check` enforces it for every zoom.
 
@@ -65,8 +66,9 @@ reader could follow without the video. If you can't write the callouts, the vide
 - Small `demo.scroll()` steps over big jumps; or navigate straight to the section.
 - Read values from the page instead of hard-coding seeded data.
 - Wrap slow waits in `demo.cut()`; a short glimpse is kept so the cut doesn't feel like a glitch.
-- Trim the login off (video.json `trim.start`, suggested on the first build) unless the video is
-  about logging in.
+- Trim the login off (video.json `"trim": { "start": "auto" }`, the default) unless the video
+  is about logging in. Tie trims to markers or clicks, never to plain seconds: a re-record
+  moves the footage.
 - Keep the 1440x900 viewport; wider makes text tiny inside the 1920x1080 frame.
 
 **Composition**

@@ -4,8 +4,11 @@
  * Rule (style guide #13): a zoom rides along with the cursor and is done before the click.
  *   1. zoom in while the cursor glides to the first click it frames: start at most
  *      EARLY s before the glide starts, and finish SETTLE s before the click;
- *   2. zoom out while the cursor glides to the next target outside the zoom: start
- *      at most EARLY s before that glide, finish SETTLE s before that click;
+ *   2. zoom out while the cursor glides to the next target: start at most EARLY s
+ *      before that glide, finish SETTLE s before that click. A later click still in
+ *      view that follows within ABSORB s joins the hold instead (no out-and-back-in);
+ *      a longer pause ends the zoom — widen `clicks` to hold through it. When the next
+ *      glide is more than MAX_IDLE s away, the zoom lingers, then leaves on its own;
  *   3. never ease during a click or while typing, and every click in the hold is
  *      inside the zoomed view.
  *
@@ -21,6 +24,8 @@ export const ZOOM_RULES = {
     settle: 0.1, // the zoom is done this long before the click
     early: 0.35, // may start this long before the glide (not more: no waiting)
     linger: 1.2, // with no next target, hold this long after the last action
+    absorb: 1.0, // a visible later click whose glide starts within this joins the hold
+    maxIdle: 3.0, // a longer wait for the next glide: linger and zoom out, don't sit zoomed
     eps: 0.005, // float slack (13.03 + 4.36 must not fail against 17.39)
     margin: 0.03, // keep clicks this far (fraction of the frame) inside the view
 }
@@ -123,12 +128,18 @@ export function planZoom(spec: ZoomSpec, clicks: CompClick[], timeline: Timeline
             : round(Math.max(first.glide - R.early, first.comp - R.settle - R.defaultEase))
     const inEase = spec.in ?? round(Math.max(R.minEase, Math.min(R.defaultEase, first.comp - R.settle - at)))
 
-    // Later clicks the zoom still shows stay in the hold; the first one it doesn't show ends it.
-    const later = clicks.filter((c) => c.index > b)
-    const nextIdx = later.findIndex((c) => !visible(c))
-    const next = nextIdx === -1 ? undefined : later[nextIdx]
-    const held = [...selected, ...(nextIdx === -1 ? later : later.slice(0, nextIdx))]
-    const holdEnd = Math.max(...held.map((c) => c.until))
+    // The zoom holds its clicks, plus later ones it still shows that follow right away
+    // (zooming out and straight back in would jump); the first other click ends it.
+    let holdEnd = Math.max(...selected.map((c) => c.until))
+    let next: CompClick | undefined
+    for (const c of clicks.filter((c) => c.index > b)) {
+        if (visible(c) && c.glide - holdEnd <= R.absorb) {
+            holdEnd = Math.max(holdEnd, c.until)
+            continue
+        }
+        next = c
+        break
+    }
 
     // The recording belts out before a hand-off card and fades out at the end.
     const nextCard = timeline.transitions.find((t) => t.at > first.comp)
@@ -136,7 +147,7 @@ export function planZoom(spec: ZoomSpec, clicks: CompClick[], timeline: Timeline
 
     let outEnd: number
     let outEase: number
-    if (next && next.comp - R.settle <= limit) {
+    if (next && next.comp - R.settle <= limit && next.glide - holdEnd <= R.maxIdle) {
         outEnd = next.comp - R.settle
         const outStart = Math.max(next.glide - R.early, outEnd - R.defaultEase, holdEnd + 0.2)
         outEase = spec.out ?? Math.max(R.minEase, outEnd - outStart)

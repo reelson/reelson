@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { computeTimeline, round, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { computeTimeline, round, suggestTrimStart, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
 const spec = (extra: Partial<VideoSpec> = {}): VideoSpec => ({ title: 'T', trim: { start: 1 }, ...extra })
@@ -181,5 +181,34 @@ describe('hand-offs (demo.transition)', () => {
         const { timeline, warnings } = computeTimeline(filmed, spec({ cursor: { size: 60 } }))
         assert.equal(timeline.cursor, null)
         assert.match(warnings.join(), /cursor filmed in/)
+    })
+
+    it('anchors the trim to markers and clicks, so a re-record moves it along', () => {
+        const markers = fixture('todo')
+        const first = markers.markers[0]
+        const at = (trim: VideoSpec['trim']) => {
+            const { timeline } = computeTimeline(markers, spec({ trim }))
+            return [timeline.mediaStart, timeline.mediaEnd]
+        }
+        assert.equal(at({ start: 'auto' })[0], suggestTrimStart(markers))
+        assert.equal(at({ start: { marker: first.label, offset: -0.8 } })[0], round(first.at - 0.8))
+        const click = markers.clicks![1]
+        assert.equal(at({ start: { click: 2 } })[0], click.move)
+        assert.equal(at({ end: { marker: markers.markers.at(-1)!.label, offset: 2 } })[1], round(markers.markers.at(-1)!.at + 2))
+
+        // The same video.json after a re-record where everything happens 1.5 s later.
+        const later = {
+            ...markers,
+            durationSeconds: markers.durationSeconds + 1.5,
+            markers: markers.markers.map((m) => ({ ...m, at: m.at + 1.5 })),
+            clicks: markers.clicks!.map((c) => ({ ...c, at: c.at + 1.5, move: (c.move ?? c.at) + 1.5 })),
+        }
+        const anchored = { start: { marker: first.label, offset: -0.8 } }
+        assert.equal(computeTimeline(later, spec({ trim: anchored })).timeline.mediaStart, round(first.at + 1.5 - 0.8))
+        assert.equal(computeTimeline(later, spec({ trim: { start: 'auto' } })).timeline.mediaStart, round(suggestTrimStart(markers) + 1.5))
+
+        assert.throws(() => at({ start: { marker: 'nope' } }), /trim.start: no marker "nope"/)
+        assert.throws(() => at({ start: { click: 99 } }), /no click 99/)
+        assert.throws(() => at({ end: 'auto' }), /trim.end cannot be "auto"/)
     })
 })

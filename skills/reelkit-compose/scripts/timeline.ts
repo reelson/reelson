@@ -118,6 +118,13 @@ export interface ZoomSpec {
     out?: number
 }
 
+/**
+ * A trim edge in video.json: a recording time, "auto" (start only: just before the first
+ * glide or marker), or a time relative to a marker / to the glide towards a click — so a
+ * re-record moves the trim with the footage.
+ */
+export type TrimPoint = number | 'auto' | { marker: string; offset?: number } | { click: number; offset?: number }
+
 /** Section name per slot; "none" is allowed for the recap only. */
 export type SectionChoice = Partial<Record<Slot, string>>
 
@@ -129,7 +136,7 @@ export interface VideoSpec {
     sections?: SectionChoice
     recapTitle?: string
     brand?: { name?: string; tagline?: string; eyebrow?: string; logo?: string | null }
-    trim?: { start?: number; end?: number }
+    trim?: { start?: TrimPoint; end?: TrimPoint }
     music?: string | boolean | null
     callouts?: CalloutSpec[]
     zooms?: ZoomSpec[]
@@ -189,8 +196,8 @@ export function computeTimeline(
     timing: Timing = TIMING_DEFAULTS,
 ): { timeline: Timeline; warnings: string[] } {
     const warnings: string[] = []
-    const mediaStart = spec.trim?.start ?? 0
-    const mediaEnd = Math.min(spec.trim?.end ?? markers.durationSeconds, markers.durationSeconds)
+    const mediaStart = Math.max(0, resolveTrimPoint(spec.trim?.start, markers, 'start') ?? 0)
+    const mediaEnd = Math.min(resolveTrimPoint(spec.trim?.end, markers, 'end') ?? markers.durationSeconds, markers.durationSeconds)
     const mediaDuration = round(mediaEnd - mediaStart)
     if (mediaDuration <= 0) {
         throw new TimelineError(`trim window is empty (start ${mediaStart}s, end ${mediaEnd}s)`)
@@ -344,6 +351,45 @@ export function computeTimeline(
         },
         warnings,
     }
+}
+
+/** A trim edge in recording seconds (undefined: not set). */
+export function resolveTrimPoint(point: TrimPoint | undefined, markers: Markers, edge: 'start' | 'end'): number | undefined {
+    if (point === undefined || typeof point === 'number') {
+        return point
+    }
+    if (point === 'auto') {
+        if (edge === 'end') {
+            throw new TimelineError('trim.end cannot be "auto" — leave it out to keep the recording to its end')
+        }
+        return suggestTrimStart(markers)
+    }
+    if ('marker' in point) {
+        const found = markers.markers.find((m) => m.label === point.marker)
+        if (!found) {
+            throw new TimelineError(
+                `trim.${edge}: no marker "${point.marker}" — markers.json has ${markers.markers.map((m) => JSON.stringify(m.label)).join(', ') || 'none'}`,
+            )
+        }
+        return round(found.at + (point.offset ?? 0))
+    }
+    const click = markers.clicks?.[point.click - 1]
+    if (!click) {
+        throw new TimelineError(`trim.${edge}: no click ${point.click} — markers.json has ${markers.clicks?.length ?? 0}`)
+    }
+    return round((click.move ?? click.at) + (point.offset ?? 0))
+}
+
+/** Where the footage should start: just before the first logged glide (after the login). */
+export function suggestTrimStart(markers: Markers): number {
+    const candidates = [
+        ...(markers.clicks ?? []).map((c) => (c.move ?? c.at) - 0.5),
+        ...markers.markers.map((m) => m.at - 0.8),
+    ]
+    if (!candidates.length) {
+        return 0
+    }
+    return Math.max(0, round(Math.min(...candidates)))
 }
 
 /** One callout per marker, worded as the marker label: the starting point of a new video.json. */
