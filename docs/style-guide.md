@@ -101,7 +101,7 @@ reader could follow without the video. If you can't write the callouts, the vide
 
 ## Troubleshooting
 
-- **Scenario timed out on a locator**: open `recording.failed.webm`, re-run with `--headed`.
+- **Scenario timed out on a locator**: open `recording.failed.mp4`, re-run with `--headed`.
 - **`video_nested_in_timed_element` lint error**: a timed `<video>` inside a timed wrapper.
 - **A callout flashes at t=0 or a zoom starts zoomed in**: an "out" tween without
   `immediateRender: false`.

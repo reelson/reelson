@@ -16,8 +16,7 @@ with raw Playwright calls.
 ```
 <videosDir>/<slug>/
 ├── scenario.ts      ← you write this (committed)
-├── recording.mp4    ← generated: H.264, 2x viewport, no audio (git-ignored)
-├── recording.webm   ← generated: raw Playwright capture (ignored)
+├── recording.mp4    ← generated: H.264, 30 fps, 2x viewport, no audio (git-ignored)
 └── markers.json     ← generated: duration, viewport, markers, clicks, cuts (committed)
 ```
 
@@ -47,6 +46,10 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 
 ## What the recorder adds on top of plain Playwright video
 
+- **Smooth footage**: the page is filmed with Chrome's screencast — every frame it paints
+  (up to 60 fps, full 2x pixels, stamped on the same clock as the markers and the cursor) —
+  and assembled into a constant 30 fps recording.mp4, so scrolls, hovers and transitions don't
+  stutter. `record.capture: "playwright"` falls back to Playwright's 25 fps video.
 - **Visible cursor**: a large black macOS-style arrow with a press squash and a brand-coloured
   double ring on click (Playwright's synthetic mouse is otherwise invisible). By default
   (`record.cursor: "layer"`) the page only *logs* it: every move and press goes into
@@ -116,7 +119,7 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
    ```
 
    Prints the duration and marker count. On a scenario error the partial capture is kept as
-   `recording.failed.webm`. Flows that create records do so for real — point scenarios at a
+   `recording.failed.mp4`. Flows that create records do so for real — point scenarios at a
    local environment, never staging/prod.
 
 4. **Verify before handing off.** Pull frames at the marker times and look at them:

@@ -62,7 +62,8 @@ typo is an error with a "did you mean" hint).
         "hideSelectors": [".environment-indicator"],   // local-only UI to hide on camera
         "extraHTTPHeaders": { "X-Demo-Recording": "1" },
         "personaDomain": "example.com",
-        "cursor": "layer"                              // or "recorded": film it into the footage
+        "cursor": "layer",                             // or "recorded": film it into the footage
+        "capture": "screencast"                        // every painted frame → smooth 30 fps (or "playwright")
     }
 }
 ```

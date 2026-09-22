@@ -5,15 +5,15 @@
  *   node <skills>/reelkit-record/scripts/record.ts <scenario.ts> [--out <dir>] [--headed]
  *
  * The scenario module default-exports a `Scenario` (see ./scenario.ts). The
- * recorder drives it with Playwright, draws a visible cursor with click
- * ripples into the page, hides local dev chrome, and writes into --out
- * (default: the scenario's directory). Project settings (viewport, locale,
+ * recorder drives it with Playwright, logs the cursor (or draws it, record.cursor
+ * "recorded"), hides local dev chrome, films the page with Chrome's screencast
+ * (see ./capture.ts; record.capture "playwright" uses Playwright's video) and writes
+ * into --out (default: the scenario's directory). Project settings (viewport, locale,
  * brand colour, hidden selectors, persona domain) come from demo.config.json
  * (see ./config.ts):
  *
- *   recording.webm   raw Playwright capture
- *   recording.mp4    H.264 transcode (what HyperFrames consumes)
- *   markers.json     { durationSeconds, viewport, markers: [{ label, at }] }
+ *   recording.mp4    H.264, 30 fps (what HyperFrames consumes); recording.failed.mp4 on failure
+ *   markers.json     { durationSeconds, viewport, markers, clicks, cuts, transitions, cursor }
  *
  * Markers are the timestamps (seconds from the start of the video) of every
  * `demo.marker()` call, so callouts/zooms in the composition can be timed
@@ -32,6 +32,7 @@ import {
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { encodeFrames, frameSchedule, startScreencast } from './capture.ts'
 import { COMMON_DEV_CHROME, ConfigError, loadConfig } from './config.ts'
 import { CURSOR_BINDING, cursorOverlayScript, hideDevChromeScript, type CursorEvent } from './cursor-overlay.ts'
 import { createDemo, type Scenario } from './scenario.ts'
@@ -69,6 +70,7 @@ const viewport = scenario.viewport ?? config.record.viewport
 const captureScale =
     scenario.deviceScaleFactor ?? config.record.deviceScaleFactor
 const rawDir = resolve(outDir, '.raw')
+const screencast = config.record.capture === 'screencast'
 
 mkdirSync(outDir, { recursive: true })
 rmSync(rawDir, { recursive: true, force: true })
@@ -87,13 +89,14 @@ const context: BrowserContext = await browser.newContext({
     viewport,
     deviceScaleFactor: captureScale,
     // Film at device pixels (2x by default) so text survives the frame scaling and zooms.
-    recordVideo: {
-        dir: rawDir,
-        size: {
-            width: viewport.width * captureScale,
-            height: viewport.height * captureScale,
-        },
-    },
+    ...(screencast
+        ? {}
+        : {
+              recordVideo: {
+                  dir: rawDir,
+                  size: { width: viewport.width * captureScale, height: viewport.height * captureScale },
+              },
+          }),
     // Tells the app it is being recorded (X-Demo-Recording by default), so it can skip
     // dev conveniences that would look wrong on camera (pre-filled forms, pre-ticked consents).
     extraHTTPHeaders: config.record.extraHTTPHeaders,
@@ -117,6 +120,7 @@ if (hideScript) {
 }
 
 const page: Page = await context.newPage()
+const filming = screencast ? await startScreencast(context, page, rawDir) : null
 const demo = createDemo(page, hashSeed(scenario.name), {
     domain: config.record.personaDomain,
     language: config.language,
@@ -134,15 +138,35 @@ try {
     console.error('scenario failed:', error)
 }
 
-const videoPath = await page.video()?.path()
+const endedAt = Date.now()
+const frames = filming ? await filming.stop() : []
+const videoPath = screencast ? undefined : await page.video()?.path()
 await context.close()
 await browser.close()
 
+const mp4 = resolve(outDir, 'recording.mp4')
+if (screencast) {
+    // Frames painted after the scenario ended are not part of it.
+    const schedule = frameSchedule(frames.filter((f) => f.t <= endedAt), demo.startedAt, endedAt, failure ? [] : demo.cuts)
+    const target = failure ? resolve(outDir, 'recording.failed.mp4') : mp4
+    if (!(await encodeFrames(schedule, target))) {
+        console.error(schedule.length ? 'ffmpeg could not encode the frames (is ffmpeg installed? brew install ffmpeg)' : 'no frames were captured')
+        process.exit(1)
+    }
+    rmSync(rawDir, { recursive: true, force: true })
+    if (failure) {
+        console.error(`partial capture kept for debugging: ${target}`)
+        process.exit(1)
+    }
+} else {
+    transcodePlaywrightVideo()
+}
+
+function transcodePlaywrightVideo(): void {
 const webm = resolve(
     outDir,
     failure ? 'recording.failed.webm' : 'recording.webm',
 )
-const mp4 = resolve(outDir, 'recording.mp4')
 const produced = videoPath ?? resolve(rawDir, readdirSync(rawDir)[0] ?? '')
 if (!produced || !existsSync(produced)) {
     console.error('no video was produced')
@@ -212,12 +236,13 @@ if (ffmpeg.status !== 0) {
     )
     process.exit(1)
 }
+}
 
 /**
  * Seconds between the page handling an input event and the frame that shows it in the
  * capture (measured on the example, see the reelkit-record SKILL.md).
  */
-const CAPTURE_LATENCY = 0.04
+const CAPTURE_LATENCY = screencast ? 0 : 0.04
 
 /**
  * The cursor as the video saw it: [t, x, y] per move and per press (video seconds after

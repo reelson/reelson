@@ -75,6 +75,11 @@ export interface DemoConfig {
          * zooms, restyled without re-recording). 'recorded': drawn into the page and filmed.
          */
         cursor: 'layer' | 'recorded'
+        /**
+         * 'screencast': every frame Chrome paints (up to 60 fps), assembled into a smooth
+         * 30 fps recording. 'playwright': Playwright's own 25 fps video (the pre-0.5 way).
+         */
+        capture: 'screencast' | 'playwright'
     }
 }
 
@@ -105,6 +110,7 @@ export const DEFAULTS: DemoConfig = {
         hideSelectors: [],
         personaDomain: 'example.com',
         cursor: 'layer',
+        capture: 'screencast',
     },
 }
 

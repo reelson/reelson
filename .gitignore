@@ -6,6 +6,7 @@ node_modules/
 **/recording.mp4
 **/recording.webm
 **/recording.failed.webm
+**/recording.failed.mp4
 **/.raw/
 **/video/
 *.openscreen

@@ -45,6 +45,7 @@
         },
         "hideSelectors": [],
         "personaDomain": "example.com",
-        "cursor": "layer"
+        "cursor": "layer",
+        "capture": "screencast"
     }
 }

@@ -154,6 +154,13 @@
                     ],
                     "description": "layer (default): the cursor is logged, not filmed, and the video draws it — same size under zooms, restyled without re-recording. recorded: drawn into the page and filmed (the pre-0.4 behaviour)."
                 },
+                "capture": {
+                    "enum": [
+                        "screencast",
+                        "playwright"
+                    ],
+                    "description": "screencast (default): every frame Chrome paints, up to 60 fps, assembled into a smooth 30 fps recording. playwright: Playwright's own 25 fps video (stutters one frame in six at 30 fps)."
+                },
                 "hideSelectors": {
                     "type": "array",
                     "items": {
