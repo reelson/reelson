@@ -79,6 +79,15 @@ export interface Markers {
     transitions?: HandOff[]
     cuts?: { from: number; to: number }[]
     cursor?: CursorLog
+    /** What the demo worked on (reelkit-record's Focus): recording s, viewport CSS px. */
+    focus?: { at: number; box: Box; area: Box }[]
+}
+
+export interface Box {
+    x: number
+    y: number
+    width: number
+    height: number
 }
 
 /** The cursor as reelkit-record logged it: [t, x, y] in recording seconds and viewport CSS px. */
@@ -146,6 +155,12 @@ export interface VideoSpec {
     zooms?: ZoomSpec[]
     /** false: no cursor at all. Only for recordings with a logged (not filmed) cursor. */
     cursor?: false | CursorSpec
+    /**
+     * Where the portrait video (`render --portrait`) comes from: "mobile" — the phone take
+     * (`reelkit record --mobile`); "desktop" — a camera over the desktop recording; "auto"
+     * (default) — the phone take when there is one.
+     */
+    portrait?: 'auto' | 'mobile' | 'desktop'
 }
 
 export interface Callout {
@@ -186,10 +201,14 @@ export interface Timeline {
         ripple: boolean
         /** Seconds of stillness before it fades out; 0 = always shown. */
         idle: number
+        /** A phone take: show the taps (ripples) only, no arrow. */
+        touch?: boolean
         scale: number
         path: [number, number, number][]
         presses: [number, number, number][]
     } | null
+    /** What the demo worked on, in composition time (empty for recordings made before 0.5). */
+    focus: { at: number; box: Box; area: Box }[]
     /** Recording time → composition time (footage after a hand-off is pushed back by the gap). */
     toComposition: (recordingTime: number) => number
 }
@@ -354,6 +373,9 @@ export function computeTimeline(
             segments,
             callouts,
             cursor,
+            focus: (markers.focus ?? [])
+                .filter((f) => f.at >= mediaStart && f.at <= mediaEnd)
+                .map((f) => ({ ...f, at: toComposition(f.at) })),
             toComposition,
         },
         warnings,

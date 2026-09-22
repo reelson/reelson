@@ -27,7 +27,9 @@ Usage: reelkit <command> [options]
   init                          create demo.config.json in this directory
   doctor                        check the tools and that the cursor layer lines up here
   new <slug> [--url <origin>]   start <videosDir>/<slug>/scenario.ts
-  record <slug> [--headed]      run the scenario → recording.mp4 + markers.json
+  record <slug> [--headed] [--mobile]
+                                run the scenario → recording.mp4 + markers.json; --mobile: on a
+                                phone (record.mobile.device) → recording.mobile.mp4, for --portrait
   build <slug> [options]        video.json → video/ (HyperFrames project)
       --title, --subtitle, --template <name>
       --intro <name>, --recap <name|none>, --outro <name>
@@ -195,15 +197,21 @@ function record(argv: string[]): number {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { headed: { type: 'boolean' }, out: { type: 'string' } },
+        options: { headed: { type: 'boolean' }, mobile: { type: 'boolean' }, out: { type: 'string' } },
     })
-    const target = one(positionals, 'record <slug|scenario.ts> [--headed]')
+    const target = one(positionals, 'record <slug|scenario.ts> [--headed] [--mobile]')
     const scenario = target.endsWith('.ts') ? resolve(target) : resolve(resolveDemoDir(target, config()), 'scenario.ts')
     if (!existsSync(scenario)) {
         throw new ReelkitError(`no scenario at ${scenario} — create one with \`reelkit new\``)
     }
     const script = resolve(KIT_ROOT, 'skills/reelkit-record/scripts/record.ts')
-    const args = [script, scenario, ...(values.headed ? ['--headed'] : []), ...(values.out ? ['--out', values.out] : [])]
+    const args = [
+        script,
+        scenario,
+        ...(values.headed ? ['--headed'] : []),
+        ...(values.mobile ? ['--mobile'] : []),
+        ...(values.out ? ['--out', values.out] : []),
+    ]
 
     return spawnSync(process.execPath, args, { stdio: 'inherit' }).status ?? 1
 }

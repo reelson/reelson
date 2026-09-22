@@ -154,6 +154,16 @@
                     ],
                     "description": "layer (default): the cursor is logged, not filmed, and the video draws it — same size under zooms, restyled without re-recording. recorded: drawn into the page and filmed (the pre-0.4 behaviour)."
                 },
+                "mobile": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "device": {
+                            "type": "string",
+                            "description": "Playwright device for `reelkit record --mobile` (the phone take behind the portrait video), e.g. \"Pixel 7\" (default), \"iPhone 14\", \"Galaxy S9+\"."
+                        }
+                    }
+                },
                 "capture": {
                     "enum": [
                         "screencast",

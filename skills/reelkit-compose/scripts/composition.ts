@@ -47,7 +47,11 @@ export interface CompositionInput {
     layout?: Layout
     /** Overrides the timeline's cursor layer (portrait moves it into its own footage scale). */
     cursor?: Timeline['cursor']
+    /** The media files (default assets/recording.mp4, narration.m4a, music.m4a). */
+    media?: { recording: string; narration: string; music: string }
 }
+
+const MEDIA = { recording: 'assets/recording.mp4', narration: 'assets/narration.m4a', music: 'assets/music.m4a' }
 
 /** HyperFrames track per slot: the recap cross-fades with the outro, so they sit on different tracks. */
 const TRACKS: Record<Slot, number> = { intro: 3, recap: 2, outro: 3 }
@@ -66,7 +70,7 @@ export function renderComposition(input: CompositionInput): string {
         callouts: t.callouts.map(({ source: _source, ...c }) => c),
         zooms: input.zooms,
         cursor: input.cursor !== undefined ? input.cursor : t.cursor,
-        layout: { format: layout.format, stage: layout.stage, bandZoom: layout.bandZoom, pan: layout.pan },
+        layout: { format: layout.format, stage: layout.stage, bandZoom: layout.bandZoom, camera: layout.camera },
         transitions: t.transitions.map(({ at, gap }) => ({ at, gap })),
         chip: { steps: text.stepsChip, seconds: text.secondsChip },
     }
@@ -134,14 +138,14 @@ export function renderComposition(input: CompositionInput): string {
         RECAP: part('recap').html,
         OUTRO: part('outro').html,
         SECTION_SCRIPTS: parts.map((p) => p.js).join('\n\n'),
-        VIDEOS: renderVideoSegments(t),
+        VIDEOS: renderVideoSegments(t, (input.media ?? MEDIA).recording),
         TRANSITIONS: t.transitions.map((tr, i) => renderTransitionCard(tr, i, t.belt)).join('\n'),
-        AUDIO: input.narration ? renderNarration(t) : '',
-        MUSIC: input.music ? renderMusic(t) : '',
+        AUDIO: input.narration ? renderNarration(t, (input.media ?? MEDIA).narration) : '',
+        MUSIC: input.music ? renderMusic(t, (input.media ?? MEDIA).music) : '',
         // JSON is valid JS; escaping "<" keeps "</script>" in a callout from closing the tag.
         DEMO: JSON.stringify(demo, null, 2)
-            // The cursor's [t, x, y] points one per line, not one number per line.
-            .replace(/\[\s+(-?[\d.]+),\s+(-?[\d.]+),\s+(-?[\d.]+)\s+\]/g, '[$1, $2, $3]')
+            // Number tuples (cursor [t, x, y], camera [t, k, x, y, h]) one per line, not one number per line.
+            .replace(/\[\s+((?:-?[\d.]+,\s+)+-?[\d.]+)\s+\]/g, (_m, inner: string) => `[${inner.split(/,\s+/).join(', ')}]`)
             .replace(/</g, '\\u003c')
             .replace(/\n/g, '\n      '),
     })
@@ -164,12 +168,12 @@ function indent(block: string, spaces: number): string {
  * One <video> clip per stretch of footage between hand-offs (same file,
  * different data-media-start), so the footage pauses while a card is on screen.
  */
-function renderVideoSegments(t: Timeline): string {
+function renderVideoSegments(t: Timeline, src: string): string {
     return t.segments
         .map((s, i) => {
             const id = i === 0 ? 'recording' : `recording-${i + 1}`
 
-            return `          <video id="${id}" class="clip" src="assets/recording.mp4" muted playsinline
+            return `          <video id="${id}" class="clip" src="${src}" muted playsinline
             data-start="${s.start}" data-duration="${s.duration}" data-media-start="${s.mediaStart}" data-track-index="1"></video>`
         })
         .join('\n')
@@ -200,14 +204,14 @@ function renderTransitionCard(tr: Timeline['transitions'][number], i: number, be
       </section>`
 }
 
-function renderNarration(t: Timeline): string {
+function renderNarration(t: Timeline, src: string): string {
     return `      <!-- Narration from the recording (kept in sync via the same start/media-start) -->
-      <audio id="narration" class="clip" src="assets/narration.m4a" data-start="${t.clipStart}" data-duration="${round(t.mediaEnd - t.mediaStart)}" data-media-start="${t.mediaStart}" data-track-index="3"></audio>`
+      <audio id="narration" class="clip" src="${src}" data-start="${t.clipStart}" data-duration="${round(t.mediaEnd - t.mediaStart)}" data-media-start="${t.mediaStart}" data-track-index="3"></audio>`
 }
 
-function renderMusic(t: Timeline): string {
+function renderMusic(t: Timeline, src: string): string {
     return `      <!-- Music bed, pre-rendered by reelkit build (trim + loudnorm + fades) -->
-      <audio id="music" class="clip" src="assets/music.m4a" data-start="0" data-duration="${t.total}" data-track-index="4"></audio>`
+      <audio id="music" class="clip" src="${src}" data-start="0" data-duration="${t.total}" data-track-index="4"></audio>`
 }
 
 export function escapeHtml(s: string): string {

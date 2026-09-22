@@ -89,7 +89,7 @@
       #root.portrait > #intro, #root.portrait > #recap, #root.portrait > #outro, #root.portrait > .transition-card {
         inset: auto; left: 0; top: calc((var(--stage-h) - 1080px * var(--band-zoom)) / 2 / var(--band-zoom));
         width: 1920px; height: 1080px; zoom: var(--band-zoom); }
-      #root.portrait #screen { place-items: start center; padding-top: 250px; }
+      #root.portrait #screen { place-items: center; padding-bottom: 300px; }  /* centred above the callouts */
       #root.portrait .callout { bottom: 150px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
 
       /* Cursor layer (DEMO.cursor): the recorder logs the cursor instead of filming it, and
@@ -255,7 +255,7 @@
        *   cursor: { size, ripple, idle, scale, path: [[t, x, y]], presses: [[t, x, y]] } | null
        *           the logged cursor (x/y recording px, × scale = frame px); null = filmed in
        *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
-       *   layout: { format, stage: { width, height }, bandZoom, pan: [[t, px]] }   portrait: pan = footage offset
+       *   layout: { format, stage: { width, height }, bandZoom, camera: [[t, k, x, y, h]] }   portrait camera
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
       const DEMO = {
@@ -308,7 +308,7 @@
             "height": 1080
           },
           "bandZoom": 1,
-          "pan": []
+          "camera": []
         },
         "transitions": [
           {
@@ -444,6 +444,26 @@
         }
       });
 
+      // Portrait camera (DEMO.layout.camera, [t, k, x, y, h]): the footage scales and moves
+      // inside the frame to frame what the demo works on; the frame's height follows it.
+      const cam = DEMO.layout.camera;
+      const cameraAt = (t) => {
+        if (!cam.length) return 1;
+        const i = cam.findIndex((c) => c[0] > t);
+        if (i <= 0) return cam[i === -1 ? cam.length - 1 : 0][1];
+        const a = cam[i - 1], b = cam[i];
+        return a[1] + (b[1] - a[1]) * ((t - a[0]) / (b[0] - a[0]));
+      };
+      if (cam.length) {
+        gsap.set('#footage', { transformOrigin: '0 0', scale: cam[0][1], x: cam[0][2], y: cam[0][3] });
+        gsap.set('#frame', { height: cam[0][4] });
+        for (let i = 1; i < cam.length; i++) {
+          const a = cam[i - 1], b = cam[i], duration = b[0] - a[0];
+          tl.fromTo('#footage', { scale: a[1], x: a[2], y: a[3] }, { scale: b[1], x: b[2], y: b[3], duration, ease: 'none', ...later }, a[0]);
+          if (a[4] !== b[4]) tl.fromTo('#frame', { height: a[4] }, { height: b[4], duration, ease: 'none', ...later }, a[0]);
+        }
+      }
+
       // Cursor layer: every logged move is a tween to the next point (a glide's moves are
       // 20–50 ms apart; a longer gap is a jump: a cut, a new page). During a zoom the arrow
       // is counter-scaled, so it keeps its size while the footage grows.
@@ -470,7 +490,7 @@
 
         if (C.ripple) {
           C.presses.forEach((p) => {
-            const counter = 1 / zoomAt(p[0]);
+            const counter = 1 / (zoomAt(p[0]) * cameraAt(p[0]));
             [['a', 0.55, 0], ['b', 0.8, 0.08]].forEach(([kind, duration, delay]) => {
               const ring = node('div', 'cursor-ripple ' + kind);
               const d = 84 * C.scale;
@@ -482,6 +502,7 @@
         }
         layer.append(cursor);
         document.getElementById('footage').append(layer);
+        if (C.touch) cursor.style.visibility = 'hidden'; // a phone take: the taps only
 
         gsap.set(cursor, { ...place(C.path[0]), transformOrigin: tip.x + 'px ' + tip.y + 'px' });
         gsap.set(arrow, { transformOrigin: tip.x + 'px ' + tip.y + 'px' });
@@ -497,6 +518,12 @@
           tl.fromTo(cursor, { scale: 1 }, { scale: k, duration: zin, ease: (p) => (inverse(E(p)) - 1) / (k - 1), ...later }, z.at);
           tl.fromTo(cursor, { scale: k }, { scale: 1, duration: zout, ease: (p) => (inverse(1 - E(p)) - k) / (1 - k), ...later }, z.at + z.duration - zout);
         });
+        // The portrait camera scales the footage: keep the arrow its size.
+        for (let i = 1; i < cam.length; i++) {
+          const a = cam[i - 1], b = cam[i];
+          if (a[1] !== b[1]) tl.fromTo(cursor, { scale: 1 / a[1] }, { scale: 1 / b[1], duration: b[0] - a[0], ease: 'none', ...later }, a[0]);
+        }
+        if (cam.length) gsap.set(cursor, { scale: 1 / cam[0][1] });
         // Idle: after C.idle s without a move or a press, fade out; back in as it moves again.
         if (C.idle > 0) {
           const active = [...C.path.map((p) => p[0]), ...C.presses.map((p) => p[0])].sort((a, b) => a - b);
@@ -513,14 +540,6 @@
           tl.fromTo(arrow, { scale: 1 }, { scale: 0.82, duration: 0.09, ease: 'power1.out', ...later }, p[0]);
           tl.fromTo(arrow, { scale: 0.82 }, { scale: 1, duration: 0.13, ease: 'power1.out', ...later }, p[0] + 0.09);
         });
-      }
-
-      // Portrait: the footage pans inside the tall frame to keep the cursor in view.
-      const pan = DEMO.layout.pan;
-      if (pan.length) gsap.set('#footage', { x: -pan[0][1], y: -pan[0][2] });
-      for (let i = 1; i < pan.length; i++) {
-        const a = pan[i - 1], b = pan[i];
-        tl.fromTo('#footage', { x: -a[1], y: -a[2] }, { x: -b[1], y: -b[2], duration: b[0] - a[0], ease: 'none', ...later }, a[0]);
       }
 
       /* ---- Sections: each runs with `section` = its DEMO.sections entry, and may use

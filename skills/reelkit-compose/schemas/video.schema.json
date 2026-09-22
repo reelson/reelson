@@ -77,6 +77,10 @@
                 }
             }
         },
+        "portrait": {
+            "enum": ["auto", "mobile", "desktop"],
+            "description": "Source of `reelkit render --portrait`: mobile = the phone take (`reelkit record --mobile`), desktop = a camera framing each element on the desktop recording, auto (default) = the phone take when there is one."
+        },
         "cursor": {
             "description": "The cursor layer (recordings with record.cursor \"layer\", the default since reelkit 0.4): false hides it, or tune it. Has no effect when the cursor is filmed in.",
             "anyOf": [

@@ -81,6 +81,8 @@ export interface DemoConfig {
          * 30 fps recording. 'playwright': Playwright's own 25 fps video (the pre-0.5 way).
          */
         capture: 'screencast' | 'playwright'
+        /** `reelkit record --mobile`: the Playwright device the phone take uses. */
+        mobile: { device: string }
     }
 }
 
@@ -112,6 +114,7 @@ export const DEFAULTS: DemoConfig = {
         personaDomain: 'example.com',
         cursor: 'layer',
         capture: 'screencast',
+        mobile: { device: 'Pixel 7' },
     },
 }
 

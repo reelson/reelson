@@ -47,6 +47,10 @@ if (!scenarioArg) {
 const scenarioPath = resolve(scenarioArg)
 const outDir = resolve(flag('--out') ?? dirname(scenarioPath))
 const headed = args.includes('--headed')
+// --mobile: the same scenario on a phone (record.mobile.device), next to the desktop take —
+// recording.mobile.mp4 + markers.mobile.json, for the portrait video.
+const mobile = args.includes('--mobile')
+const suffix = mobile ? '.mobile' : ''
 
 function flag(name: string): string | undefined {
     const i = args.indexOf(name)
@@ -63,13 +67,17 @@ const config = (() => {
 })()
 // The project's own Playwright when the scenario can see one: its helpers (a login from the
 // e2e suite) import it too, and Playwright refuses to be loaded twice from two places.
-const { chromium } = await import(playwrightFor(scenarioPath))
+const { chromium, devices } = await import(playwrightFor(scenarioPath))
 const scenario: Scenario = (await import(pathToFileURL(scenarioPath).href))
     .default
-const viewport = scenario.viewport ?? config.record.viewport
-const captureScale =
-    scenario.deviceScaleFactor ?? config.record.deviceScaleFactor
-const rawDir = resolve(outDir, '.raw')
+const device = mobile ? devices[config.record.mobile.device] : undefined
+if (mobile && !device) {
+    console.error(`reelkit: record.mobile.device "${config.record.mobile.device}" is not a Playwright device (e.g. "Pixel 7", "iPhone 14")`)
+    process.exit(1)
+}
+const viewport = device ? device.viewport : (scenario.viewport ?? config.record.viewport)
+const captureScale = device ? device.deviceScaleFactor : (scenario.deviceScaleFactor ?? config.record.deviceScaleFactor)
+const rawDir = resolve(outDir, `.raw${suffix}`)
 const screencast = config.record.capture === 'screencast'
 
 mkdirSync(outDir, { recursive: true })
@@ -83,6 +91,8 @@ const browser: Browser = await chromium.launch({
     args: [`--force-device-scale-factor=${captureScale}`],
 })
 const context: BrowserContext = await browser.newContext({
+    // A phone: its user agent, touch and mobile layout (viewport + scale are set below).
+    ...(device ? { userAgent: device.userAgent, isMobile: device.isMobile, hasTouch: device.hasTouch } : {}),
     baseURL: scenario.baseURL,
     ignoreHTTPSErrors: true,
     locale: config.locale,
@@ -150,7 +160,7 @@ const demo = createDemo(
     page,
     hashSeed(scenario.name),
     { domain: config.record.personaDomain, language: config.language },
-    { onSwitch: (p) => camera.push({ t: Date.now(), page: idOf(p) }) },
+    { onSwitch: (p) => camera.push({ t: Date.now(), page: idOf(p) }), mobile },
 )
 camera.push({ t: demo.startedAt, page: 0 })
 
@@ -183,11 +193,11 @@ const videoPath = screencast ? undefined : await page.video()?.path()
 await context.close()
 await browser.close()
 
-const mp4 = resolve(outDir, 'recording.mp4')
+const mp4 = resolve(outDir, `recording${suffix}.mp4`)
 if (screencast) {
     // Frames painted after the scenario ended are not part of it.
     const schedule = frameSchedule(frames.filter((f) => f.t <= endedAt), demo.startedAt, endedAt, failure ? [] : demo.cuts, camera)
-    const target = failure ? resolve(outDir, 'recording.failed.mp4') : mp4
+    const target = failure ? resolve(outDir, `recording${suffix}.failed.mp4`) : mp4
     if (!(await encodeFrames(schedule, target))) {
         console.error(schedule.length ? 'ffmpeg could not encode the frames (is ffmpeg installed? brew install ffmpeg)' : 'no frames were captured')
         process.exit(1)
@@ -204,7 +214,7 @@ if (screencast) {
 function transcodePlaywrightVideo(): void {
 const webm = resolve(
     outDir,
-    failure ? 'recording.failed.webm' : 'recording.webm',
+    failure ? `recording${suffix}.failed.webm` : `recording${suffix}.webm`,
 )
 const produced = videoPath ?? resolve(rawDir, readdirSync(rawDir)[0] ?? '')
 if (!produced || !existsSync(produced)) {
@@ -366,7 +376,7 @@ const durationSeconds =
     Number.parseFloat(probe.stdout.trim()) || demo.elapsedSeconds()
 
 writeFileSync(
-    resolve(outDir, 'markers.json'),
+    resolve(outDir, `markers${suffix}.json`),
     JSON.stringify(
         {
             scenario: scenario.name,
@@ -397,6 +407,9 @@ writeFileSync(
                 ...m,
                 at: toCutTime(m.at, demo.cuts),
             })),
+            focus: demo.focus
+                .filter((f) => !demo.cuts.some((cut) => f.at > cut.from && f.at < cut.to))
+                .map((f) => ({ ...f, at: toCutTime(f.at, demo.cuts) })),
             cursor: cursorLog(onCamera(cursorEvents, camera), demo.startedAt, demo.cuts, config.record.cursor === 'recorded'),
         },
         null,

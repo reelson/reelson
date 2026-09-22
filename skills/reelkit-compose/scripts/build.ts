@@ -19,8 +19,8 @@ import { spawnSync } from 'node:child_process'
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, extname, resolve } from 'node:path'
 import { countLabel, fromRoot, type LoadedConfig } from '../../reelkit-record/scripts/config.ts'
-import { renderComposition } from './composition.ts'
-import { portraitLayout } from './portrait.ts'
+import { renderComposition, type CompositionInput } from './composition.ts'
+import { phoneLayout, portraitLayout } from './portrait.ts'
 import { HYPERFRAMES_VERSION, RENDER_FLAGS } from './hyperframes.ts'
 import {
     readMarkers,
@@ -175,12 +175,9 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     }
     const html = renderComposition(composition)
     writeFileSync(resolve(videoDir, 'index.html'), html)
-    // The same video for phones (`reelkit render --portrait`): tall frame, footage panning with the cursor.
-    const portrait = portraitLayout(timeline, result.zooms)
-    writeFileSync(
-        resolve(videoDir, 'portrait.html'),
-        renderComposition({ ...composition, layout: portrait.layout, cursor: portrait.cursor, zooms: portrait.zooms }),
-    )
+    // The same video for phones (`reelkit render --portrait`): from the phone take when there
+    // is one (video.json "portrait"), else a camera framing each element on this recording.
+    writeFileSync(resolve(videoDir, 'portrait.html'), renderPortrait(demoDir, config, spec, composition, result, assets, log))
     writeFileSync(
         resolve(videoDir, 'hyperframes.json'),
         JSON.stringify(
@@ -228,6 +225,57 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     return result
 }
 
+/** The portrait composition (see `build`). */
+function renderPortrait(
+    demoDir: string,
+    config: LoadedConfig,
+    spec: VideoSpec,
+    composition: CompositionInput,
+    result: Omit<Plan, 'created'>,
+    assets: string,
+    log: (line: string) => void,
+): string {
+    const source = spec.portrait ?? 'auto'
+    const phoneTake = resolve(demoDir, 'recording.mobile.mp4')
+    const phoneMarkers = resolve(demoDir, 'markers.mobile.json')
+    const hasPhone = existsSync(phoneTake) && existsSync(phoneMarkers)
+    if (source === 'mobile' && !hasPhone) {
+        log('  warning: video.json "portrait": "mobile", but there is no phone take — run `reelkit record <slug> --mobile`; using the desktop camera')
+    }
+    if (source !== 'desktop' && hasPhone) {
+        try {
+            // The same video.json on the phone take: callouts follow their markers; zooms are
+            // numbered by the desktop clicks, so they don't apply.
+            const markers = JSON.parse(readFileSync(phoneMarkers, 'utf8')) as Markers
+            const phone = planSpec(demoDir, { ...spec, zooms: [] }, markers, config)
+            copyIfChanged(phoneTake, resolve(assets, 'recording.mobile.mp4'))
+            const narration = extractNarration(phoneTake, resolve(assets, 'narration.mobile.m4a'), phone.timeline, () => {})
+            const music = renderMusicBed(spec, config, phone.timeline, resolve(assets, 'music.mobile.m4a'), narration, () => {})
+            const layout = phoneLayout(phone.timeline)
+            log(`  portrait: the phone take (${markers.viewport.width}x${markers.viewport.height}), ${phone.timeline.total}s`)
+            return renderComposition({
+                ...composition,
+                timeline: phone.timeline,
+                layout: layout.layout,
+                cursor: layout.cursor,
+                zooms: [],
+                narration,
+                music,
+                media: { recording: 'assets/recording.mobile.mp4', narration: 'assets/narration.mobile.m4a', music: 'assets/music.mobile.m4a' },
+                text: {
+                    ...composition.text,
+                    stepsChip: countLabel(phone.timeline.callouts.length, config.strings.stepsLabel, config.language),
+                    secondsChip: countLabel(Math.round(phone.timeline.total), config.strings.secondsLabel, config.language),
+                },
+            })
+        } catch (error) {
+            log(`  warning: the phone take does not fit video.json (${(error as Error).message}) — portrait uses the desktop camera`)
+        }
+    }
+    const camera = portraitLayout(result.timeline)
+    return renderComposition({ ...composition, layout: camera.layout, cursor: camera.cursor, zooms: camera.zooms })
+}
+
 function applyOptions(spec: VideoSpec, o: BuildOptions): void {
     if (o.title !== undefined) spec.title = o.title
     if (o.subtitle !== undefined) spec.subtitle = o.subtitle
@@ -251,7 +299,7 @@ export function serializeVideoSpec(spec: VideoSpec, demoDir: string, config: Loa
 /** video.json in a stable, readable key order, without `$schema` (re-added on write). */
 function withoutSchema(spec: VideoSpec): VideoSpec {
     const { $schema: _ignored, ...rest } = spec as VideoSpec & { $schema?: string }
-    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms', 'cursor']
+    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms', 'cursor', 'portrait']
     const known = order.filter((k) => rest[k] !== undefined).map((k) => [k, rest[k]])
     const others = Object.entries(rest).filter(([k]) => !order.includes(k as keyof VideoSpec))
 

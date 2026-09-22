@@ -50,6 +50,17 @@ export interface Click {
     until?: number
 }
 
+/**
+ * What the demo was working on: the element it moved to (`box`) and the compact block
+ * around it (`area`: e.g. a form field with its label), viewport CSS px, from `at` (the
+ * glide towards it). A portrait video frames `area` so the element is never cut.
+ */
+export interface Focus {
+    at: number
+    box: { x: number; y: number; width: number; height: number }
+    area: { x: number; y: number; width: number; height: number }
+}
+
 /** A range of the raw capture removed from recording.mp4 (see Demo.cut). */
 export interface Cut {
     from: number
@@ -149,6 +160,8 @@ export interface Demo {
     page: Page
     markers: Marker[]
     clicks: Click[]
+    /** Every element moveTo/click/type went to, with its surroundings (see Focus). */
+    focus: Focus[]
     /**
      * Realistic customer data for forms (see Persona), in the project's UI
      * language. Domain defaults to demo.config.json `record.personaDomain`.
@@ -201,12 +214,19 @@ export interface Demo {
     popup: (action: () => Promise<unknown>) => Promise<Page>
     /** Continue on another page of the context (see popup); the video follows. */
     switchTo: (next: Page) => Promise<void>
+    /**
+     * True when recording the phone version (`reelkit record --mobile`): branch where the
+     * mobile UI differs, e.g. open the menu behind the hamburger button first.
+     */
+    mobile: boolean
 }
 
-/** What the recorder hears from the demo. */
+/** What the recorder tells the demo, and hears from it. */
 export interface DemoHooks {
     /** The page the demo acts on (and the video shows) changed. */
     onSwitch?: (page: Page) => void
+    /** Recording on a phone (`reelkit record --mobile`). */
+    mobile?: boolean
 }
 
 export function createDemo(
@@ -221,6 +241,7 @@ export function createDemo(
     const startedAt = Date.now()
     const markers: Marker[] = []
     const clicks: Click[] = []
+    const focus: Focus[] = []
     const cuts: Cut[] = []
     const transitions: Transition[] = []
     const elapsedSeconds = (): number => (Date.now() - startedAt) / 1000
@@ -285,6 +306,7 @@ export function createDemo(
         if (!box) {
             throw new Error(`moveTo: target has no bounding box: ${target}`)
         }
+        focus.push({ at: stamp(), box: rounded(box), area: rounded(await areaAround(target.first(), box)) })
         // Land near, not exactly on, the centre — people don't hit the middle.
         const jx = (rng() - 0.5) * Math.min(24, box.width * 0.3)
         const jy = (rng() - 0.5) * Math.min(10, box.height * 0.3)
@@ -357,6 +379,7 @@ export function createDemo(
         },
         markers,
         clicks,
+        focus,
         persona: (personaSeed, domain) =>
             persona(
                 personaSeed,
@@ -430,6 +453,7 @@ export function createDemo(
             await page.waitForTimeout(300 + rng() * 200)
         },
         switchTo,
+        mobile: hooks.mobile ?? false,
         popup: async (action) => {
             const [opened] = await Promise.all([page.context().waitForEvent('page'), action()])
             await switchTo(opened)
@@ -458,4 +482,29 @@ function mulberry32(seed: number): () => number {
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296
     }
+}
+
+type Box = { x: number; y: number; width: number; height: number }
+
+const rounded = (b: Box): Box => ({ x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) })
+
+/**
+ * The compact block around an element: the largest ancestor that is still about one row
+ * (at most 3x the element's height, or 180 px) and narrower than the viewport — e.g. a form
+ * field with its label and hint, a table row, a toolbar. Falls back to the element itself.
+ */
+async function areaAround(element: Locator, box: Box): Promise<Box> {
+    return element
+        .evaluate((node, own) => {
+            const maxHeight = Math.max(own.height * 3, 180)
+            const maxWidth = window.innerWidth * 0.9
+            let best = own
+            for (let el = node.parentElement; el && el !== document.body; el = el.parentElement) {
+                const r = el.getBoundingClientRect()
+                if (r.height > maxHeight || r.width > maxWidth) break
+                if (r.width >= best.width && r.height >= best.height) best = { x: r.x, y: r.y, width: r.width, height: r.height }
+            }
+            return best
+        }, box)
+        .catch(() => box)
 }

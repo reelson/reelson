@@ -71,7 +71,7 @@ describe('renderComposition', () => {
 
     it('renders the phone layout (portrait golden)', () => {
         const t = input('todo', example)
-        const portrait = portraitLayout(t.timeline, t.zooms)
+        const portrait = portraitLayout(t.timeline)
         golden('classic-portrait.html', renderComposition({ ...t, layout: portrait.layout, cursor: portrait.cursor, zooms: portrait.zooms }))
     })
 

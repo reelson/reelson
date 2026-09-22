@@ -168,6 +168,16 @@ page) is cut, and `markers.json` gets a `transitions` entry; reelkit-compose spl
 there and shows a hand-off card (`from` → `to`, title, subtitle). Leave ~3 s after the last
 marker before it.
 
+**Phone take (for the portrait video)**: `reelkit record <slug> --mobile` runs the same
+scenario on a phone — the Playwright device `record.mobile.device` (default "Pixel 7": its
+viewport, touch, mobile user agent) — into `recording.mobile.mp4` + `markers.mobile.json`
+(commit the markers like the desktop ones). `render --portrait` then shows it whole in a phone
+frame, with the taps as ripples: real mobile layout, nothing cropped. Use the same marker labels
+so video.json's callouts fit both takes; branch on `demo.mobile` where the mobile UI differs
+(`if (demo.mobile) await demo.click(page.getByRole('button', { name: 'Menu' }))`). The page
+needs `<meta name="viewport" content="width=device-width">` — without it a phone lays it out
+at desktop width, tiny.
+
 **Pop-ups and new tabs** (target="_blank", OAuth, a PDF preview): `const tab = await
 demo.popup(() => demo.click(link))`. From then on `demo.page` and every demo action use the new
 page, and the video cuts to it; when it closes (`window.close()`, `tab.close()`) the demo and
