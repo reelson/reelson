@@ -2,32 +2,44 @@
  * Builds a demo's HyperFrames project from its video.json.
  *
  *   reelkit build <slug|dir> [--title ".."] [--subtitle ".."] [--trim-start s] [--trim-end s]
- *                            [--template name] [--music file | --no-music]
+ *                            [--template name] [--intro name] [--recap name|none] [--outro name]
+ *                            [--music file | --no-music]
  *
  * video.json is the source of truth; video/ is generated and can be deleted at
  * any time. The first build creates video.json from markers.json (one callout
  * per marker, a suggested trim); the flags above edit video.json in place.
  *
  * Writes <demo>/video/{index.html, hyperframes.json, package.json, assets/*}:
- * the template's own assets (vendored GSAP + fonts), the recording, narration
+ * the template's stage with the chosen intro/recap/outro sections, its own assets
+ * (vendored GSAP + fonts), each section's assets, the brand logo, the recording, narration
  * (when the recording has audio) and the music bed (trimmed, loudness-normalised,
  * faded; cached between builds).
  */
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { basename, resolve } from 'node:path'
+import { basename, extname, resolve } from 'node:path'
 import { countLabel, fromRoot, type LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { renderComposition } from './composition.ts'
 import { HYPERFRAMES_VERSION, RENDER_FLAGS } from './hyperframes.ts'
 import {
-    findTemplate,
     readMarkers,
+    readSection,
     readVideoSpec,
     ReelkitError,
+    resolveDesign,
     videoSchemaRef,
-    type Template,
+    type Design,
+    type Section,
 } from './project.ts'
-import { computeTimeline, defaultCallouts, round, type Markers, type Timeline, type VideoSpec } from './timeline.ts'
+import {
+    computeTimeline,
+    defaultCallouts,
+    round,
+    type Markers,
+    type SectionChoice,
+    type Timeline,
+    type VideoSpec,
+} from './timeline.ts'
 import { compositionClicks, planZoom, ZoomError, type CompClick, type Zoom } from './zooms.ts'
 
 export interface BuildOptions {
@@ -36,6 +48,8 @@ export interface BuildOptions {
     trimStart?: number
     trimEnd?: number
     template?: string
+    /** Section per slot; stored in video.json `sections`. */
+    sections?: SectionChoice
     /** A file for this video, or false for none; undefined keeps video.json / config. */
     music?: string | false
     log?: (line: string) => void
@@ -44,7 +58,7 @@ export interface BuildOptions {
 export interface Plan {
     spec: VideoSpec
     markers: Markers
-    template: Template
+    design: Design
     timeline: Timeline
     clicks: CompClick[]
     zooms: Zoom[]
@@ -65,10 +79,10 @@ export function plan(demoDir: string, config: LoadedConfig, options: BuildOption
     }
     applyOptions(spec, options)
 
-    const template = findTemplate(spec.template ?? config.template, config)
+    const design = resolveDesign(spec.template ?? config.template, [config.sections, spec.sections], config)
     let computed
     try {
-        computed = computeTimeline(markers, spec, template.timing)
+        computed = computeTimeline(markers, spec, design.timing)
     } catch (error) {
         throw new ReelkitError(`${resolve(demoDir, 'video.json')}: ${(error as Error).message}`)
     }
@@ -85,7 +99,7 @@ export function plan(demoDir: string, config: LoadedConfig, options: BuildOption
         }
     })
 
-    return { spec, markers, template, timeline, clicks, zooms, warnings, created: existing === null }
+    return { spec, markers, design, timeline, clicks, zooms, warnings, created: existing === null }
 }
 
 export function build(demoDir: string, config: LoadedConfig, options: BuildOptions = {}): Plan {
@@ -95,7 +109,8 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
         throw new ReelkitError(`missing ${recording} — run \`reelkit record\` first (or export one from OpenScreen)`)
     }
     const result = plan(demoDir, config, options)
-    const { spec, timeline, template } = result
+    const { spec, timeline, design } = result
+    const { template } = design
 
     // video.json first: it is the source of truth even if a later step fails.
     const specPath = resolve(demoDir, 'video.json')
@@ -112,21 +127,32 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     if (existsSync(resolve(template.dir, 'assets'))) {
         cpSync(resolve(template.dir, 'assets'), assets, { recursive: true })
     }
+    const sections = Object.values(design.sections)
+        .filter((section): section is Section => section !== null)
+        .map((section) => {
+            const source = readSection(section)
+            if (source.assets) {
+                cpSync(resolve(section.dir, 'assets'), resolve(videoDir, source.assets), { recursive: true })
+            }
+            return source
+        })
+    const logo = copyLogo(spec, config, assets, log)
     copyIfChanged(recording, resolve(assets, 'recording.mp4'))
     const narration = extractNarration(recording, resolve(assets, 'narration.m4a'), timeline, log)
     const music = renderMusicBed(spec, config, timeline, resolve(assets, 'music.m4a'), narration, log)
 
     const brand = { ...config.brand, ...spec.brand }
     const html = renderComposition({
-        template: readFileSync(resolve(template.dir, 'index.html'), 'utf8'),
+        stage: readFileSync(resolve(template.dir, 'stage.html'), 'utf8'),
+        sections,
         timeline,
         zooms: result.zooms,
-        maxSteps: template.timing.maxSteps,
         narration,
         music,
         text: {
             language: config.language,
             brand,
+            logo,
             title: spec.title,
             subtitle: spec.subtitle ?? '',
             recapTitle: spec.recapTitle ?? config.strings.recapTitle,
@@ -164,10 +190,12 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     )
 
     const t = timeline
+    const { intro, recap, outro } = design.sections
     log(`built ${resolve(videoDir, 'index.html')} (template '${template.name}')`)
     log(
-        `  timeline: cover 0–${t.cover}s | recording ${t.clipStart}–${t.clipEnd}s (media ${t.mediaStart}–${t.mediaEnd}s) | ` +
-            `recap ${t.recapStart}–${round(t.recapStart + t.recapDuration)}s | brand ${t.brandOutStart}–${t.total}s`,
+        `  timeline: intro/${intro.name} 0–${t.intro.duration}s | recording ${t.clipStart}–${t.clipEnd}s (media ${t.mediaStart}–${t.mediaEnd}s) | ` +
+            (recap && t.recap ? `recap/${recap.name} ${t.recap.start}–${round(t.recap.start + t.recap.duration)}s | ` : 'no recap | ') +
+            `outro/${outro.name} ${t.outro.start}–${t.total}s`,
     )
     if (t.transitions.length) {
         log(`  hand-off card(s) at ${t.transitions.map((tr) => `${tr.at}s`).join(', ')}`)
@@ -184,6 +212,7 @@ function applyOptions(spec: VideoSpec, o: BuildOptions): void {
     if (o.title !== undefined) spec.title = o.title
     if (o.subtitle !== undefined) spec.subtitle = o.subtitle
     if (o.template !== undefined) spec.template = o.template
+    if (o.sections && Object.keys(o.sections).length) spec.sections = { ...spec.sections, ...o.sections }
     if (o.trimStart !== undefined) spec.trim = { ...spec.trim, start: o.trimStart }
     if (o.trimEnd !== undefined) spec.trim = { ...spec.trim, end: o.trimEnd }
     if (o.music !== undefined) spec.music = o.music
@@ -209,11 +238,48 @@ function humanize(slug: string): string {
 /** video.json in a stable, readable key order, without `$schema` (re-added on write). */
 function withoutSchema(spec: VideoSpec): VideoSpec {
     const { $schema: _ignored, ...rest } = spec as VideoSpec & { $schema?: string }
-    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms']
+    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms']
     const known = order.filter((k) => rest[k] !== undefined).map((k) => [k, rest[k]])
     const others = Object.entries(rest).filter(([k]) => !order.includes(k as keyof VideoSpec))
 
     return Object.fromEntries([...known, ...others]) as VideoSpec
+}
+
+const LOGO_TYPES = ['.svg', '.png', '.webp']
+
+/**
+ * brand.logo (video.json over demo.config.json) → assets/brand-logo.<ext>. Returns its
+ * path for the composition, or '' when the brand is drawn as a text wordmark.
+ */
+function copyLogo(spec: VideoSpec, config: LoadedConfig, assets: string, log: (l: string) => void): string {
+    const file = spec.brand?.logo !== undefined ? spec.brand.logo : config.brand.logo
+    if (!file) {
+        return ''
+    }
+    const source = fromRoot(config, file)
+    const ext = extname(source).toLowerCase()
+    if (!LOGO_TYPES.includes(ext)) {
+        throw new ReelkitError(`brand.logo must be ${LOGO_TYPES.join(', ')} (SVG stays sharpest), got ${source}`)
+    }
+    if (!existsSync(source)) {
+        throw new ReelkitError(`brand logo not found: ${source} — fix brand.logo, or set it to null for the text wordmark`)
+    }
+    const height = ext === '.png' ? pngHeight(source) : null
+    if (height !== null && height < MIN_LOGO_HEIGHT) {
+        log(`  warning: ${basename(source)} is ${height}px tall — under ${MIN_LOGO_HEIGHT}px it looks soft on the cards; use an SVG or a taller PNG`)
+    }
+    const name = `brand-logo${ext}`
+    copyIfChanged(source, resolve(assets, name))
+
+    return `assets/${name}`
+}
+
+/** The biggest wordmark (168px tall on the outro) at 2x, so the logo stays crisp. */
+const MIN_LOGO_HEIGHT = 340
+
+function pngHeight(path: string): number | null {
+    const header = readFileSync(path).subarray(0, 24)
+    return header.toString('ascii', 12, 16) === 'IHDR' ? header.readUInt32BE(20) : null
 }
 
 function copyIfChanged(from: string, to: string): void {

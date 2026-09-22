@@ -1,0 +1,4 @@
+{
+    "description": "An end card that stays readable: wordmark (or logo) and accent line over the video title, subtitle and steps chip. Held longer, drifts very slightly, and ends fully visible, so the paused last frame says what the video was.",
+    "timing": { "duration": 4.0 }
+}

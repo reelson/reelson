@@ -1,0 +1,9 @@
+#outro { display: grid; place-items: center; }
+#outro .card { display: flex; flex-direction: column; align-items: center; gap: 72px; text-align: center; will-change: transform; }
+#outro .brand { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+#outro .wordmark { font-size: 120px; }
+#outro .brand-line { width: 180px; }
+#outro .what { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+#outro .title { font-size: 76px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1400px; }
+#outro .subtitle { font-size: 34px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
+#outro .subtitle:empty { display: none; }

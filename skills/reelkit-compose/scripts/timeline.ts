@@ -2,30 +2,55 @@
  * The composition timeline, computed from a recording's markers.json and the
  * video's video.json. Pure: no files, no ffmpeg — so it is unit-tested.
  *
- *   cover (0 → coverExit) → recording (callouts, zooms, hand-off cards)
- *   → recap card → brand card
+ *   intro (0 → exit) → recording (callouts, zooms, hand-off cards)
+ *   → recap (optional) → outro
  *
  * video.json times are recording times; everything this module returns is in
  * composition seconds.
  */
 
-/** Timeline constants (seconds). A template's template.json can override any of them. */
-export const TIMING_DEFAULTS = {
-    cover: 4.0, // cover clip length
-    coverExit: 3.0, // the cover lifts away and the recording rides in (= clipStart)
-    recapBase: 2.4, // + recapPerStep per step, capped at recapMax
-    recapPerStep: 0.45,
-    recapMax: 7.5,
-    brandOut: 2.6,
-    overlap: 0.4, // recording → recap → brand card cross-fades
+/**
+ * Timeline constants (seconds). The stage keys come from the template's
+ * template.json, the rest from the section chosen for each slot (section.json).
+ */
+export const STAGE_TIMING = {
+    overlap: 0.4, // recording → recap → outro cross-fades
     calloutDuration: 3.0,
     transitionGap: 2.6, // seconds a hand-off card holds between the two belts
-    belt: 0.9, // the recording's exit before a hand-off card (matches the template)
+    belt: 0.9, // the recording's exit before a hand-off card (matches the stage)
     maxW: 1600, // the framed recording's box inside the 1920x1080 stage
     maxH: 940,
-    maxSteps: 10, // the recap card's capacity
 }
-export type Timing = typeof TIMING_DEFAULTS
+export const SECTION_TIMING = {
+    intro: {
+        duration: 4.0, // intro clip length
+        exit: 3.0, // the intro hands over and the recording starts (= clipStart)
+    },
+    recap: {
+        base: 2.4, // + perStep per step, capped at max
+        perStep: 0.45,
+        max: 7.5,
+        maxSteps: 10, // the recap's capacity
+    },
+    outro: {
+        duration: 2.6,
+    },
+}
+export type StageTiming = typeof STAGE_TIMING
+export type IntroTiming = typeof SECTION_TIMING.intro
+export type RecapTiming = typeof SECTION_TIMING.recap
+export type OutroTiming = typeof SECTION_TIMING.outro
+export type Slot = keyof typeof SECTION_TIMING
+export const SLOTS = Object.keys(SECTION_TIMING) as Slot[]
+
+export interface Timing {
+    stage: StageTiming
+    intro: IntroTiming
+    /** null: no recap section ("recap": "none"). */
+    recap: RecapTiming | null
+    outro: OutroTiming
+}
+export const TIMING_DEFAULTS: Timing = { stage: STAGE_TIMING, ...SECTION_TIMING }
 
 export interface Click {
     at: number
@@ -74,13 +99,17 @@ export interface ZoomSpec {
     out?: number
 }
 
+/** Section name per slot; "none" is allowed for the recap only. */
+export type SectionChoice = Partial<Record<Slot, string>>
+
 /** video.json */
 export interface VideoSpec {
     title: string
     subtitle?: string
     template?: string
+    sections?: SectionChoice
     recapTitle?: string
-    brand?: { name?: string; tagline?: string; eyebrow?: string }
+    brand?: { name?: string; tagline?: string; eyebrow?: string; logo?: string | null }
     trim?: { start?: number; end?: number }
     music?: string | boolean | null
     callouts?: CalloutSpec[]
@@ -96,18 +125,15 @@ export interface Callout {
 
 export interface Timeline {
     total: number
-    cover: number
-    coverExit: number
+    intro: { start: number; duration: number; exit: number }
+    recap: { start: number; duration: number; maxSteps: number } | null
+    outro: { start: number; duration: number }
     clipStart: number
     clipDuration: number
     clipEnd: number
     /** Recording window used (trim). */
     mediaStart: number
     mediaEnd: number
-    recapStart: number
-    recapDuration: number
-    brandOutStart: number
-    brandOutDuration: number
     /** Seconds the recording takes to leave before a hand-off card. */
     belt: number
     frame: { width: number; height: number }
@@ -136,9 +162,10 @@ export function computeTimeline(
         throw new TimelineError(`trim window is empty (start ${mediaStart}s, end ${mediaEnd}s)`)
     }
 
-    const clipStart = timing.coverExit
+    const stage = timing.stage
+    const clipStart = timing.intro.exit
     const handOffs = (markers.transitions ?? []).filter((t) => t.at > mediaStart && t.at < mediaEnd)
-    const gap = timing.transitionGap
+    const gap = stage.transitionGap
     const clipDuration = round(mediaDuration + gap * handOffs.length)
     const clipEnd = round(clipStart + clipDuration)
     const toComposition = (t: number): number =>
@@ -190,10 +217,10 @@ export function computeTimeline(
         // Never overlap the next callout or a hand-off card; never outlive the recording.
         const cap = Math.min(
             next ? toComposition(next.recordingAt) - 0.2 : Infinity,
-            nextTransition !== undefined ? nextTransition - timing.belt - 0.1 : Infinity,
+            nextTransition !== undefined ? nextTransition - stage.belt - 0.1 : Infinity,
             clipEnd - 0.3,
         )
-        const duration = round(c.duration ?? Math.max(1, Math.min(timing.calloutDuration, cap - at)))
+        const duration = round(c.duration ?? Math.max(1, Math.min(stage.calloutDuration, cap - at)))
         if (c.duration !== undefined && at + c.duration > cap + 0.01) {
             warnings.push(`callout "${c.text}" (${c.duration}s) overlaps the next step or the end of the recording`)
         }
@@ -203,35 +230,44 @@ export function computeTimeline(
 
         return { at, duration, text: c.text, ...(group ? { group } : {}) }
     })
-    if (callouts.length > timing.maxSteps) {
+    const recapTiming = timing.recap
+    if (recapTiming && callouts.length > recapTiming.maxSteps) {
         warnings.push(
-            `${callouts.length} callouts — the recap holds ${timing.maxSteps}; merge or drop steps (extra ones are left out of the recap)`,
+            `${callouts.length} callouts — the recap holds ${recapTiming.maxSteps}; merge or drop steps (extra ones are left out of the recap)`,
         )
     }
 
-    const scale = Math.min(timing.maxW / markers.viewport.width, timing.maxH / markers.viewport.height)
-    const recapStart = round(clipEnd - timing.overlap)
-    const recapDuration = round(
-        Math.min(timing.recapMax, timing.recapBase + timing.recapPerStep * Math.min(callouts.length, timing.maxSteps)),
-    )
-    const brandOutStart = round(recapStart + recapDuration - timing.overlap)
-    const total = round(brandOutStart + timing.brandOut)
+    const scale = Math.min(stage.maxW / markers.viewport.width, stage.maxH / markers.viewport.height)
+    // recording → recap → outro, each cross-fading into the next by `overlap`. Without a
+    // recap the outro waits for the recording to fade out: its text never lands on the footage.
+    const recapStart = round(clipEnd - stage.overlap)
+    const recap = recapTiming
+        ? {
+              start: recapStart,
+              duration: round(
+                  Math.min(
+                      recapTiming.max,
+                      recapTiming.base + recapTiming.perStep * Math.min(callouts.length, recapTiming.maxSteps),
+                  ),
+              ),
+              maxSteps: recapTiming.maxSteps,
+          }
+        : null
+    const outroStart = recap ? round(recap.start + recap.duration - stage.overlap) : clipEnd
+    const total = round(outroStart + timing.outro.duration)
 
     return {
         timeline: {
             total,
-            cover: timing.cover,
-            coverExit: timing.coverExit,
+            intro: { start: 0, duration: timing.intro.duration, exit: timing.intro.exit },
+            recap,
+            outro: { start: outroStart, duration: timing.outro.duration },
             clipStart,
             clipDuration,
             clipEnd,
             mediaStart: round(mediaStart),
             mediaEnd: round(mediaEnd),
-            recapStart,
-            recapDuration,
-            brandOutStart,
-            brandOutDuration: timing.brandOut,
-            belt: timing.belt,
+            belt: stage.belt,
             frame: {
                 width: Math.round(markers.viewport.width * scale),
                 height: Math.round(markers.viewport.height * scale),

@@ -151,7 +151,7 @@ function describe(v: unknown): string {
 }
 
 /** The known key within edit distance 3 of `key`, if any. */
-function closest(key: string, known: string[]): string | null {
+export function closest(key: string, known: string[]): string | null {
     let best: string | null = null
     let bestDistance = 4
     for (const candidate of known) {

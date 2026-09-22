@@ -1,0 +1,4 @@
+{
+    "description": "Centred and short: eyebrow, title and accent line, then the steps as a wrapping row of numbered chips (role tag on the first chip of each role). Cross-fades in after the recording.",
+    "timing": { "base": 1.8, "perStep": 0.35, "max": 5.5, "maxSteps": 10 }
+}

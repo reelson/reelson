@@ -1,0 +1,4 @@
+{
+    "description": "Left-aligned and quiet: a small wordmark row, a big title with an accent line, subtitle and steps chip. Legible at frame 0 (the poster), settles in place, then fades into the recording. Shorter than poster.",
+    "timing": { "duration": 2.7, "exit": 2.6 }
+}

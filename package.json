@@ -1,6 +1,6 @@
 {
     "name": "reelkit",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "private": true,
     "type": "module",
     "description": "Claude Code skills + CLI that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",

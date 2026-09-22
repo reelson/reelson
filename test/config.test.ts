@@ -26,6 +26,15 @@ describe('schemas', () => {
         assert.deepEqual(validate(video, videoSchema), [])
     })
 
+    it('accept sections and a logo in both files, and catch a mistyped slot', () => {
+        const sections = { intro: 'minimal', recap: 'none', outro: 'endcard' }
+        assert.deepEqual(validate({ sections, brand: { logo: 'docs/logo.svg' } }, configSchema), [])
+        assert.deepEqual(validate({ title: 'x', sections, brand: { logo: null } }, videoSchema), [])
+        assert.deepEqual(validate({ title: 'x', sections: { outtro: 'compact' } }, videoSchema), [
+            'sections.outtro: unknown key — did you mean "outro"?',
+        ])
+    })
+
     it('reject a mistyped key with a suggestion', () => {
         assert.deepEqual(validate({ brand: { colour: '#fff' } }, configSchema), ['brand.colour: unknown key — did you mean "color"?'])
         assert.deepEqual(validate({ title: 'x', zoom: [] }, videoSchema), ['zoom: unknown key — did you mean "zooms"?'])

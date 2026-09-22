@@ -1,93 +1,145 @@
 /**
- * Fills a template's index.html from a computed timeline. Pure (string in,
- * string out), so the output is golden-tested. See templates/README.md for the
- * placeholder contract.
+ * Assembles a template's stage.html and the chosen sections into one
+ * composition, filled from a computed timeline. Pure (strings in, string out),
+ * so the output is golden-tested. See templates/README.md for the contract.
  */
-import type { Timeline } from './timeline.ts'
+import type { Slot, Timeline } from './timeline.ts'
 import { round } from './timeline.ts'
 import type { Zoom } from './zooms.ts'
 
 export interface CompositionText {
     language: string
     brand: { name: string; tagline: string; eyebrow: string; color: string; colorSoft: string }
+    /** assets/ path of the brand logo, or '' to draw the text wordmark. */
+    logo: string
     title: string
     subtitle: string
     recapTitle: string
-    /** Cover chip halves, already pluralised: "4 steps", "27 seconds". */
+    /** Intro chip halves, already pluralised: "4 steps", "27 seconds". */
     stepsChip: string
     secondsChip: string
 }
 
+/** One section's files, read by the build. */
+export interface SectionSource {
+    slot: Slot
+    name: string
+    html: string
+    css: string
+    js: string
+    /** Where the section's own assets/ were copied, relative to video/ ('' if it has none). */
+    assets: string
+}
+
 export interface CompositionInput {
-    template: string
+    stage: string
+    /** In slot order; the recap is left out when the video has none. */
+    sections: SectionSource[]
     timeline: Timeline
     zooms: Zoom[]
     text: CompositionText
-    maxSteps: number
     /** assets/narration.m4a exists (the recording had an audio track). */
     narration: boolean
     /** assets/music.m4a exists. */
     music: boolean
 }
 
+/** HyperFrames track per slot: the recap cross-fades with the outro, so they sit on different tracks. */
+const TRACKS: Record<Slot, number> = { intro: 3, recap: 2, outro: 3 }
+
 export function renderComposition(input: CompositionInput): string {
     const { timeline: t, text } = input
 
-    // Everything the template's builder script animates from. Times are composition seconds.
+    // Everything the stage and section scripts animate from. Times are composition seconds.
     const demo = {
         total: t.total,
-        coverDuration: t.cover,
-        coverExit: t.coverExit,
         clipStart: t.clipStart,
         clipDuration: t.clipDuration,
         mediaStart: t.mediaStart,
-        recapStart: t.recapStart,
-        recapDuration: t.recapDuration,
-        brandOutStart: t.brandOutStart,
-        brandOutDuration: t.brandOutDuration,
+        sections: { intro: t.intro, recap: t.recap, outro: t.outro },
         callouts: t.callouts,
         zooms: input.zooms,
         transitions: t.transitions.map(({ at, gap }) => ({ at, gap })),
         chip: { steps: text.stepsChip, seconds: text.secondsChip },
-        maxSteps: input.maxSteps,
     }
 
-    const replacements: Record<string, string> = {
+    const shared: Record<string, string> = {
         LANG: escapeHtml(text.language),
         BRAND_COLOR: escapeHtml(text.brand.color),
         BRAND_COLOR_SOFT: escapeHtml(text.brand.colorSoft),
         BRAND: escapeHtml(text.brand.name),
         BRAND_SUB: escapeHtml(text.brand.tagline),
+        BRAND_LOGO: escapeHtml(text.logo),
         EYEBROW: escapeHtml(text.brand.eyebrow),
         TITLE: escapeHtml(text.title),
         SUBTITLE: escapeHtml(text.subtitle),
         OUTRO_TITLE: escapeHtml(text.recapTitle),
         TOTAL: String(t.total),
-        COVER_DURATION: String(t.cover),
-        RECAP_START: String(t.recapStart),
-        RECAP_DURATION: String(t.recapDuration),
-        BRAND_OUT_START: String(t.brandOutStart),
-        BRAND_OUT_DURATION: String(t.brandOutDuration),
         FRAME_W: String(t.frame.width),
         FRAME_H: String(t.frame.height),
+    }
+    const unfilled = new Set<string>()
+    const fill = (source: string, values: Record<string, string>): string =>
+        source.replace(/{{([A-Z_]+)}}/g, (match, key: string) => {
+            if (key in values) {
+                return values[key]
+            }
+            unfilled.add(match)
+            return match
+        })
+
+    const parts = input.sections.map((s) => {
+        const slot = t[s.slot]
+        if (!slot) {
+            throw new Error(`the timeline has no ${s.slot} (recap "none") but a ${s.slot} section was given`)
+        }
+        const values = {
+            ...shared,
+            START: String(slot.start),
+            DURATION: String(slot.duration),
+            TRACK: String(TRACKS[s.slot]),
+            ASSETS: s.assets,
+        }
+        const label = `${s.slot}: ${s.name}`
+        return {
+            slot: s.slot,
+            css: `      /* ── ${label} ── */\n${indent(fill(s.css, values).trim(), 6)}`,
+            html: `      <!-- ── ${label} ── -->\n${indent(fill(s.html, values).trim(), 6)}`,
+            js:
+                `      // ── ${label} ──\n      ;((section) => {\n${indent(fill(s.js, values).trim(), 8)}\n` +
+                `      })(DEMO.sections.${s.slot});`,
+        }
+    })
+
+    const part = (slot: Slot) => parts.find((p) => p.slot === slot) ?? { html: '', css: '', js: '' }
+    const html = fill(input.stage, {
+        ...shared,
+        SECTION_STYLES: parts.map((p) => p.css).join('\n\n'),
+        // Each slot has its own place in the stage: the intro sits under #screen, recap and outro above it.
+        INTRO: part('intro').html,
+        RECAP: part('recap').html,
+        OUTRO: part('outro').html,
+        SECTION_SCRIPTS: parts.map((p) => p.js).join('\n\n'),
         VIDEOS: renderVideoSegments(t),
         TRANSITIONS: t.transitions.map((tr, i) => renderTransitionCard(tr, i, t.belt)).join('\n'),
         AUDIO: input.narration ? renderNarration(t) : '',
         MUSIC: input.music ? renderMusic(t) : '',
         // JSON is valid JS; escaping "<" keeps "</script>" in a callout from closing the tag.
         DEMO: JSON.stringify(demo, null, 2).replace(/</g, '\\u003c').replace(/\n/g, '\n      '),
-    }
-
-    let html = input.template
-    for (const [key, value] of Object.entries(replacements)) {
-        html = html.replaceAll(`{{${key}}}`, () => value)
-    }
-    const leftover = html.match(/{{[A-Z_]+}}/g)
-    if (leftover) {
-        throw new Error(`template placeholders left unfilled: ${[...new Set(leftover)].join(', ')}`)
+    })
+    if (unfilled.size) {
+        throw new Error(`template placeholders left unfilled: ${[...unfilled].join(', ')}`)
     }
 
     return html
+}
+
+function indent(block: string, spaces: number): string {
+    const pad = ' '.repeat(spaces)
+    return block
+        .split('\n')
+        .map((line) => (line.trim() ? pad + line : ''))
+        .join('\n')
 }
 
 /**

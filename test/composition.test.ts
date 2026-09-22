@@ -3,28 +3,30 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it } from 'node:test'
 import { renderComposition, type CompositionInput } from '../skills/reelkit-compose/scripts/composition.ts'
-import { BUILTIN_TEMPLATES } from '../skills/reelkit-compose/scripts/project.ts'
+import { readSection, resolveDesign } from '../skills/reelkit-compose/scripts/project.ts'
 import { computeTimeline, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { compositionClicks, planZoom } from '../skills/reelkit-compose/scripts/zooms.ts'
-import { fixture, TEST_DIR } from './helpers.ts'
-
-const template = readFileSync(resolve(BUILTIN_TEMPLATES, 'classic/index.html'), 'utf8')
+import { fixture, kitConfig, TEST_DIR } from './helpers.ts'
 
 function input(name: 'todo' | 'handoff', spec: VideoSpec, overrides: Partial<CompositionInput> = {}): CompositionInput {
     const markers = fixture(name)
-    const { timeline } = computeTimeline(markers, spec)
+    const design = resolveDesign('classic', [spec.sections], kitConfig())
+    const { timeline } = computeTimeline(markers, spec, design.timing)
     const clicks = compositionClicks(markers, timeline)
 
     return {
-        template,
+        stage: readFileSync(resolve(design.template.dir, 'stage.html'), 'utf8'),
+        sections: [design.sections.intro, design.sections.recap, design.sections.outro]
+            .filter((s) => s !== null)
+            .map(readSection),
         timeline,
         zooms: (spec.zooms ?? []).map((z) => planZoom(z, clicks, timeline)),
-        maxSteps: 10,
         narration: false,
         music: true,
         text: {
             language: 'en',
             brand: { name: 'ACME', tagline: 'PLATFORM', eyebrow: 'Acme', color: '#6366f1', colorSoft: '#a5b4fc' },
+            logo: '',
             title: spec.title,
             subtitle: spec.subtitle ?? '',
             recapTitle: 'In short',
@@ -44,19 +46,44 @@ function golden(name: string, actual: string): void {
     assert.equal(actual, readFileSync(path, 'utf8'), `${name} changed — run \`npm run test:update-golden\` if intended`)
 }
 
+const example: VideoSpec = {
+    title: 'Plan your day',
+    subtitle: 'Add tasks and tick them off',
+    trim: { start: 2.6 },
+    zooms: [{ clicks: [3, 4], scale: 1.7 }],
+}
+
 describe('renderComposition', () => {
     it('renders the classic template for the example (golden)', () => {
-        const spec: VideoSpec = {
-            title: 'Plan your day',
-            subtitle: 'Add tasks and tick them off',
-            trim: { start: 2.6 },
-            zooms: [{ clicks: [3, 4], scale: 1.7 }],
-        }
-        golden('classic-todo.html', renderComposition(input('todo', spec)))
+        golden('classic-todo.html', renderComposition(input('todo', example)))
     })
 
     it('renders hand-off cards and per-actor clips (golden)', () => {
         golden('classic-handoff.html', renderComposition(input('handoff', { title: 'Hand-off', trim: { start: 1 } })))
+    })
+
+    it('mixes sections from different designs, with a logo (golden)', () => {
+        const spec = { ...example, sections: { intro: 'split', recap: 'compact', outro: 'endcard' } }
+        const t = input('todo', spec)
+        golden('classic-mixed.html', renderComposition({ ...t, text: { ...t.text, logo: 'assets/brand-logo.svg' } }))
+    })
+
+    it('places each slot in the stage and scopes it under its id', () => {
+        const html = renderComposition(input('todo', { ...example, sections: { intro: 'minimal', outro: 'compact' } }))
+        const at = (s: string) => html.indexOf(s)
+        assert.ok(at('<section id="intro"') < at('<section id="screen"'), 'the intro sits under the recording')
+        assert.ok(at('<section id="screen"') < at('<section id="recap"'), 'the recap sits over it')
+        assert.ok(at('<section id="recap"') < at('<section id="outro"'))
+        assert.match(html, /<!-- ── intro: minimal ── -->/)
+        assert.match(html, /\}\)\(DEMO\.sections\.outro\);/)
+        assert.match(html, /<section id="recap" class="clip" data-start="19.73" data-duration="4.2" data-track-index="2">/) // minimal hands over at 2.6 s
+    })
+
+    it('leaves the recap out entirely for "recap": "none"', () => {
+        const html = renderComposition(input('todo', { ...example, sections: { recap: 'none' } }))
+        assert.ok(!html.includes('id="recap"'))
+        assert.match(html, /"recap": null/)
+        assert.match(html, /<section id="outro" class="clip" data-start="20.53"/)
     })
 
     it('escapes text so it cannot break out of attributes or the script', () => {
@@ -71,15 +98,23 @@ describe('renderComposition', () => {
         assert.ok(html.includes('\\u003c/script>\\u003cimg'))
     })
 
+    it('never fills placeholders inside video text', () => {
+        const html = renderComposition(input('todo', { title: 'Costs {{TOTAL}} and {{NOPE}}' }))
+        assert.ok(html.includes('Costs {{TOTAL}} and {{NOPE}}'))
+    })
+
     it('leaves the audio tags out when there is no music or narration', () => {
         const html = renderComposition(input('todo', { title: 'T' }, { music: false }))
         assert.ok(!html.includes('<audio'))
     })
 
-    it('fails on a placeholder the template uses but the builder does not know', () => {
+    it('fails on a placeholder the stage or a section uses but the builder does not know', () => {
+        const base = input('todo', { title: 'T' })
+        assert.throws(() => renderComposition({ ...base, stage: `${base.stage}{{NEW_THING}}` }), /placeholders left unfilled: {{NEW_THING}}/)
+        const [intro, ...rest] = base.sections
         assert.throws(
-            () => renderComposition(input('todo', { title: 'T' }, { template: `${template}{{NEW_THING}}` })),
-            /placeholders left unfilled: {{NEW_THING}}/,
+            () => renderComposition({ ...base, sections: [{ ...intro, html: `${intro.html}{{OTHER}}` }, ...rest] }),
+            /placeholders left unfilled: {{OTHER}}/,
         )
     })
 })

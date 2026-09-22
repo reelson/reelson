@@ -9,9 +9,15 @@
         "tagline": "PRODUCT",
         "eyebrow": "Your Brand",
         "color": "#dc2626",
-        "colorSoft": "#f87171"
+        "colorSoft": "#f87171",
+        "logo": null
     },
     "template": "classic",
+    "sections": {
+        "intro": "poster",
+        "recap": "steps",
+        "outro": "wordmark"
+    },
     "strings": {
         "recapTitle": "In short",
         "stepsLabel": {

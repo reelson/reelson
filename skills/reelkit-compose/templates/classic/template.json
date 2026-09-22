@@ -1,4 +1,5 @@
 {
-    "description": "Deep navy gradient with drifting glows; wordmark cover that doubles as the poster, framed recording, one-column recap, wordmark brand card ending at 15% opacity.",
+    "description": "Deep navy gradient with four drifting glows and a faint dot grid; the recording in a rounded frame with numbered callout pills and hand-off cards.",
+    "sections": { "intro": "poster", "recap": "steps", "outro": "wordmark" },
     "timing": {}
 }

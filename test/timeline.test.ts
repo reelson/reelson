@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { computeTimeline, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { computeTimeline, round, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
 const spec = (extra: Partial<VideoSpec> = {}): VideoSpec => ({ title: 'T', trim: { start: 1 }, ...extra })
 
 describe('computeTimeline', () => {
-    it('places the recording right after the cover and maps recording → composition time', () => {
+    it('places the recording right after the intro and maps recording → composition time', () => {
         const { timeline: t } = computeTimeline(fixture('todo'), spec({ trim: { start: 2.6 } }))
-        assert.equal(t.clipStart, TIMING_DEFAULTS.coverExit)
+        assert.equal(t.clipStart, TIMING_DEFAULTS.intro.exit)
         assert.equal(t.toComposition(2.6), 3)
         assert.equal(t.toComposition(6.74), 7.14)
         assert.equal(t.mediaEnd, 20.13)
@@ -32,9 +32,8 @@ describe('computeTimeline', () => {
 
     it('sizes the recap and the total from the step count', () => {
         const { timeline: t } = computeTimeline(fixture('todo'), spec({ trim: { start: 2.6 } }))
-        assert.equal(t.recapDuration, 4.2) // 2.4 + 0.45 × 4
-        assert.equal(t.recapStart, 20.13)
-        assert.equal(t.brandOutStart, 23.93)
+        assert.deepEqual(t.recap, { start: 20.13, duration: 4.2, maxSteps: 10 }) // 2.4 + 0.45 × 4
+        assert.deepEqual(t.outro, { start: 23.93, duration: 2.6 })
         assert.equal(t.total, 26.53)
     })
 
@@ -83,10 +82,36 @@ describe('computeTimeline', () => {
         assert.throws(() => computeTimeline(fixture('todo'), spec({ trim: { start: 30 } })), /trim window is empty/)
     })
 
-    it('respects template timing overrides', () => {
-        const { timeline: t } = computeTimeline(fixture('todo'), spec(), { ...TIMING_DEFAULTS, coverExit: 3.5, brandOut: 3 })
-        assert.equal(t.clipStart, 3.5)
-        assert.equal(t.total, t.brandOutStart + 3)
+    it('takes each part of the timeline from its section', () => {
+        const { timeline: t } = computeTimeline(fixture('todo'), spec(), {
+            ...TIMING_DEFAULTS,
+            intro: { duration: 2.7, exit: 2.6 },
+            recap: { base: 1.8, perStep: 0.35, max: 5.5, maxSteps: 10 },
+            outro: { duration: 4 },
+        })
+        assert.deepEqual(t.intro, { start: 0, duration: 2.7, exit: 2.6 })
+        assert.equal(t.clipStart, 2.6)
+        assert.equal(t.recap?.duration, 3.2) // 1.8 + 0.35 × 4
+        assert.equal(t.total, round(t.outro.start + 4))
+    })
+
+    it('runs the outro straight after the recording without a recap', () => {
+        const callouts = Array.from({ length: 11 }, (_, i) => ({ at: 2 + i, text: `Step ${i}` }))
+        const { timeline: t, warnings } = computeTimeline(fixture('todo'), spec({ callouts }), { ...TIMING_DEFAULTS, recap: null })
+        assert.equal(t.recap, null)
+        // no cross-fade: the outro's text never lands on the fading footage
+        assert.equal(t.outro.start, t.clipEnd)
+        assert.equal(t.total, round(t.clipEnd + 2.6))
+        assert.ok(!warnings.some((w) => /recap holds/.test(w)), 'no recap, no capacity warning')
+    })
+
+    it('respects stage timing overrides', () => {
+        const { timeline: t } = computeTimeline(fixture('todo'), spec(), {
+            ...TIMING_DEFAULTS,
+            stage: { ...TIMING_DEFAULTS.stage, overlap: 0.6, maxW: 1200 },
+        })
+        assert.equal(t.outro.start, round((t.recap?.start ?? 0) + (t.recap?.duration ?? 0) - 0.6))
+        assert.equal(t.frame.width, 1200)
     })
 })
 

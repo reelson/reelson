@@ -1,0 +1,7 @@
+#outro { display: grid; place-items: center; }
+#outro .row { display: flex; align-items: center; gap: 48px; will-change: transform, opacity; }
+#outro .wordmark { font-size: 120px; }
+#outro .divider { width: 6px; height: 132px; border-radius: 3px; background: linear-gradient(180deg, var(--brand), var(--brand-soft)); transform-origin: center; will-change: transform; }
+#outro .right { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 820px; will-change: transform, opacity; }
+#outro .title { font-size: 54px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+#outro .brand-sub { font-size: 22px; letter-spacing: 0.36em; padding-left: 0; }

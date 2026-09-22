@@ -9,7 +9,7 @@ Make a demo video of <FEATURE>.
 Where:      <URL / area + account>            e.g. the admin area on https://app.test as the admin user
 Steps:      1. ... 2. ... 3. ...              what the viewer should see happen, in order
 Callouts:   <one short imperative per step>   in the UI's language, matching its labels
-Cards:      title "...", subtitle "..."        recap title optional
+Cards:      title "...", subtitle "..."        recap title, intro/recap/outro sections optional
 Emphasis:   zoom on <what> during step <n>     only where the UI is small
 Output:     mp4 (default) / also gif           slug: <kebab-case>
 ```
@@ -60,10 +60,10 @@ callouts in video.json, checks, renders, and reports the file path with a few ex
 
 > Render <videosDir>/customers-search also as a 15 fps GIF for the README.
 
-**Another template**
+**Another intro or outro**
 
-> Render <videosDir>/customers-search with the `<name>` template next to the
-> current one so I can compare.
+> Render <videosDir>/customers-search with the `minimal` intro, no recap and the `endcard`
+> outro, next to the current one so I can compare.
 
 **Narrated recording (manual, OpenScreen)**
 

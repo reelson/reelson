@@ -1,0 +1,14 @@
+#recap { display: grid; grid-template-columns: 640px 1fr; align-items: center; column-gap: 120px; padding: 0 160px; }
+#recap .left { display: flex; flex-direction: column; gap: 26px; }
+#recap .title { font-size: 120px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
+#recap .steps { display: flex; flex-direction: column; gap: 14px; }
+#recap .step { display: inline-flex; align-items: center; gap: 18px; font-size: 32px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+#recap .step .n { font-size: 21px; }
+#recap .steps.dense { gap: 11px; }
+#recap .steps.dense .step { font-size: 28px; gap: 16px; }
+#recap .steps.dense .step .n { width: 38px; height: 38px; font-size: 18px; }
+/* Split by actor: a titled list per role */
+#recap .group { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 700; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--brand-soft); margin: 18px 0 2px; }
+#recap .group:first-child { margin-top: 0; }
+#recap .group::after { content: ""; width: 64px; height: 2px; border-radius: 1px; background: var(--line); }

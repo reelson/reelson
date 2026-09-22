@@ -1,6 +1,6 @@
 ---
 name: reelkit-compose
-description: Use when the user wants the finished demo video — intro/outro title cards, numbered callouts, zoom-ins, branded framing — rendered to MP4/GIF from a screen recording, or mentions HyperFrames or reelkit. Takes <videosDir>/<slug>/recording.mp4 (+ markers.json) from the reelkit-record skill; video.json is the per-video source of truth, and `reelkit build` turns it into a HyperFrames composition from a template (brand, language and music from demo.config.json); `reelkit render` produces video/renders/<slug>.mp4.
+description: Use when the user wants the finished demo video — intro/outro title cards, numbered callouts, zoom-ins, branded framing — rendered to MP4/GIF from a screen recording, or mentions HyperFrames or reelkit. Takes <videosDir>/<slug>/recording.mp4 (+ markers.json) from the reelkit-record skill; video.json is the per-video source of truth, and `reelkit build` turns it into a HyperFrames composition from a template plus mix-and-match intro/recap/outro sections (brand, logo, language and music from demo.config.json); `reelkit render` produces video/renders/<slug>.mp4.
 ---
 
 # reelkit-compose
@@ -11,8 +11,8 @@ frame-by-frame in headless Chrome), driven by the `reelkit` CLI. Needs Node 22.1
 HyperFrames is fetched by `npx` (pinned version).
 
 **Read the kit's `docs/style-guide.md` first** (`realpath` this skill to find the kit). The
-templates implement it; design changes belong in a template (`templates/README.md`), never in
-a video's generated files.
+templates and sections implement it; design changes belong in a template or a section
+(`templates/README.md`), never in a video's generated files.
 
 ```
 <videosDir>/<slug>/
@@ -44,7 +44,8 @@ changing the trim or the template never re-times anything. Validated against
     "zooms": [
         { "clicks": [2, 3], "scale": 1.8 }      // frame clicks #2–#3 of markers.json
     ]
-    // optional: "template", "recapTitle", "brand": { name, tagline, eyebrow }, "music": file | false
+    // optional: "template", "sections": { intro, recap, outro }, "recapTitle",
+    //           "brand": { name, tagline, eyebrow, logo }, "music": file | false
 }
 ```
 
@@ -59,20 +60,31 @@ changing the trim or the template never re-times anything. Validated against
   is possible but rarely needed. Never add pauses to the scenario for a zoom.
 - To find click numbers, read `clicks` in markers.json (each has `at`, `x`, `y`, `kind`).
 
-## Templates
+## Templates and sections
 
-`templates/<name>/` in this skill, or `<videosDir>/_templates/<name>/` in the project (checked
-first). Pick with `template` in video.json or demo.config.json. Shipped:
+A video = a **template** (the stage: background, framed recording, callouts, hand-off cards)
++ one **section** per slot: `intro`, `recap`, `outro`. Pick sections in demo.config.json
+(project default) or video.json (this video), or with `reelkit build --intro/--recap/--outro`
+(written into video.json). `reelkit templates` lists them all. Shipped with `classic`:
 
-- **classic** — 1920x1080, 30 fps, Inter, deep navy gradient with drifting glows:
+```
+INTRO (0 → exit)                     RECORDING               RECAP                        OUTRO
+poster   wordmark over title, chip   framed clip, callouts,  steps    title left, one     wordmark  big, ends at 15%
+         centred, belt hand-over     zooms, hand-off cards            column of steps     compact   wordmark | title, short
+minimal  small brand row, big title,                         compact  centred chips,      endcard   brand + title + chip,
+         left-aligned, fades                                          shorter                       ends fully readable
+split    brand panel left, title                             none     (no recap)
+         right, doors open
+```
 
-  ```
-  COVER (0 → 3.0s exit)                RECORDING               RECAP (2.4s + 0.45s/step)   BRAND (2.6s)
-  wordmark · line · tagline            framed clip, callouts,  title left ·                wordmark big,
-  title · subtitle · "4 steps · 27 s"  zooms, hand-off cards   one column of steps right   ends at 15% opacity
-  ```
+Defaults are `poster` / `steps` / `wordmark`. Rules of thumb: `minimal` + `compact` + `compact`
+for short clips (< 15 s); `recap: none` when there are ≤ 2 steps; `endcard` when the video is
+embedded where it pauses on the last frame (docs pages, GitHub). Every intro keeps frame 0 as
+the poster (thumbnail in chat apps, GitHub, Finder); every outro ends on the brand.
 
-  Frame 0 is the poster (thumbnail in chat apps, GitHub, Finder): the cover is legible at t=0.
+**Logo**: `brand.logo` (demo.config.json, or per video in video.json `brand`) — an .svg (best),
+.png (≥ 340 px tall) or .webp relative to the project root — replaces the text wordmark in
+every intro and outro.
 
 **Hand-offs**: when markers.json has `transitions` (from `demo.transition()`), the footage is
 split into one clip per actor with a hand-off card between them; callouts after it shift
@@ -92,11 +104,12 @@ reelkit render <slug> [--gif]         # build + render video/renders/<slug>.mp4
 1. **First build.** It creates video.json with one callout per marker (the label as text), a
    suggested `trim.start` (just before the first logged glide, i.e. after the login) and no
    zooms, then prints the timeline. `--title/--subtitle/--trim-start/--trim-end/--template/
-   --music/--no-music` edit video.json in place on any build.
+   --intro/--recap/--outro/--music/--no-music` edit video.json in place on any build.
 2. **Edit video.json**, rebuild. Nothing in `video/` is edited by hand; it is overwritten.
 3. **Check and look.** `reelkit check` must report "ready to render" (0 problems). Layout
    `info` items about the recap/brand cross-fade overlap and off-canvas glows are expected.
-   Then snapshot the poster (t=0), a callout, a zoom and the recap, and look at them.
+   Then snapshot the poster (t=0), the intro's hand-over, a callout, a zoom and the recap, and
+   look at them.
 4. **Render.** `reelkit render` rebuilds first. ~30–60 s per 12 s of video. `--all` renders
    every demo in the project; `--gif` adds a 15 fps GIF for READMEs.
 5. **Verify the artifact**, not the log: `ffprobe` duration ≈ the printed total; extract frames
@@ -117,12 +130,12 @@ The build handles audio; never add `<audio>` by hand.
 - **Narration** when the recording has an audio track (OpenScreen): extracted and played in
   sync; the bed drops to `music.lufsUnderNarration`. (It is not split at hand-off cards.)
 
-## HyperFrames rules that bite (when editing a template)
+## HyperFrames rules that bite (when editing a template or section)
 
 - A timed `<video>` may not sit inside a timed element (`#screen` is untimed on purpose).
 - `fromTo()` renders its from-state at construction (`immediateRender`). Every "out" tween needs
-  `immediateRender: false` (`...later` in the template); anything whose entry uses `...later`
-  needs an explicit hidden state in the final `gsap.set` block. Cover entry tweens must NOT use
+  `immediateRender: false` (`...later`); anything whose entry uses `...later` needs an explicit
+  hidden state in the section's closing `gsap.set`. Intro tweens that start at t=0 must NOT use
   `later` (frame 0 is the poster).
 - Animate transforms/opacity only (`x`, `y`, `scale`, `scaleX`, `opacity`, `filter`).
 - One `gsap.timeline({ paused: true })`, registered as `window.__timelines[<composition id>]`;
@@ -135,4 +148,5 @@ The build handles audio; never add `<audio>` by hand.
 
 Narration (`npx hyperframes tts`), captions, shader transitions, device mockups: install the
 official skills (`npx skills add heygen-com/hyperframes`) or read
-https://hyperframes.heygen.com/llms.txt. A new look that should be reusable → a new template.
+https://hyperframes.heygen.com/llms.txt. A new opening or ending that should be reusable → a new
+section (`<videosDir>/_sections/<slot>/<name>/`); a new background or frame → a new template.

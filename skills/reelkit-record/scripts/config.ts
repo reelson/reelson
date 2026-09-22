@@ -39,9 +39,13 @@ export interface DemoConfig {
         color: string
         /** Lighter accent for gradients. */
         colorSoft: string
+        /** Logo image (SVG, PNG or WebP) shown instead of the text wordmark; relative to the project root. */
+        logo: string | null
     }
     /** Template folder name under reelkit-compose/templates/ (or <videosDir>/_templates/). */
     template: string
+    /** Section per slot (intro, recap, outro) over the template's defaults; "recap": "none" drops the recap. */
+    sections: { intro?: string; recap?: string; outro?: string }
     /** Every piece of on-card text that is not per-video. */
     strings: {
         recapTitle: string
@@ -79,8 +83,10 @@ export const DEFAULTS: DemoConfig = {
         eyebrow: 'Your Brand',
         color: '#dc2626',
         colorSoft: '#f87171',
+        logo: null,
     },
     template: 'classic',
+    sections: {},
     strings: {
         recapTitle: 'In short',
         stepsLabel: { one: 'step', other: 'steps' },

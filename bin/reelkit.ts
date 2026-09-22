@@ -12,7 +12,8 @@ import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfi
 import { build, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
 import { hyperframes, RENDER_FLAGS } from '../skills/reelkit-compose/scripts/hyperframes.ts'
-import { KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
+import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
+import { SLOTS, type SectionChoice } from '../skills/reelkit-compose/scripts/timeline.ts'
 
 const HELP = `reelkit — scripted walkthroughs → branded demo videos
 
@@ -23,10 +24,12 @@ Usage: reelkit <command> [options]
   record <slug> [--headed]      run the scenario → recording.mp4 + markers.json
   build <slug> [options]        video.json → video/ (HyperFrames project)
       --title, --subtitle, --template <name>
+      --intro <name>, --recap <name|none>, --outro <name>
       --trim-start <s>, --trim-end <s>, --music <file> | --no-music
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
   snapshot <slug> --at 1,3.5,8  PNG frames into video/snapshots/
   preview <slug>                open the HyperFrames studio
+  templates                     list templates and intro/recap/outro sections
   render <slug...> | --all [--gif] [--no-build]
                                 build + render video/renders/<slug>.mp4 (and .gif)
 
@@ -74,6 +77,8 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             return preview(argv)
         case 'render':
             return render(argv)
+        case 'templates':
+            return templates()
         default:
             console.error(`reelkit: unknown command "${cmd}"\n\n${HELP}`)
             return 2
@@ -190,6 +195,9 @@ function buildOptions(argv: string[]): { options: BuildOptions; positionals: str
             title: { type: 'string' },
             subtitle: { type: 'string' },
             template: { type: 'string' },
+            intro: { type: 'string' },
+            recap: { type: 'string' },
+            outro: { type: 'string' },
             'trim-start': { type: 'string' },
             'trim-end': { type: 'string' },
             music: { type: 'string' },
@@ -211,6 +219,7 @@ function buildOptions(argv: string[]): { options: BuildOptions; positionals: str
         title: values.title,
         subtitle: values.subtitle,
         template: values.template,
+        sections: Object.fromEntries(SLOTS.filter((slot) => values[slot] !== undefined).map((slot) => [slot, values[slot]])) as SectionChoice,
         trimStart: seconds(values['trim-start'], 'trim-start'),
         trimEnd: seconds(values['trim-end'], 'trim-end'),
         // video.json stores the path relative to the project root.
@@ -238,6 +247,21 @@ function checkCommand(argv: string[]): number {
         hyperframes: !values['no-hyperframes'],
     })
     return problems ? 1 : 0
+}
+
+function templates(): number {
+    const cfg = config()
+    const { templates: found, sections } = catalog(cfg)
+    const row = (name: string, description: string, local: boolean) =>
+        `  ${(name + (local ? ' (project)' : '')).padEnd(22)} ${description}`
+    console.log('Templates (the stage: background, frame, callouts) — "template":')
+    found.forEach((t) => console.log(row(t.name, t.description, t.local)))
+    for (const slot of SLOTS) {
+        console.log(`\nSections — "sections": { "${slot}": … }`)
+        sections[slot].forEach((s) => console.log(row(s.name, s.description, s.local)))
+    }
+    console.log(`\nProject: template "${cfg.template}", sections ${JSON.stringify(cfg.sections)} (video.json overrides both)`)
+    return 0
 }
 
 function builtVideoDir(slug: string): string {

@@ -1,0 +1,11 @@
+#intro { display: grid; place-items: center; }
+/* gap: room between the tagline and the title, which only rises a little into place */
+#intro .stack { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 115px; will-change: transform, opacity; }
+#intro .top, #intro .bottom { display: flex; flex-direction: column; align-items: center; will-change: transform, opacity; }
+#intro .top { gap: 22px; }
+#intro .bottom { gap: 24px; }
+#intro .wordmark { font-size: 99px; }
+#intro .brand-sub { font-size: 30px; }
+#intro .brand-line { width: 180px; }
+#intro .title { font-size: 92px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1380px; will-change: transform, opacity; }
+#intro .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }

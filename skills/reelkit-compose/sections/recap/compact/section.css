@@ -1,0 +1,10 @@
+#recap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 64px; padding: 0 140px; text-align: center; }
+#recap .head { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+#recap .title { font-size: 96px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
+#recap .accent { transform-origin: center; }
+#recap .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 18px; max-width: 1600px; }
+#recap .chip { display: inline-flex; align-items: center; gap: 14px; padding: 10px 26px 10px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); font-size: 28px; font-weight: 500; white-space: nowrap; }
+#recap .chip .n { width: 40px; height: 40px; font-size: 19px; }
+#recap .chip .who { font-size: 17px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
+  padding-right: 14px; border-right: 1px solid var(--line); }

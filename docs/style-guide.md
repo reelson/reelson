@@ -1,23 +1,26 @@
 # Style guide
 
-The house style for every video made with the kit. The scripts and the `classic` template
-already implement it; this page exists so a fresh session knows *why* and doesn't undo it.
+The house style for every video made with the kit. The scripts, the `classic` template and
+every kit section already implement it; this page exists so a fresh session knows *why* and doesn't undo it.
 A project can tighten these rules in its own docs (e.g. its payment test cards or seeded
 accounts), but should not loosen them without a reason.
 
 ## Standing instructions
 
-1. **Structure**: cover card → framed recording with numbered callouts and zooms → recap
-   card (title left, ONE column of numbered steps right) → closing brand card (wordmark big,
-   letters growing in from farther out, line wiping from the left). The video **ends on the
-   wordmark at 15 % opacity**, never on an empty frame: the last frame is what players show
-   when playback stops. No URLs on any card.
-2. **Cover = poster**: wordmark, accent line, tagline, then title, subtitle and the
-   "N steps · S seconds" chip, centred. **Frame 0 shows the brand and the title fully** —
-   chat apps, GitHub and Finder use it as the thumbnail — so at t=0 everything is big (130 %)
-   and 60 % transparent, never hidden or blurred. It "breathes" down into place (sine.inOut,
+1. **Structure**: intro → framed recording with numbered callouts and zooms → recap (optional)
+   → outro. Intro, recap and outro are sections picked per project or per video; the classic
+   set is the poster cover, a recap with the title left and ONE column of numbered steps right,
+   and a wordmark card (letters growing in from farther out, line wiping from the left). The
+   video **ends on the brand**, never on an empty frame: the last frame is what players show
+   when playback stops. `wordmark` and `compact` settle at 15 % opacity; `endcard` stays fully
+   readable. No URLs on any card.
+2. **Intro = poster**: **frame 0 shows the brand and the title legibly** — chat apps, GitHub
+   and Finder use it as the thumbnail — never hidden or blurred. The classic `poster`: wordmark,
+   accent line, tagline, then title, subtitle and the "N steps · S seconds" chip, centred; at
+   t=0 everything is big (130 %) and 60 % transparent. It "breathes" down into place (sine.inOut,
    letters one after another from the centre), holds ~1.8 s, and at 3.0 s lifts out through
-   the top while the recording rides in from below on the same upward motion.
+   the top while the recording rides in from below on the same upward motion. Other intros
+   keep the poster rule and hand over with `stage.enter()`.
 3. **Background**: deep navy gradient with four soft glows (brand colour, blue, violet, teal)
    drifting and breathing on 4–6.5 s loops — slow but perceptible — plus a faint dot grid.
 4. **Cursor**: large black macOS-style arrow with a white outline, press squash, and a
@@ -38,8 +41,8 @@ accounts), but should not loosen them without a reason.
     because they also become the recap. **At most 10 steps** per video.
 11. **Nothing pre-filled on camera**: the recorder sends `X-Demo-Recording: 1`; the app should
     skip local-only prefills when it sees it. Checkboxes and consents are ticked on camera.
-12. **Verify with frames**, not logs: frame 0 (poster), settled cover, a callout, a zoom, the
-    recap, the brand card.
+12. **Verify with frames**, not logs: frame 0 (poster), settled intro, the hand-over to the
+    recording, a callout, a zoom, the recap, the last frame of a real render.
 13. **Zooms ride along with the cursor and finish before the click**: zoom in while the cursor
     glides to the first click it frames (starting ≤ 0.35 s before the glide), fully in 0.1 s
     before that click; zoom out while it glides to the next target outside the zoom, done
@@ -71,15 +74,15 @@ reader could follow without the video. If you can't write the callouts, the vide
   clicks the save button"). One on screen at a time, ≥ 2 s each.
 - Zoom only where the UI is small (a field, a toggle, a badge), scale 1.5–2.0, timed by the
   cursor (rule 13).
-- Title = the task ("Find a customer"), subtitle = the benefit or context. Keep the cover at
-  its 3 s default; longer intros get skipped.
+- Title = the task ("Find a customer"), subtitle = the benefit or context. Keep the intro at
+  its section's default (3 s for `poster`); longer intros get skipped.
 - Recap rows must read as steps on their own ("Choose Card"), not commentary ("Here is the form").
 - Length: 15–30 s is the sweet spot. Over 45 s, split into two videos.
 
 **Verify the artifact, not the log**
 
 1. `reelkit check <slug>` says "ready to render" (schemas, zoom timing, `hyperframes check`).
-2. Extract and look at frames: t=0, settled cover, each callout, the zoom, the recap, the end.
+2. Extract and look at frames: t=0, settled intro, each callout, the zoom, the recap, the end.
 3. `ffprobe` duration matches the timeline the build printed.
 4. Watch it once at 1x. If a step is unreadable, pause longer in the scenario, not in the
    composition.
@@ -91,7 +94,7 @@ reader could follow without the video. If you can't write the callouts, the vide
 | Callout text, zoom, trims | Edit `video.json`, `reelkit render <slug>` (it rebuilds).                   |
 | Pacing, missing step      | Edit `scenario.ts`, `reelkit record`, add the new marker to video.json, render. |
 | UI changed                | `reelkit record` then `reelkit render`: callouts follow their markers, zooms their click numbers (re-check if the clicks changed). |
-| Look of intro/outro       | New template (`templates/README.md`), not per-video edits.                  |
+| Look of intro/recap/outro | Pick another section (`reelkit templates`), or make one (`templates/README.md`) — never per-video edits. |
 
 ## Troubleshooting
 

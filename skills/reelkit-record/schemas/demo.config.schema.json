@@ -39,12 +39,38 @@
                 "colorSoft": {
                     "type": "string",
                     "description": "Lighter accent for gradients."
+                },
+                "logo": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Logo image (.svg, .png or .webp; relative to the project root) drawn instead of the text wordmark. SVG stays sharpest; a PNG should be ≥ 340 px tall. null = text wordmark."
                 }
             }
         },
         "template": {
             "type": "string",
-            "description": "Template folder name (skills/reelkit-compose/templates/<name> or <videosDir>/_templates/<name>). Default classic."
+            "description": "Template (the stage: background, frame, callouts) folder name: skills/reelkit-compose/templates/<name> or <videosDir>/_templates/<name>. Default classic."
+        },
+        "sections": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Section per slot, over the template's defaults (classic: poster / steps / wordmark). Run `reelkit templates` for the list.",
+            "properties": {
+                "intro": {
+                    "type": "string",
+                    "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split."
+                },
+                "recap": {
+                    "type": "string",
+                    "description": "Steps card after the recording, or \"none\". Kit: steps, compact, none."
+                },
+                "outro": {
+                    "type": "string",
+                    "description": "Closing brand card. Kit: wordmark, compact, endcard."
+                }
+            }
         },
         "strings": {
             "type": "object",

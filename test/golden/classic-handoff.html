@@ -15,12 +15,15 @@
         unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b1220; }
+      /* Design tokens: the ONLY things sections may assume about the stage (templates/README.md). */
       :root {
         --brand: #6366f1;          /* demo.config.json brand.color */
         --brand-soft: #a5b4fc;
         --ink: #f8fafc;
         --muted: #94a3b8;
         --line: rgba(255, 255, 255, 0.10);
+        --surface: rgba(255, 255, 255, 0.04);
+        --bg: #0b1220;
         --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
       }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
@@ -28,7 +31,7 @@
       .clip { position: absolute; inset: 0; }
 
       /* Background: four soft glows that drift and breathe (GSAP, yoyo) — slow but perceptible —
-         plus a faint dot grid. #glows is a wrapper so the cover can settle the whole layer at once. */
+         plus a faint dot grid. #glows is a wrapper so the intro can settle the whole layer at once. */
       #bg { pointer-events: none; }
       #glows { position: absolute; inset: 0; will-change: transform; }
       .glow { position: absolute; border-radius: 50%; filter: blur(100px); will-change: transform; }
@@ -42,50 +45,28 @@
         -webkit-mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%);
                 mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%); }
 
-      /* Wordmark pieces, shared by the cover and the closing brand card */
-      .wordmark { display: flex; gap: 0.02em; font-size: 168px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
+      /* Brand pieces any section can use. .wordmark[data-text] is split into letters (.l) by the
+         stage script — or, when brand.logo is set, holds the logo as a single .l.logo image sized
+         to the wordmark's font-size, so letter animations work on both. */
+      .wordmark { display: flex; align-items: center; gap: 0.02em; font-size: 168px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
       .wordmark .l { display: inline-block; will-change: transform, opacity, filter; }
       .wordmark .l.space { width: 0.32em; }
+      .wordmark .l.logo { display: block; height: 1em; width: auto; max-width: 9em; object-fit: contain; }
       .brand-sub:empty { display: none; }
       .brand-sub { font-size: 44px; font-weight: 600; letter-spacing: 0.42em; color: var(--muted); padding-left: 0.42em; will-change: transform, opacity; }
       .brand-line { width: 220px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-soft)); transform-origin: center; will-change: transform, opacity; }
-
-      /* Cover (opening card): wordmark + title, fully rendered at frame 0 — that frame is the
-         poster Telegram/Slack/Finder show — then it settles smaller and holds. */
-      .cover { display: grid; place-items: center; }
-      /* gap: room between PLATFORM and the title, which only rises a little into place: ~63px in all, half of the old 126px */
-      .stack { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 115px; will-change: transform, opacity; }
-      .stack .top, .stack .bottom { display: flex; flex-direction: column; align-items: center; will-change: transform, opacity; }
-      .stack .top { gap: 22px; }
-      .stack .bottom { gap: 24px; }
-      .cover .wordmark { font-size: 99px; }
-      .cover .brand-sub { font-size: 30px; }
-      .cover .brand-line { width: 180px; }
-      .cover .title { font-size: 92px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1380px; will-change: transform, opacity; }
-      .cover .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
-      .meta { display: inline-flex; align-items: center; gap: 12px; padding: 12px 22px; border-radius: 999px;
-        border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--muted); font-size: 24px; font-weight: 500; width: max-content; }
-      .meta b { color: var(--ink); font-weight: 600; }
-
-      /* Closing brand card: big centred wordmark */
-      .brand-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; }
-
-      /* Recap card: title on the left, ONE column of numbered steps on the right */
       .eyebrow { display: inline-flex; align-items: center; gap: 14px; font-size: 24px; font-weight: 600;
         letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
       .eyebrow::before { content: ""; width: 14px; height: 14px; border-radius: 4px; background: var(--brand);
         box-shadow: 0 0 24px color-mix(in srgb, var(--brand) 70%, transparent); }
       .accent { width: 140px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-soft)); transform-origin: left center; }
-      .recap-card { display: grid; grid-template-columns: 640px 1fr; align-items: center; column-gap: 120px; padding: 0 160px; }
-      .recap-card .left { display: flex; flex-direction: column; gap: 26px; }
-      .recap-card .title { font-size: 120px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
-      .recap { display: flex; flex-direction: column; gap: 14px; }
-      .step { display: inline-flex; align-items: center; gap: 18px; font-size: 32px; font-weight: 500; color: var(--ink); white-space: nowrap; }
-      .recap.dense .step { font-size: 28px; gap: 16px; }
-      .recap.dense { gap: 11px; }
-      .step .n { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--brand);
-        font-size: 21px; font-weight: 700; flex: none; }
-      .recap.dense .step .n { width: 38px; height: 38px; font-size: 18px; }
+      /* "4 steps · 27 seconds" chip (DEMO.chip) */
+      .meta { display: inline-flex; align-items: center; gap: 12px; padding: 12px 22px; border-radius: 999px;
+        border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 24px; font-weight: 500; width: max-content; }
+      .meta b { color: var(--ink); font-weight: 600; }
+      /* Numbered badge (callouts, recap steps) */
+      .n { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--brand);
+        font-size: 24px; font-weight: 700; flex: none; }
 
       /* Framed recording */
       #screen { display: grid; place-items: center; }
@@ -100,7 +81,7 @@
          The recording leaves through the top, this card rides in on the same belt, then the
          recording comes back from below with the next actor. */
       .transition-card { display: grid; place-items: center; }
-      .transition-card .stack { gap: 40px; }
+      .transition-card .stack { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 40px; will-change: transform, opacity; }
       .roles { display: inline-flex; align-items: center; gap: 28px; }
       .role { padding: 16px 34px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05);
         font-size: 34px; font-weight: 600; color: var(--muted); will-change: transform, opacity; }
@@ -118,17 +99,42 @@
         gap: 18px; padding: 18px 34px 18px 22px; border-radius: 999px; background: rgba(11, 18, 32, 0.94); color: var(--ink);
         font-size: 34px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap;
         border: 1px solid var(--line); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); opacity: 0; }
-      .callout .n { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
-        background: var(--brand); font-size: 24px; font-weight: 700; }
       /* Who is acting (two-actor videos): a small role tag before the step text */
       .callout .who { font-size: 20px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
         padding-right: 18px; border-right: 1px solid var(--line); }
 
-      /* Recap split by actor: a titled list per role */
-      .recap-group { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 700; letter-spacing: 0.2em;
+      /* ---- Sections (intro, recap, outro), each scoped under its #slot id ---- */
+      /* ── intro: poster ── */
+      #intro { display: grid; place-items: center; }
+      /* gap: room between the tagline and the title, which only rises a little into place */
+      #intro .stack { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 115px; will-change: transform, opacity; }
+      #intro .top, #intro .bottom { display: flex; flex-direction: column; align-items: center; will-change: transform, opacity; }
+      #intro .top { gap: 22px; }
+      #intro .bottom { gap: 24px; }
+      #intro .wordmark { font-size: 99px; }
+      #intro .brand-sub { font-size: 30px; }
+      #intro .brand-line { width: 180px; }
+      #intro .title { font-size: 92px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1380px; will-change: transform, opacity; }
+      #intro .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
+
+      /* ── recap: steps ── */
+      #recap { display: grid; grid-template-columns: 640px 1fr; align-items: center; column-gap: 120px; padding: 0 160px; }
+      #recap .left { display: flex; flex-direction: column; gap: 26px; }
+      #recap .title { font-size: 120px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
+      #recap .steps { display: flex; flex-direction: column; gap: 14px; }
+      #recap .step { display: inline-flex; align-items: center; gap: 18px; font-size: 32px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+      #recap .step .n { font-size: 21px; }
+      #recap .steps.dense { gap: 11px; }
+      #recap .steps.dense .step { font-size: 28px; gap: 16px; }
+      #recap .steps.dense .step .n { width: 38px; height: 38px; font-size: 18px; }
+      /* Split by actor: a titled list per role */
+      #recap .group { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 700; letter-spacing: 0.2em;
         text-transform: uppercase; color: var(--brand-soft); margin: 18px 0 2px; }
-      .recap-group:first-child { margin-top: 0; }
-      .recap-group::after { content: ""; width: 64px; height: 2px; border-radius: 1px; background: var(--line); }
+      #recap .group:first-child { margin-top: 0; }
+      #recap .group::after { content: ""; width: 64px; height: 2px; border-radius: 1px; background: var(--line); }
+
+      /* ── outro: wordmark ── */
+      #outro { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; }
     </style>
   </head>
   <body>
@@ -145,18 +151,19 @@
         <div id="grid"></div>
       </div>
 
-      <!-- 1. Cover: 0 → COVER_DURATION. Frame 0 is the poster. -->
-      <section id="cover" class="clip cover" data-start="0" data-duration="4" data-track-index="3">
-        <div class="stack" id="stack">
+      <!-- 1. Intro section: 0 → DEMO.sections.intro.duration. Frame 0 is the poster. -->
+      <!-- ── intro: poster ── -->
+      <section id="intro" class="clip" data-start="0" data-duration="4" data-track-index="3">
+        <div class="stack">
           <div class="top">
-            <div class="wordmark" data-text="ACME"></div>
+            <div class="wordmark" data-text="ACME" data-logo=""></div>
             <div class="brand-line"></div>
             <div class="brand-sub">PLATFORM</div>
           </div>
           <div class="bottom">
             <h1 class="title">Hand-off</h1>
             <p class="subtitle"></p>
-            <div class="meta" id="intro-meta"></div>
+            <div class="meta" data-chip></div>
           </div>
         </div>
       </section>
@@ -189,19 +196,21 @@
       <!-- Music bed, pre-rendered by reelkit build (trim + loudnorm + fades) -->
       <audio id="music" class="clip" src="assets/music.m4a" data-start="0" data-duration="30.15" data-track-index="4"></audio>
 
-      <!-- 3. Recap card: title left, numbered steps right -->
-      <section id="outro" class="clip recap-card" data-start="24.2" data-duration="3.75" data-track-index="2">
+      <!-- 3. Recap section (absent when video.json says "recap": "none") -->
+      <!-- ── recap: steps ── -->
+      <section id="recap" class="clip" data-start="24.2" data-duration="3.75" data-track-index="2">
         <div class="left">
           <div class="eyebrow">Acme</div>
           <h1 class="title">In short</h1>
           <div class="accent"></div>
         </div>
-        <div class="recap" id="recap"></div>
+        <div class="steps"></div>
       </section>
 
-      <!-- 4. Closing brand card -->
-      <section id="brand-out" class="clip brand-card" data-start="27.55" data-duration="2.6" data-track-index="3">
-        <div class="wordmark" data-text="ACME"></div>
+      <!-- 4. Outro section: ends on the brand, never on an empty frame -->
+      <!-- ── outro: wordmark ── -->
+      <section id="outro" class="clip" data-start="27.55" data-duration="2.6" data-track-index="3">
+        <div class="wordmark" data-text="ACME" data-logo=""></div>
         <div class="brand-line"></div>
         <div class="brand-sub">PLATFORM</div>
       </section>
@@ -211,23 +220,35 @@
       /* ------------------------------------------------------------------
        * Generated by `reelkit build` from video.json — edit video.json and
        * rebuild; changes made here are overwritten. Times are composition
-       * seconds (cover included):
+       * seconds (intro included):
+       *   sections: { intro: { start, duration, exit }, recap: { start, duration, maxSteps } | null,
+       *               outro: { start, duration } }
        *   callouts: [{ at, duration, text, group? }]   numbered step pills
        *   zooms: [{ at, duration, x, y, scale, in, out }]   x/y = 0..1 focus
        *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
-       *   chip: { steps, seconds }   cover chip text, already pluralised
+       *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
       const DEMO = {
         "total": 30.15,
-        "coverDuration": 4,
-        "coverExit": 3,
         "clipStart": 3,
         "clipDuration": 21.6,
         "mediaStart": 1,
-        "recapStart": 24.2,
-        "recapDuration": 3.75,
-        "brandOutStart": 27.55,
-        "brandOutDuration": 2.6,
+        "sections": {
+          "intro": {
+            "start": 0,
+            "duration": 4,
+            "exit": 3
+          },
+          "recap": {
+            "start": 24.2,
+            "duration": 3.75,
+            "maxSteps": 10
+          },
+          "outro": {
+            "start": 27.55,
+            "duration": 2.6
+          }
+        },
         "callouts": [
           {
             "at": 5,
@@ -258,11 +279,10 @@
         "chip": {
           "steps": "4 steps",
           "seconds": "27 seconds"
-        },
-        "maxSteps": 10
+        }
       };
 
-      /* ---- Builder: normally nothing below needs editing. ---- */
+      /* ---- Stage builder: normally nothing below needs editing. ---- */
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       const FADE = 0.5;
@@ -280,49 +300,55 @@
 
       // Background: glows drift and breathe on sine curves for the whole video — slow but
       // perceptible, never busy — and the whole layer settles from a zoomed, slightly
-      // rotated pose over the cover so the opening feels alive.
+      // rotated pose over the intro so the opening feels alive.
       const breathe = (sel, vars, period) =>
         tl.fromTo(sel, { x: 0, y: 0, scale: 1 }, { ...vars, duration: period, ease: 'sine.inOut', yoyo: true, repeat: Math.ceil(DEMO.total / period) }, 0);
       breathe('#glow-a', { x: 560, y: 340, scale: 1.28 }, 4.8);
       breathe('#glow-b', { x: -520, y: -320, scale: 1.22 }, 5.6);
       breathe('#glow-c', { x: -420, y: 300, scale: 1.35 }, 4.2);
       breathe('#glow-d', { x: 460, y: -260, scale: 1.3 }, 6.4);
-      tl.fromTo('#glows', { scale: 1.4, rotation: -9 }, { scale: 1, rotation: 0, duration: DEMO.coverDuration - 0.2, ease: 'power2.out' }, 0);
+      tl.fromTo('#glows', { scale: 1.4, rotation: -9 }, { scale: 1, rotation: 0, duration: DEMO.sections.intro.duration - 0.2, ease: 'power2.out' }, 0);
 
-      // Wordmarks: split into letters once so the cover and the closing card can animate them.
+      // Wordmarks: split into letters once so sections can animate them — or, with a brand
+      // logo, one .l.logo image (the same letter tweens then move the whole logo).
       document.querySelectorAll('.wordmark').forEach((el) => {
+        if (el.dataset.logo) {
+          const img = node('img', 'l logo');
+          img.src = el.dataset.logo;
+          img.alt = el.dataset.text;
+          el.replaceChildren(img);
+          return;
+        }
         el.replaceChildren(...[...el.dataset.text].map((ch) =>
           ch === ' ' ? node('span', 'l space') : node('span', 'l', ch)));
       });
+      // Every "4 steps · 27 seconds" chip.
+      document.querySelectorAll('.meta[data-chip]').forEach((el) => {
+        el.replaceChildren(node('b', '', DEMO.chip.steps), node('span', '', '·'), node('span', '', DEMO.chip.seconds));
+      });
 
-      // 1. Cover. Frame 0 = the poster: letters, line, sub and title are big (130%) and
-      //    half-transparent, the letters spread a little. Then everything "breathes" down
-      //    into place (sine.inOut, letters 60 ms apart from the centre, no snap anywhere),
-      //    the subtitle and chip rise in, the card holds, and at coverExit the whole stack
-      //    leaves through the top while the recording arrives from below on the same belt.
-      //    The from-states below ARE the poster — keep them sharp (no blur at t=0).
-      const introMeta = document.getElementById('intro-meta');
-      introMeta.append(node('b', '', DEMO.chip.steps), node('span', '', '·'), node('span', '', DEMO.chip.seconds));
-      const c0 = 0.08;
-      tl.fromTo('#cover .l', { scale: 1.3, opacity: 0.6, x: (i, el, all) => (i - (all.length - 1) / 2) * 26 },
-        { scale: 1, opacity: 1, x: 0, duration: 1.4, ease: 'sine.inOut', stagger: { each: 0.06, from: 'center' } }, c0);
-      tl.fromTo('#cover .brand-line', { scaleX: 1.3, opacity: 0.6 }, { scaleX: 1, opacity: 1, duration: 1.3, ease: 'sine.inOut' }, c0 + 0.25);
-      tl.fromTo('#cover .brand-sub', { scale: 1.3, opacity: 0.6 }, { scale: 1, opacity: 1, duration: 1.3, ease: 'sine.inOut' }, c0 + 0.35);
-      tl.fromTo('#cover .title', { scale: 1.3, opacity: 0.65 }, { scale: 1, opacity: 1, duration: 1.4, ease: 'sine.inOut' }, c0 + 0.2);
-      tl.fromTo('#stack', { y: 0 }, { y: -30, duration: 1.2, ease: 'power2.out' }, c0);
-      tl.fromTo('#cover .top', { y: -24 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0);
-      tl.fromTo('#cover .bottom', { y: 33 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0 + 0.15);
-      tl.fromTo('#cover .subtitle', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, 0.9);
-      tl.fromTo('#cover .meta', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, 1.05);
-      tl.fromTo('#stack', { y: -30 }, { y: -1150, duration: 0.9, ease: 'power3.inOut', ...later }, DEMO.coverExit);
+      // What sections may do to the framed recording. The intro calls stage.enter() once, at
+      // its hand-over (usually section.exit); the stage owns #frame because zooms move it too.
+      const BELT = 0.9;
+      const stage = {
+        entered: false,
+        enter(at, style = 'fade') {
+          stage.entered = true;
+          if (style === 'belt') {        // rides in from below (pair with an intro leaving through the top)
+            tl.fromTo('#frame', { opacity: 1, y: 1150 }, { opacity: 1, y: 0, duration: BELT, ease: 'power3.inOut', ...later }, at);
+          } else if (style === 'zoom') { // grows out of the middle
+            tl.fromTo('#frame', { opacity: 0, scale: 0.84, y: 30 }, { opacity: 1, scale: 1, y: 0, duration: 0.9, ease: 'power3.out', ...later }, at);
+          } else {                       // 'fade'
+            tl.fromTo('#frame', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'power2.out', ...later }, at);
+          }
+        },
+      };
 
-      // 2. Screen: rides in from below with the cover's exit, fades out into the recap.
-      tl.fromTo('#frame', { opacity: 1, y: 1150 }, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.inOut', ...later }, DEMO.coverExit);
+      // 2. Screen: fades out into the recap / outro.
       tl.fromTo('#screen', { opacity: 1 }, { opacity: 0, duration: FADE, ease: 'power2.inOut', ...later }, DEMO.clipStart + DEMO.clipDuration - FADE);
 
       // Hand-off cards: recording out through the top, card in on the same belt, hold,
       // card out through the top, recording back in from below. The "to" role fills red.
-      const BELT = 0.9;
       DEMO.transitions.forEach((t, i) => {
         const card = '#transition-' + i;
         tl.fromTo('#frame', { y: 0 }, { y: -1150, duration: BELT, ease: 'power3.inOut', ...later }, t.at - BELT);
@@ -362,54 +388,83 @@
         tl.fromTo('#frame', { scale: z.scale }, { scale: 1, transformOrigin: origin, duration: zoomOut, ease: 'power2.inOut', ...later }, z.at + z.duration - zoomOut);
       });
 
-      // 3. Recap: left block rises, steps cascade in on the right, then the card fades.
-      const recap = document.getElementById('recap');
-      const steps = DEMO.callouts.slice(0, DEMO.maxSteps); // the recap card holds this many
-      if (steps.length > 8) recap.classList.add('dense');
-      // Two-actor videos: callouts carry a `group` (the role from the hand-off card); each
-      // role gets its own titled list, numbering continues across them.
-      const recapRows = [];
-      steps.forEach((c, i) => {
-        if (c.group && c.group !== steps[i - 1]?.group) {
-          const heading = document.createElement('div');
-          heading.className = 'recap-group';
-          heading.id = 'recap-group-' + i;
-          heading.textContent = c.group; // plain text
-          recap.appendChild(heading);
-          recapRows.push('#' + heading.id);
-        }
-        const el = document.createElement('div');
-        el.className = 'step';
-        el.id = 'step-' + i;
-        el.append(node('span', 'n', String(i + 1)), node('span', '', c.text));
-        recap.appendChild(el);
-        recapRows.push('#' + el.id);
-      });
-      const r0 = DEMO.recapStart;
-      tl.fromTo('#outro', { opacity: 0 }, { opacity: 1, duration: FADE, ease: 'power2.inOut', ...later }, r0);
-      tl.fromTo('#outro .eyebrow', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, r0 + 0.1);
-      tl.fromTo('#outro .title', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', ...later }, r0 + 0.2);
-      tl.fromTo('#outro .accent', { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: 'power3.inOut', ...later }, r0 + 0.45);
-      recapRows.forEach((row, i) => {
-        tl.fromTo(row, { opacity: 0, x: 36 }, { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out', ...later }, r0 + 0.5 + i * 0.1);
-      });
-      tl.fromTo('#outro', { opacity: 1 }, { opacity: 0, duration: FADE, ease: 'power2.in', ...later }, r0 + DEMO.recapDuration - FADE);
+      /* ---- Sections: each runs with `section` = its DEMO.sections entry, and may use
+       *      tl, DEMO, FADE, later, node, stage. ---- */
+      // ── intro: poster ──
+      ;((section) => {
+        // Frame 0 = the poster: letters, line, sub and title are big (130%) and half-transparent,
+        // the letters spread a little. Then everything "breathes" down into place (sine.inOut,
+        // letters 60 ms apart from the centre, no snap anywhere), the subtitle and chip rise in,
+        // the card holds, and at section.exit the whole stack leaves through the top while the
+        // recording arrives from below on the same belt.
+        // The from-states below ARE the poster — keep them sharp (no blur, no `later` at t=0).
+        const c0 = section.start + 0.08;
+        tl.fromTo('#intro .l', { scale: 1.3, opacity: 0.6, x: (i, el, all) => (i - (all.length - 1) / 2) * 26 },
+          { scale: 1, opacity: 1, x: 0, duration: 1.4, ease: 'sine.inOut', stagger: { each: 0.06, from: 'center' } }, c0);
+        tl.fromTo('#intro .brand-line', { scaleX: 1.3, opacity: 0.6 }, { scaleX: 1, opacity: 1, duration: 1.3, ease: 'sine.inOut' }, c0 + 0.25);
+        tl.fromTo('#intro .brand-sub', { scale: 1.3, opacity: 0.6 }, { scale: 1, opacity: 1, duration: 1.3, ease: 'sine.inOut' }, c0 + 0.35);
+        tl.fromTo('#intro .title', { scale: 1.3, opacity: 0.65 }, { scale: 1, opacity: 1, duration: 1.4, ease: 'sine.inOut' }, c0 + 0.2);
+        tl.fromTo('#intro .stack', { y: 0 }, { y: -30, duration: 1.2, ease: 'power2.out' }, c0);
+        tl.fromTo('#intro .top', { y: -24 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0);
+        tl.fromTo('#intro .bottom', { y: 33 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0 + 0.15);
+        tl.fromTo('#intro .subtitle', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, section.start + 0.9);
+        tl.fromTo('#intro .meta', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, section.start + 1.05);
+        tl.fromTo('#intro .stack', { y: -30 }, { y: -1150, duration: 0.9, ease: 'power3.inOut', ...later }, section.exit);
+        stage.enter(section.exit, 'belt');
 
-      // 4. Closing brand: letters drift in from farther out and scale up from 0.88, the line
-      //    wipes from the left, then everything zooms out gently at the very end and settles
-      //    at 15% opacity: the last frame still shows the wordmark (house rule), never empty.
-      const b0 = DEMO.brandOutStart;
-      tl.fromTo('#brand-out .l', { opacity: 0, x: (i, el, all) => (i - all.length / 2) * 44, scale: 0.88, filter: 'blur(12px)' },
-        { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)', duration: 1.1, ease: 'power3.out', stagger: { each: 0.06, from: 'center' }, ...later }, b0 + 0.1);
-      tl.fromTo('#brand-out .brand-line', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.9, ease: 'power3.inOut', ...later }, b0 + 0.7);
-      tl.fromTo('#brand-out .brand-sub', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', ...later }, b0 + 0.95);
-      tl.fromTo('#brand-out', { opacity: 1, scale: 1 }, { opacity: 0.15, scale: 0.96, duration: 0.8, ease: 'power2.in', ...later }, b0 + DEMO.brandOutDuration - 0.8);
+        gsap.set(['#intro .subtitle', '#intro .meta'], { opacity: 0 });
+      })(DEMO.sections.intro);
 
-      // Hidden states for everything that appears later (cold-seek safety).
-      gsap.set(['#cover .subtitle', '#cover .meta',
-        '#outro', '#outro .eyebrow', '#outro .title', '#outro .step', '#outro .recap-group', '#brand-out .l', '#brand-out .brand-sub'], { opacity: 0 });
-      gsap.set(['#outro .accent', '#brand-out .brand-line'], { scaleX: 0 });
-      gsap.set('#frame', { opacity: 0 }); // the recording card must not sit over the cover
+      // ── recap: steps ──
+      ;((section) => {
+        // Left block rises, steps cascade in on the right, then the card fades.
+        const list = document.querySelector('#recap .steps');
+        const steps = DEMO.callouts.slice(0, section.maxSteps); // the card holds this many
+        if (steps.length > 8) list.classList.add('dense');
+        // Two-actor videos: callouts carry a `group` (the role from the hand-off card); each
+        // role gets its own titled list, numbering continues across them.
+        const rows = [];
+        steps.forEach((c, i) => {
+          if (c.group && c.group !== steps[i - 1]?.group) {
+            rows.push(list.appendChild(node('div', 'group', c.group)));
+          }
+          const el = node('div', 'step');
+          el.append(node('span', 'n', String(i + 1)), node('span', '', c.text));
+          rows.push(list.appendChild(el));
+        });
+        const r0 = section.start;
+        tl.fromTo('#recap', { opacity: 0 }, { opacity: 1, duration: FADE, ease: 'power2.inOut', ...later }, r0);
+        tl.fromTo('#recap .eyebrow', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, r0 + 0.1);
+        tl.fromTo('#recap .title', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', ...later }, r0 + 0.2);
+        tl.fromTo('#recap .accent', { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: 'power3.inOut', ...later }, r0 + 0.45);
+        rows.forEach((row, i) => {
+          tl.fromTo(row, { opacity: 0, x: 36 }, { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out', ...later }, r0 + 0.5 + i * 0.1);
+        });
+        tl.fromTo('#recap', { opacity: 1 }, { opacity: 0, duration: FADE, ease: 'power2.in', ...later }, r0 + section.duration - FADE);
+
+        gsap.set(['#recap', '#recap .eyebrow', '#recap .title', ...rows], { opacity: 0 });
+        gsap.set('#recap .accent', { scaleX: 0 });
+      })(DEMO.sections.recap);
+
+      // ── outro: wordmark ──
+      ;((section) => {
+        // Letters drift in from farther out and scale up from 0.88, the line wipes from the left,
+        // then everything zooms out gently at the very end and settles at 15% opacity: the last
+        // frame still shows the wordmark (house rule), never empty.
+        const b0 = section.start;
+        tl.fromTo('#outro .l', { opacity: 0, x: (i, el, all) => (i - all.length / 2) * 44, scale: 0.88, filter: 'blur(12px)' },
+          { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)', duration: 1.1, ease: 'power3.out', stagger: { each: 0.06, from: 'center' }, ...later }, b0 + 0.1);
+        tl.fromTo('#outro .brand-line', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.9, ease: 'power3.inOut', ...later }, b0 + 0.7);
+        tl.fromTo('#outro .brand-sub', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', ...later }, b0 + 0.95);
+        tl.fromTo('#outro', { opacity: 1, scale: 1 }, { opacity: 0.15, scale: 0.96, duration: 0.8, ease: 'power2.in', ...later }, b0 + section.duration - 0.8);
+
+        gsap.set(['#outro .l', '#outro .brand-sub'], { opacity: 0 });
+        gsap.set('#outro .brand-line', { scaleX: 0 });
+      })(DEMO.sections.outro);
+
+      // An intro that never handed over still gets the recording on screen.
+      if (!stage.entered) stage.enter(DEMO.clipStart, 'fade');
+      gsap.set('#frame', { opacity: 0 }); // the recording card must not sit over the intro
 
       window.__timelines.main = tl;
       tl.seek(0);

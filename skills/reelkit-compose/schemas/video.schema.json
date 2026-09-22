@@ -9,6 +9,16 @@
         "title": { "type": "string", "description": "Cover title: the task, e.g. \"Find a customer\"." },
         "subtitle": { "type": "string", "description": "Cover subtitle: the benefit or context." },
         "template": { "type": "string", "description": "Overrides demo.config.json `template` for this video." },
+        "sections": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Overrides demo.config.json `sections` per slot, e.g. { \"intro\": \"minimal\", \"recap\": \"none\" }. Run `reelkit templates` for the list.",
+            "properties": {
+                "intro": { "type": "string", "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split." },
+                "recap": { "type": "string", "description": "Steps card after the recording, or \"none\". Kit: steps, compact, none." },
+                "outro": { "type": "string", "description": "Closing brand card. Kit: wordmark, compact, endcard." }
+            }
+        },
         "recapTitle": { "type": "string", "description": "Overrides demo.config.json `strings.recapTitle`." },
         "brand": {
             "type": "object",
@@ -17,7 +27,8 @@
             "properties": {
                 "name": { "type": "string" },
                 "tagline": { "type": "string" },
-                "eyebrow": { "type": "string" }
+                "eyebrow": { "type": "string" },
+                "logo": { "type": ["string", "null"], "description": "Overrides demo.config.json `brand.logo`: an .svg/.png/.webp relative to the project root, or null for the text wordmark." }
             }
         },
         "trim": {
