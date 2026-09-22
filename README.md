@@ -51,8 +51,8 @@ typo is an error with a "did you mean" hint).
                "logo": "docs/brand/logo.svg" },      // optional: replaces the text wordmark
     "template": "classic",
     "sections": { "intro": "poster", "recap": "steps", "outro": "wordmark" },  // the defaults
-    "strings": {
-        "recapTitle": "In short",
+    "strings": {                                       // optional: built in for en, ro, de, fr, es, it,
+        "recapTitle": "In short",                      // pt, nl, pl, ru, uk, cs, sv, da, nb, fi, hu, tr
         "stepsLabel": { "one": "step", "other": "steps" },      // Intl.PluralRules categories
         "secondsLabel": { "one": "second", "other": "seconds" } // e.g. ro: one/few/other
     },

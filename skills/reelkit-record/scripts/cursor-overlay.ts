@@ -108,7 +108,8 @@ export function hideDevChromeScript(selectors: string[]): string {
     if (selectors.length === 0) {
         return ''
     }
-    const css = selectors.join(', ') + ' { display: none !important; }'
+    // One rule per selector: an invalid selector in a list drops the whole rule.
+    const css = selectors.map((s) => `${s} { display: none !important; }`).join('\n')
 
     return `
 (() => {

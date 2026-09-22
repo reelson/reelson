@@ -10,6 +10,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { stringsFor } from './languages.ts'
 import { loadSchema, validate } from './validate.ts'
 
 /** JSON Schema for demo.config.json (editors pick it up through `$schema`). */
@@ -121,10 +122,18 @@ export const DEFAULTS: DemoConfig = {
 export const COMMON_DEV_CHROME = [
     '.phpdebugbar',
     '.phpdebugbar-openhandler', // Laravel Debugbar
+    'form[action*="filament-developer-logins"]', // Filament developer logins (login page buttons)
+    '[wire\\:snapshot*="menu-logins"]', // … and its "Switch to" topbar menu
+    '.sf-toolbar',
+    '.sf-minitoolbar', // Symfony web debug toolbar
+    '#djDebug', // Django Debug Toolbar
+    '.profiler-results', // rack-mini-profiler
     'vite-error-overlay', // Vite
     'nextjs-portal', // Next.js dev indicator
     '#__next-build-watcher',
     '[data-nextjs-toast]',
+    '#nuxt-devtools-container', // Nuxt DevTools
+    'astro-dev-toolbar', // Astro dev toolbar
     '#webpack-dev-server-client-overlay',
 ]
 
@@ -148,7 +157,8 @@ export function loadConfig(...startDirs: string[]): LoadedConfig {
         throw new ConfigError(path, problems)
     }
 
-    const merged = deepMerge(DEFAULTS, raw)
+    // The language's built-in strings (plurals, recap title) first; demo.config.json `strings` on top.
+    const merged = deepMerge({ ...DEFAULTS, strings: stringsFor(raw.language ?? DEFAULTS.language) }, raw)
     // Plural forms replace the defaults as a whole: merging would leak "step" into { other: "pași" }.
     for (const key of ['stepsLabel', 'secondsLabel'] as const) {
         const own = raw.strings?.[key]

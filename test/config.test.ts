@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, it } from 'node:test'
 import { CONFIG_SCHEMA_PATH, ConfigError, countLabel, DEFAULTS, loadConfig } from '../skills/reelkit-record/scripts/config.ts'
+import { LANGUAGE_STRINGS } from '../skills/reelkit-record/scripts/languages.ts'
 import { loadSchema, validate } from '../skills/reelkit-record/scripts/validate.ts'
 import { VIDEO_SCHEMA_PATH } from '../skills/reelkit-compose/scripts/project.ts'
 import { KIT } from './helpers.ts'
@@ -75,6 +76,34 @@ describe('loadConfig', () => {
     it('replaces plural forms instead of merging them into the English defaults', () => {
         const config = loadConfig(projectWith({ strings: { stepsLabel: { other: 'Schritte' } } }))
         assert.deepEqual(config.strings.stepsLabel, { other: 'Schritte' })
+    })
+
+    it('uses the language\'s own strings unless the project overrides them', () => {
+        const ro = loadConfig(projectWith({ language: 'ro' }))
+        assert.equal(ro.strings.recapTitle, 'Pe scurt')
+        assert.equal(countLabel(20, ro.strings.stepsLabel, 'ro'), '20 de pași')
+        assert.equal(countLabel(16, ro.strings.secondsLabel, 'ro'), '16 secunde')
+
+        const own = loadConfig(projectWith({ language: 'ro', strings: { recapTitle: 'Rezumat' } }))
+        assert.equal(own.strings.recapTitle, 'Rezumat')
+        assert.deepEqual(own.strings.stepsLabel, ro.strings.stepsLabel)
+
+        assert.equal(loadConfig(projectWith({ language: 'pt-BR' })).strings.recapTitle, 'Em resumo')
+        assert.equal(loadConfig(projectWith({ language: 'xx' })).strings.recapTitle, 'In short')
+    })
+
+    it('has a plural form for every category each built-in language uses', () => {
+        for (const [language, strings] of Object.entries(LANGUAGE_STRINGS)) {
+            for (const label of [strings.stepsLabel, strings.secondsLabel]) {
+                for (const category of new Intl.PluralRules(language).resolvedOptions().pluralCategories) {
+                    if (category !== 'many' || language !== 'fr' && language !== 'es' && language !== 'it' && language !== 'pt') {
+                        assert.ok(typeof label === 'object' && category in label, `${language}: no "${category}" form in ${JSON.stringify(label)}`)
+                    }
+                }
+            }
+        }
+        assert.equal(countLabel(5, LANGUAGE_STRINGS.pl.stepsLabel, 'pl'), '5 kroków')
+        assert.equal(countLabel(22, LANGUAGE_STRINGS.ru.secondsLabel, 'ru'), '22 секунды')
     })
 
     it('throws a readable error for an invalid config', () => {

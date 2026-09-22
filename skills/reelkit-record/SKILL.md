@@ -35,10 +35,10 @@ error with a "did you mean" hint. Fields (all optional, see `scripts/config.ts`)
 | Field                          | Used for                                                          |
 |--------------------------------|-------------------------------------------------------------------|
 | `videosDir`                    | where `<slug>/` folders live (default `docs/videos`)              |
-| `language`, `locale`           | persona names, browser locale, `<html lang>` of the composition   |
+| `language`, `locale`           | persona names, browser locale, `<html lang>`, and the built-in recap title + chip plurals (en, ro, de, fr, es, it, pt, nl, pl, ru, uk, cs, sv, da, nb, fi, hu, tr; `strings` overrides) |
 | `brand.color`                  | click-ring colour (and the cards in reelkit-compose)                   |
 | `record.viewport`              | default 1440x900; keep 16:10 or 16:9                              |
-| `record.hideSelectors`         | extra local-only UI to hide (env badges, dev-login buttons)       |
+| `record.hideSelectors`         | extra local-only UI to hide (e.g. an app's env badge); Laravel Debugbar, Filament developer logins, Symfony/Django toolbars, rack-mini-profiler, Vite/Next/Nuxt/Astro dev UI are always hidden |
 | `record.extraHTTPHeaders`      | default `X-Demo-Recording: 1`, so the app can skip dev prefills   |
 | `record.personaDomain`         | email domain for `demo.persona()` (must resolve if a gateway checks) |
 

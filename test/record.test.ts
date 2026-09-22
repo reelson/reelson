@@ -12,7 +12,7 @@ describe('page init scripts', () => {
     it('hides dev chrome with a stylesheet built from the selectors', () => {
         const script = hideDevChromeScript(['.phpdebugbar', '.environment-indicator'])
         parses(script)
-        assert.match(script, /"\.phpdebugbar, \.environment-indicator \{ display: none !important; \}"/)
+        assert.match(script, /"\.phpdebugbar \{ display: none !important; \}\\n\.environment-indicator \{ display: none !important; \}"/)
         assert.equal(hideDevChromeScript([]), '')
     })
 
