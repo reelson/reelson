@@ -95,6 +95,8 @@ export interface CursorSpec {
     size?: number
     /** The ring on each press. */
     ripple?: boolean
+    /** Fade the cursor out after this many seconds without moving or clicking (0 = never). */
+    idle?: number
 }
 
 export interface CalloutSpec {
@@ -109,6 +111,8 @@ export interface CalloutSpec {
 
 export interface ZoomSpec {
     scale: number
+    /** Pan with the cursor while zoomed (needs a logged cursor: record.cursor "layer"). */
+    follow?: boolean
     clicks?: number[]
     x?: number
     y?: number
@@ -180,6 +184,8 @@ export interface Timeline {
     cursor: {
         size: number
         ripple: boolean
+        /** Seconds of stillness before it fades out; 0 = always shown. */
+        idle: number
         scale: number
         path: [number, number, number][]
         presses: [number, number, number][]
@@ -323,6 +329,7 @@ export function computeTimeline(
         cursor = {
             size: spec.cursor?.size ?? 44,
             ripple: spec.cursor?.ripple ?? true,
+            idle: spec.cursor?.idle ?? 0,
             scale: Math.round((frame.width / markers.viewport.width) * 10000) / 10000,
             path,
             presses: log.presses.filter(([t]) => inside(t)).map(([t, x, y]) => [toComposition(t), x, y]),

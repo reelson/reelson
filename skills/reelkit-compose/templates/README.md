@@ -136,8 +136,12 @@ Only in sections: `{{START}}`, `{{DURATION}}`, `{{TRACK}}` (put all three on the
 (`{ at, duration, x, y, scale, in, out }`), `transitions` (`{ at, gap }`), `chip`
 (`{ steps, seconds }`, already pluralised) and `cursor` — all times in composition seconds.
 
+A zoom may carry `path: [[t, x, y]]` (video.json `"follow": true`): its transform-origin over
+time; tween the origin along it instead of fixing it at `x`/`y`.
+
 `cursor` is `null` when the footage already shows the cursor (or video.json turned it off);
-otherwise `{ size, ripple, scale, path: [[t, x, y]], presses: [[t, x, y]] }` with x/y in
+otherwise `{ size, ripple, idle, scale, path: [[t, x, y]], presses: [[t, x, y]] }` (`idle`: fade
+out after that many seconds without a move or press, 0 = never) with x/y in
 recording CSS px (× `scale` = `#frame` px) and `size` the arrow height in the same units. A stage
 that gets a `cursor` must draw it — the recording has none. The classic stage draws it inside
 `#frame` (so it rides with the footage), tweens between consecutive points (≤ 0.1 s apart; a

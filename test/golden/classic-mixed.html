@@ -230,8 +230,8 @@
        *   sections: { intro: { start, duration, exit }, recap: { start, duration, maxSteps } | null,
        *               outro: { start, duration } }
        *   callouts: [{ at, duration, text, group? }]   numbered step pills
-       *   zooms: [{ at, duration, x, y, scale, in, out }]   x/y = 0..1 focus
-       *   cursor: { size, ripple, scale, path: [[t, x, y]], presses: [[t, x, y]] } | null
+       *   zooms: [{ at, duration, x, y, scale, in, out, path? }]   x/y = 0..1 focus; path = [[t, x, y]] follow
+       *   cursor: { size, ripple, idle, scale, path: [[t, x, y]], presses: [[t, x, y]] } | null
        *           the logged cursor (x/y recording px, × scale = frame px); null = filmed in
        *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
@@ -293,6 +293,7 @@
         "cursor": {
           "size": 44,
           "ripple": true,
+          "idle": 0,
           "scale": 1.0444,
           "path": [
             [3, 720, 470],
@@ -432,13 +433,22 @@
         tl.fromTo(el, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in', ...later }, c.at + c.duration - 0.3);
       });
 
-      // Zooms on the framed recording (transform-origin at the focus point).
+      // Zooms on the framed recording (transform-origin at the focus point). A zoom with a
+      // `path` follows the cursor: its origin glides along the path instead of staying put.
+      const originOf = (x, y) => (x * 100) + '% ' + (y * 100) + '%';
       DEMO.zooms.forEach((z) => {
-        const origin = (z.x * 100) + '% ' + (z.y * 100) + '%';
+        const origin = originOf(z.x, z.y);
         const zoomIn = z.in ?? 0.8;
         const zoomOut = z.out ?? 0.8;
-        tl.fromTo('#frame', { scale: 1 }, { scale: z.scale, transformOrigin: origin, duration: zoomIn, ease: 'power2.inOut', ...later }, z.at);
-        tl.fromTo('#frame', { scale: z.scale }, { scale: 1, transformOrigin: origin, duration: zoomOut, ease: 'power2.inOut', ...later }, z.at + z.duration - zoomOut);
+        const fixed = z.path ? {} : { transformOrigin: origin };
+        tl.fromTo('#frame', { scale: 1 }, { scale: z.scale, ...fixed, duration: zoomIn, ease: 'power2.inOut', ...later }, z.at);
+        tl.fromTo('#frame', { scale: z.scale }, { scale: 1, ...fixed, duration: zoomOut, ease: 'power2.inOut', ...later }, z.at + z.duration - zoomOut);
+        if (z.path) {
+          for (let i = 1; i < z.path.length; i++) {
+            const a = z.path[i - 1], b = z.path[i];
+            tl.fromTo('#frame', { transformOrigin: originOf(a[1], a[2]) }, { transformOrigin: originOf(b[1], b[2]), duration: b[0] - a[0], ease: 'none', ...later }, a[0]);
+          }
+        }
       });
 
       // Cursor layer: every logged move is a tween to the next point (a glide's moves are
@@ -494,6 +504,17 @@
           tl.fromTo(cursor, { scale: 1 }, { scale: k, duration: zin, ease: (p) => (inverse(E(p)) - 1) / (k - 1), ...later }, z.at);
           tl.fromTo(cursor, { scale: k }, { scale: 1, duration: zout, ease: (p) => (inverse(1 - E(p)) - k) / (1 - k), ...later }, z.at + z.duration - zout);
         });
+        // Idle: after C.idle s without a move or a press, fade out; back in as it moves again.
+        if (C.idle > 0) {
+          const active = [...C.path.map((p) => p[0]), ...C.presses.map((p) => p[0])].sort((a, b) => a - b);
+          for (let i = 0; i < active.length; i++) {
+            const quiet = active[i] + C.idle;
+            const next = active[i + 1] ?? Infinity;
+            if (next - quiet < 0.6) continue; // too short a rest to be worth hiding
+            tl.fromTo(cursor, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power1.in', ...later }, quiet);
+            if (next !== Infinity) tl.fromTo(cursor, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'power1.out', ...later }, next - 0.25);
+          }
+        }
         // The press squash.
         C.presses.forEach((p) => {
           tl.fromTo(arrow, { scale: 1 }, { scale: 0.82, duration: 0.09, ease: 'power1.out', ...later }, p[0]);

@@ -40,6 +40,52 @@ export interface Zoom {
     scale: number
     in: number
     out: number
+    /**
+     * `follow`: the focus over time, [t, x, y] (transform-origin fractions, composition s),
+     * so the view pans with the cursor. The stage tweens between the points.
+     */
+    path?: [number, number, number][]
+}
+
+/**
+ * How a following zoom pans: sampled every `step` s, easing towards the cursor with `lag` s
+ * of smoothing, aimed `lead` s ahead — where the cursor is going, not where it was (which
+ * also cancels the smoothing's delay, and keeps the zoom-in on the click it glides to).
+ */
+export const FOLLOW = { step: 1 / 15, lag: 0.45, lead: 0.45 }
+
+/**
+ * The focus path of a zoom that follows the cursor: at each sample, the transform-origin
+ * that puts the cursor in the middle of the zoomed view (clamped so the view never leaves
+ * the frame), smoothed so the camera glides instead of jittering. Starts from the planned
+ * focus. Pure; `cursor` is the timeline's cursor layer (composition s, recording px).
+ */
+export function followPath(z: Zoom, cursor: NonNullable<Timeline['cursor']>, viewport: { width: number; height: number }): [number, number, number][] {
+    const at = (t: number): [number, number] => {
+        const path = cursor.path
+        let i = path.findIndex((p) => p[0] > t)
+        if (i === -1) i = path.length
+        const a = path[Math.max(0, i - 1)]
+        const b = path[i]
+        if (!b || i === 0 || b[0] - a[0] > 0.1) {
+            return [a[1], a[2]]
+        }
+        const u = (t - a[0]) / (b[0] - a[0])
+        return [a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]
+    }
+    const originFor = (p: number): number => Math.min(1, Math.max(0, (p - 0.5 / z.scale) / (1 - 1 / z.scale)))
+    const alpha = 1 - Math.exp(-FOLLOW.step / FOLLOW.lag)
+    const end = z.at + z.duration
+    let ox = z.x
+    let oy = z.y
+    const out: [number, number, number][] = [[round(z.at), z.x, z.y]]
+    for (let t = z.at + FOLLOW.step; t < end + 1e-9; t += FOLLOW.step) {
+        const [cx, cy] = at(Math.min(t + FOLLOW.lead, end))
+        ox += (originFor(cx / viewport.width) - ox) * alpha
+        oy += (originFor(cy / viewport.height) - oy) * alpha
+        out.push([Math.round(t * 1000) / 1000, Math.round(ox * 10000) / 10000, Math.round(oy * 10000) / 10000])
+    }
+    return out
 }
 
 /** A recorded click placed on the composition timeline. */
@@ -117,9 +163,12 @@ export function planZoom(spec: ZoomSpec, clicks: CompClick[], timeline: Timeline
     byIndex(b)
     const selected = clicks.filter((c) => c.index >= a && c.index <= b)
 
-    const x = spec.x ?? fitFocus(selected.map((c) => c.fx), scale, `clicks ${a}–${b}`, 'wide')
-    const y = spec.y ?? fitFocus(selected.map((c) => c.fy), scale, `clicks ${a}–${b}`, 'tall')
-    const visible = isVisibleIn(viewOf(x, y, scale))
+    // A following zoom pans to each click, so they need not fit in one view: it starts with
+    // the first click in the middle of the view.
+    const centred = (p: number): number => Math.round(Math.min(1, Math.max(0, (p - 0.5 / scale) / (1 - 1 / scale))) * 10000) / 10000
+    const x = spec.x ?? (spec.follow ? centred(first.fx) : fitFocus(selected.map((c) => c.fx), scale, `clicks ${a}–${b}`, 'wide'))
+    const y = spec.y ?? (spec.follow ? centred(first.fy) : fitFocus(selected.map((c) => c.fy), scale, `clicks ${a}–${b}`, 'tall'))
+    const visible = spec.follow ? () => true : isVisibleIn(viewOf(x, y, scale))
 
     const zoomIn = spec.in ?? R.defaultEase
     const at =
@@ -200,10 +249,11 @@ export function checkZoom(z: Zoom, clicks: CompClick[], timeline: Timeline): Zoo
 
     const problems: string[] = []
     const inside = clicks.filter((c) => c.comp >= z.at && c.comp <= end)
-    const framed = inside.filter(visible)
+    // A following zoom keeps the cursor in view: every click in it is framed.
+    const framed = z.path ? inside : inside.filter(visible)
     const first = framed[0]
     const last = framed.at(-1)
-    const next = clicks.find((c) => c.comp > (last?.comp ?? z.at) && !(c.comp <= end && visible(c)))
+    const next = clicks.find((c) => c.comp > (last?.comp ?? z.at) && !(c.comp <= end && (z.path || visible(c))))
 
     if (!first) {
         problems.push('frames no click — anchor it with `clicks`, or drop the zoom')
@@ -215,7 +265,7 @@ export function checkZoom(z: Zoom, clicks: CompClick[], timeline: Timeline): Zoo
             problems.push(`zoom-in starts before the cursor moves (the viewer waits)${fix}`)
         }
         for (const c of inside) {
-            if (!visible(c)) {
+            if (!visible(c) && !z.path) {
                 problems.push(`${describe(c)} is outside the zoomed view${fix}`)
             } else if (c.comp > end - z.out + R.eps) {
                 problems.push(`${describe(c)} happens while the zoom eases out${fix}`)

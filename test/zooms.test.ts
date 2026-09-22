@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { computeTimeline } from '../skills/reelkit-compose/scripts/timeline.ts'
-import { checkZoom, compositionClicks, planZoom, zoomOverlaps, ZoomError, type CompClick, type Zoom } from '../skills/reelkit-compose/scripts/zooms.ts'
+import { checkZoom, compositionClicks, followPath, planZoom, zoomOverlaps, ZoomError, type CompClick, type Zoom } from '../skills/reelkit-compose/scripts/zooms.ts'
 import { fixture } from './helpers.ts'
 
 function setup(name: 'todo' | 'handoff' = 'todo', trimStart = 2.6) {
@@ -136,5 +136,34 @@ describe('zoom hold', () => {
     it('holds through the pause when the range asks for it', () => {
         const z = planZoom({ clicks: [1, 3], scale: 1.6 }, clicks, timeline)
         assert.ok(end(z) > 12)
+    })
+})
+
+describe('followPath', () => {
+    const viewport = { width: 1000, height: 1000 }
+    const cursorAt = (points: [number, number, number][]) => ({ size: 44, ripple: true, idle: 0, scale: 1, path: points, presses: [] })
+    const zoom: Zoom = { at: 10, duration: 4, x: 0.5, y: 0.5, scale: 2, in: 0.8, out: 0.8 }
+
+    it('starts on the planned focus and glides towards the cursor, never leaving the frame', () => {
+        // The cursor jumps to the far right edge at t = 10.5 and stays there.
+        const path = followPath(zoom, cursorAt([[0, 500, 500], [10.5, 1000, 500]]), viewport)
+        assert.deepEqual(path[0], [10, 0.5, 0.5])
+        assert.ok(path.at(-1)![0] >= 13.9)
+        const xs = path.map((p) => p[1])
+        assert.ok(xs.every((x, i) => i === 0 || x >= xs[i - 1] - 1e-9), 'moves one way, no jitter')
+        assert.ok(xs.at(-1)! > 0.95 && xs.at(-1)! <= 1, `ends near the right edge (${xs.at(-1)}), clamped to the frame`)
+        assert.ok(path.every((p) => p[2] === 0.5))
+    })
+
+    it('makes check accept clicks that do not fit one view', () => {
+        const clicks: CompClick[] = [
+            { index: 1, kind: 'click', comp: 11, glide: 10.4, until: 11, fx: 0.05, fy: 0.5 },
+            { index: 2, kind: 'click', comp: 12, glide: 11.4, until: 12, fx: 0.95, fy: 0.5 },
+        ]
+        const { timeline } = setup()
+        assert.throws(() => planZoom({ clicks: [1, 2], scale: 2 }, clicks, timeline), ZoomError)
+        const z = planZoom({ clicks: [1, 2], scale: 2, follow: true }, clicks, timeline)
+        z.path = followPath(z, cursorAt([[0, 50, 500], [11.5, 950, 500]]), viewport)
+        assert.deepEqual(checkZoom(z, clicks, timeline).problems, [])
     })
 })

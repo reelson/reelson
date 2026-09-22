@@ -569,7 +569,7 @@ function renderTimeline() {
     const a = (z.in / dur) * 100
     const b = 100 - (z.out / dur) * 100
     node.innerHTML = `<svg viewBox="0 0 100 20" preserveAspectRatio="none"><polygon points="0,20 ${a},2 ${b},2 100,20" fill="color-mix(in srgb, var(--zoom) 55%, transparent)" stroke="var(--zoom)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>`
-    node.append(el('span', '', `${z.scale}×`))
+    node.append(el('span', '', `${z.scale}×${data.spec.zooms?.[z.n - 1]?.follow ? ' · follow' : ''}`))
     const src = data.spec.zooms?.[z.n - 1]
     const manual = src && !src.clicks
     hover(node, `zoom ${z.n}: ${z.scale}× at ${z.x}, ${z.y} · ${fmt(z.at)}–${fmt(z.end)}s (in ${z.in}s, out ${z.out}s)${manual ? ' — drag to move, drag an edge to resize' : ' — timed from its clicks'}`)
@@ -868,13 +868,16 @@ function inspect(kind, k) {
       rows.push(['at', numberInput(src.at, (v) => v !== undefined && set('time', 'at', Math.max(0, v)), { min: 0, placeholder: 'recording seconds' })])
       rows.push(['length', numberInput(src.duration, (v) => v && set('length', 'duration', Math.max(1, v)), { min: 1 })])
     }
+    if (data.cursor.state === 'layer' || src.follow) {
+      rows.push(['follow cursor', dropdown(['off', 'on'], src.follow ? 'on' : 'off', (v) => set('follow', 'follow', v === 'on' ? true : undefined))])
+    }
     rows.push(['focus x', numberInput(src.x, (v) => set('focus', 'x', v === undefined ? undefined : clamp(v, 0, 1)), { min: 0, max: 1, step: 0.01, placeholder: `auto (${z.x})` })])
     rows.push(['focus y', numberInput(src.y, (v) => set('focus', 'y', v === undefined ? undefined : clamp(v, 0, 1)), { min: 0, max: 1, step: 0.01, placeholder: `auto (${z.y})` })])
     rows.push(['ease in', numberInput(src.in, (v) => set('ease', 'in', v === undefined ? undefined : Math.max(0.4, v)), { min: 0.4, placeholder: `${z.in}s` })])
     rows.push(['ease out', numberInput(src.out, (v) => set('ease', 'out', v === undefined ? undefined : Math.max(0.4, v)), { min: 0.4, placeholder: `${z.out}s` })])
     rows.push(['on screen', `${fmt(z.at)}–${fmt(z.end)}s`])
     return { label: `zoom ${z.n}`, color: 'var(--zoom)', problems: z.problems, rows, actions: [button('Delete', removeSelected, 'danger')],
-      note: src.clicks ? 'Timed from its clicks: the zoom rides along with the cursor.' : 'Manual zoom: drag it on the timeline.' }
+      note: src.clicks ? `Timed from its clicks: the zoom rides along with the cursor${src.follow ? ' and pans to keep it in view' : ''}.` : 'Manual zoom: drag it on the timeline.' }
   }
 
   if (kind === 'handoff') {
@@ -932,6 +935,7 @@ function inspect(kind, k) {
     return { label: 'cursor', color: 'var(--click)', note: 'Drawn by the video from the recorder\u2019s log: it keeps its size during zooms.', rows: [
       ['size', numberInput(spec.cursor?.size, (v) => set('Cursor size', (cur) => { if (v === undefined || v === 44) delete cur.size; else cur.size = clamp(v, 16, 120) }), { min: 16, max: 120, step: 2, placeholder: '44 (classic)' })],
       ['ripple', dropdown(['on', 'off'], c.ripple ? 'on' : 'off', (v) => set(`Ripple ${v}`, (cur) => { if (v === 'on') delete cur.ripple; else cur.ripple = false }))],
+      ['idle fade', numberInput(spec.cursor?.idle, (v) => set('Cursor idle fade', (cur) => { if (!v) delete cur.idle; else cur.idle = clamp(v, 0.5, 30) }), { min: 0, max: 30, step: 0.5, placeholder: 'never (s of stillness)' })],
       ['presses', String(c.presses.length)],
     ], actions: [button('Hide the cursor', () => commit('Cursor hidden', (sp) => { sp.cursor = false }), 'danger')] }
   }

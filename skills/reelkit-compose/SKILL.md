@@ -67,10 +67,12 @@ changing the trim or the template never re-times anything. Validated against
   not be on screen at once (`reelkit check` flags it). A zoom holds its own clicks and ends at
   the next pause (a click still in view < 1 s later joins it; > 3 s of nothing, it lingers and
   leaves): to hold longer, widen `clicks`; for two overlapping zooms, use one over both ranges.
+  `"follow": true` pans with the cursor while zoomed (smoothed, aimed slightly ahead), so the
+  clicks need not fit in one view — good for a form filled top to bottom at a high `scale`.
 - To find click numbers, read `clicks` in markers.json (each has `at`, `x`, `y`, `kind`).
 - **Cursor**: recordings made with `record.cursor: "layer"` (the default) have their cursor
-  drawn by the video. `"cursor": { "size": 56, "ripple": false }` restyles it, `"cursor": false`
-  hides it. For a recording with the cursor filmed in, the build warns that `cursor` has no
+  drawn by the video. `"cursor": { "size": 56, "ripple": false }` restyles it, `"idle": 3` fades
+  it out after 3 s without moving or clicking (back in as it moves), `"cursor": false` hides it. For a recording with the cursor filmed in, the build warns that `cursor` has no
   effect.
 
 ## Templates and sections

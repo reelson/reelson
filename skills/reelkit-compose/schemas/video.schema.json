@@ -86,7 +86,8 @@
                     "additionalProperties": false,
                     "properties": {
                         "size": { "type": "number", "minimum": 16, "maximum": 120, "description": "Arrow size in recording CSS px. Default 44 (the classic macOS-style arrow)." },
-                        "ripple": { "type": "boolean", "description": "The brand-coloured ring on each press. Default true." }
+                        "ripple": { "type": "boolean", "description": "The brand-coloured ring on each press. Default true." },
+                        "idle": { "type": "number", "minimum": 0, "maximum": 30, "description": "Fade the cursor out after this many seconds without moving or clicking, back in as it moves again. Default 0 (always shown)." }
                     }
                 }
             ]
@@ -107,6 +108,7 @@
                         "description": "[first, last] click numbers (1-based, markers.json `clicks`) the zoom frames. Timing and focus are computed."
                     },
                     "scale": { "type": "number", "minimum": 1.1, "maximum": 4, "description": "1.5–2.0 reads well." },
+                    "follow": { "type": "boolean", "description": "Pan with the cursor while zoomed, so the clicks need not fit one view (recordings with a logged cursor, record.cursor \"layer\"). Default false." },
                     "x": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame width. Default: centred on the clicks." },
                     "y": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame height." },
                     "at": { "type": "number", "minimum": 0, "description": "Manual zoom: recording time the zoom-in starts (instead of `clicks`)." },

@@ -41,7 +41,7 @@ import {
     type TrimPoint,
     type VideoSpec,
 } from './timeline.ts'
-import { compositionClicks, planZoom, ZoomError, type CompClick, type Zoom } from './zooms.ts'
+import { compositionClicks, followPath, planZoom, ZoomError, type CompClick, type Zoom } from './zooms.ts'
 
 export interface BuildOptions {
     title?: string
@@ -97,7 +97,13 @@ export function planSpec(demoDir: string, spec: VideoSpec, markers: Markers, con
     const clicks = compositionClicks(markers, timeline)
     const zooms = (spec.zooms ?? []).map((z, i) => {
         try {
-            return planZoom(z, clicks, timeline)
+            const zoom = planZoom(z, clicks, timeline)
+            if (z.follow && timeline.cursor) {
+                zoom.path = followPath(zoom, timeline.cursor, timeline.viewport)
+            } else if (z.follow) {
+                warnings.push(`zoom ${i + 1}: "follow" needs the cursor log of a record.cursor "layer" recording — it stays on its focus`)
+            }
+            return zoom
         } catch (error) {
             if (error instanceof ZoomError) {
                 throw new ReelkitError(`video.json zooms[${i}]: ${error.message}`)
