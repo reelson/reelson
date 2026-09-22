@@ -87,7 +87,8 @@ reelkit build customers-search --title "Find a customer"   # creates video.json 
 reelkit check customers-search                          # schemas, zoom timing, hyperframes lint
 reelkit studio customers-search                         # preview + edit on a layer timeline (saves video.json)
 reelkit templates                                       # templates and intro/recap/outro sections
-reelkit render customers-search [--gif] [--draft]       # or: reelkit render --all (skips unchanged)
+reelkit render customers-search [--gif] [--square] [--portrait] [--draft]   # + .srt/.vtt captions
+reelkit render --all                                    # every demo; skips the unchanged ones
 ```
 
 Per video, commit `scenario.ts`, `markers.json` and `video.json`; everything else is generated.

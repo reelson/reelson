@@ -10,7 +10,9 @@ import { basename, relative, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfig } from '../skills/reelkit-record/scripts/config.ts'
 import { build, plan, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
+import { captionCues, toSrt, toVtt } from '../skills/reelkit-compose/scripts/captions.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
+import { reframe, type Format } from '../skills/reelkit-compose/scripts/formats.ts'
 import { studio } from '../skills/reelkit-compose/scripts/studio.ts'
 import { DRAFT_FLAGS, FPS, hyperframes, RENDER_FLAGS, renderIfChanged } from '../skills/reelkit-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
@@ -33,9 +35,10 @@ Usage: reelkit <command> [options]
                                 preview + edit on a timeline of every layer (saves video.json)
   preview <slug>                open the HyperFrames studio (raw composition)
   templates                     list templates and intro/recap/outro sections
-  render <slug...> | --all [--gif] [--draft] [--force] [--no-build]
-                                build + render video/renders/<slug>.mp4 (and .gif); skips a
-                                video that has not changed since its last render (--force);
+  render <slug...> | --all [--gif] [--square] [--portrait] [--draft] [--force] [--no-build]
+                                build + render video/renders/<slug>.mp4 + .srt/.vtt captions;
+                                skips a video unchanged since its last render (--force);
+                                --gif, --square (1080²), --portrait (1080x1920) add versions;
                                 --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
 
 <slug> is a folder under videosDir, or a path to a demo folder or its scenario.ts.
@@ -345,6 +348,8 @@ function render(argv: string[]): number {
         options: {
             all: { type: 'boolean' },
             gif: { type: 'boolean' },
+            square: { type: 'boolean' },
+            portrait: { type: 'boolean' },
             draft: { type: 'boolean' },
             force: { type: 'boolean' },
             'no-build': { type: 'boolean' },
@@ -359,23 +364,38 @@ function render(argv: string[]): number {
     let failures = 0
     for (const dir of dirs) {
         const slug = basename(dir)
-        if (!values['no-build']) {
-            build(dir, cfg)
-        }
+        const result = values['no-build'] ? plan(dir, cfg) : build(dir, cfg)
         const videoDir = resolve(dir, 'video')
+        // Captions: the same words as the cards, timed to the video.
+        const cues = captionCues(result.timeline, result.spec.title, result.spec.subtitle)
+        mkdirSync(resolve(videoDir, 'renders'), { recursive: true })
+        writeFileSync(resolve(videoDir, `renders/${slug}.srt`), toSrt(cues))
+        writeFileSync(resolve(videoDir, `renders/${slug}.vtt`), toVtt(cues))
         const outputs: [string, string[]][] = values.draft
             ? [[`renders/${slug}.draft.mp4`, DRAFT_FLAGS]]
             : [[`renders/${slug}.mp4`, RENDER_FLAGS]]
         if (values.gif) {
             outputs.push([`renders/${slug}.gif`, [...RENDER_FLAGS, '--format', 'gif', '--fps', '15']])
         }
-        for (const [output, flags] of outputs) {
-            const result = renderIfChanged(videoDir, output, flags, values.force)
-            if (result === 'failed') {
+        const report = (outcome: 'rendered' | 'unchanged' | 'failed', output: string): boolean => {
+            if (outcome === 'failed') {
                 failures++
                 console.error(`reelkit: render failed for ${slug} (${output})`)
-            } else {
-                console.log(`${result === 'unchanged' ? 'up to date' : 'rendered'} ${resolve(videoDir, output)}`)
+                return false
+            }
+            console.log(`${outcome === 'unchanged' ? 'up to date' : 'rendered'} ${resolve(videoDir, output)}`)
+            return true
+        }
+        let main = true
+        for (const [output, flags] of outputs) {
+            main = report(renderIfChanged(videoDir, output, flags, values.force), output) && main
+        }
+        // Square / portrait: the finished video, reframed for social feeds.
+        const source = resolve(videoDir, outputs[0][0])
+        for (const format of (['square', 'portrait'] as Format[]).filter((f) => values[f])) {
+            if (main) {
+                const output = outputs[0][0].replace(/\.mp4$/, `.${format}.mp4`)
+                report(reframe(source, resolve(videoDir, output), format, values.force), output)
             }
         }
     }

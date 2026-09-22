@@ -131,7 +131,10 @@ reelkit render <slug> [--gif] [--draft]   # build + render video/renders/<slug>.
    video.json — so re-read video.json before each of your own edits while it runs.
 4. **Render.** `reelkit render` rebuilds first. ~30–60 s per 12 s of video. `--all` renders
    every demo in the project, skipping the ones unchanged since their last render (`--force`
-   renders anyway); `--gif` adds a 15 fps GIF for READMEs. For a quick look, `--draft` renders
+   renders anyway); `--gif` adds a 15 fps GIF for READMEs, `--square` / `--portrait` add
+   1080x1080 / 1080x1920 versions for social feeds (the video at full width over a blurred,
+   darkened copy of itself). Every render also writes `renders/<slug>.srt` and `.vtt`: the title
+   and the callouts as captions, timed to the video. For a quick look, `--draft` renders
    15 fps at draft quality (about 2x faster) to `renders/<slug>.draft.mp4` — or skip rendering
    altogether and scrub in `reelkit studio`.
 5. **Verify the artifact**, not the log: `ffprobe` duration ≈ the printed total; extract frames
