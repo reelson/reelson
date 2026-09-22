@@ -5,6 +5,7 @@
  */
 import type { Slot, Timeline } from './timeline.ts'
 import { round } from './timeline.ts'
+import { landscapeLayout, type Layout } from './portrait.ts'
 import type { Zoom } from './zooms.ts'
 
 export interface CompositionText {
@@ -42,6 +43,10 @@ export interface CompositionInput {
     narration: boolean
     /** assets/music.m4a exists. */
     music: boolean
+    /** Stage/frame/footage sizes and the portrait pan; default: the landscape stage. */
+    layout?: Layout
+    /** Overrides the timeline's cursor layer (portrait moves it into its own footage scale). */
+    cursor?: Timeline['cursor']
 }
 
 /** HyperFrames track per slot: the recap cross-fades with the outro, so they sit on different tracks. */
@@ -49,6 +54,7 @@ const TRACKS: Record<Slot, number> = { intro: 3, recap: 2, outro: 3 }
 
 export function renderComposition(input: CompositionInput): string {
     const { timeline: t, text } = input
+    const layout = input.layout ?? landscapeLayout(t)
 
     // Everything the stage and section scripts animate from. Times are composition seconds.
     const demo = {
@@ -59,7 +65,8 @@ export function renderComposition(input: CompositionInput): string {
         sections: { intro: t.intro, recap: t.recap, outro: t.outro },
         callouts: t.callouts.map(({ source: _source, ...c }) => c),
         zooms: input.zooms,
-        cursor: t.cursor,
+        cursor: input.cursor !== undefined ? input.cursor : t.cursor,
+        layout: { format: layout.format, stage: layout.stage, bandZoom: layout.bandZoom, pan: layout.pan },
         transitions: t.transitions.map(({ at, gap }) => ({ at, gap })),
         chip: { steps: text.stepsChip, seconds: text.secondsChip },
     }
@@ -76,8 +83,14 @@ export function renderComposition(input: CompositionInput): string {
         SUBTITLE: escapeHtml(text.subtitle),
         OUTRO_TITLE: escapeHtml(text.recapTitle),
         TOTAL: String(t.total),
-        FRAME_W: String(t.frame.width),
-        FRAME_H: String(t.frame.height),
+        FRAME_W: String(layout.frame.width),
+        FRAME_H: String(layout.frame.height),
+        FOOTAGE_W: String(layout.footage.width),
+        FOOTAGE_H: String(layout.footage.height),
+        STAGE_W: String(layout.stage.width),
+        STAGE_H: String(layout.stage.height),
+        BAND_ZOOM: String(layout.bandZoom),
+        FORMAT: layout.format,
     }
     const unfilled = new Set<string>()
     const fill = (source: string, values: Record<string, string>): string =>

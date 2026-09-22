@@ -44,7 +44,8 @@ Usage: reelkit <command> [options]
   render <slug...> | --all [--gif] [--square] [--portrait] [--draft] [--force] [--no-build]
                                 build + render video/renders/<slug>.mp4 + .srt/.vtt captions;
                                 skips a video unchanged since its last render (--force);
-                                --gif, --square (1080²), --portrait (1080x1920) add versions;
+                                --gif, --square (1080², reframed), --portrait (1080x1920 phone
+                                layout: tall frame panning with the cursor) add versions;
                                 --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
 
 <slug> is a folder under videosDir, or a path to a demo folder or its scenario.ts.
@@ -421,13 +422,15 @@ function render(argv: string[]): number {
         for (const [output, flags] of outputs) {
             main = report(renderIfChanged(videoDir, output, flags, values.force), output) && main
         }
-        // Square / portrait: the finished video, reframed for social feeds.
-        const source = resolve(videoDir, outputs[0][0])
-        for (const format of (['square', 'portrait'] as Format[]).filter((f) => values[f])) {
-            if (main) {
-                const output = outputs[0][0].replace(/\.mp4$/, `.${format}.mp4`)
-                report(reframe(source, resolve(videoDir, output), format, values.force), output)
-            }
+        // Portrait: its own composition (tall frame, footage panning with the cursor).
+        if (values.portrait) {
+            const output = outputs[0][0].replace(/\.mp4$/, '.portrait.mp4')
+            report(renderIfChanged(videoDir, output, outputs[0][1], values.force, 'portrait.html'), output)
+        }
+        // Square: the finished landscape video, reframed over a blurred backdrop.
+        if (values.square && main) {
+            const output = outputs[0][0].replace(/\.mp4$/, '.square.mp4')
+            report(reframe(resolve(videoDir, outputs[0][0]), resolve(videoDir, output), 'square' as Format, values.force), output)
         }
     }
     return failures ? 1 : 0

@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it } from 'node:test'
 import { renderComposition, type CompositionInput } from '../skills/reelkit-compose/scripts/composition.ts'
+import { portraitLayout } from '../skills/reelkit-compose/scripts/portrait.ts'
 import { readSection, resolveDesign } from '../skills/reelkit-compose/scripts/project.ts'
 import { computeTimeline, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
 import { compositionClicks, planZoom } from '../skills/reelkit-compose/scripts/zooms.ts'
@@ -66,6 +67,12 @@ describe('renderComposition', () => {
         const spec = { ...example, sections: { intro: 'split', recap: 'compact', outro: 'endcard' } }
         const t = input('todo', spec)
         golden('classic-mixed.html', renderComposition({ ...t, text: { ...t.text, logo: 'assets/brand-logo.svg' } }))
+    })
+
+    it('renders the phone layout (portrait golden)', () => {
+        const t = input('todo', example)
+        const portrait = portraitLayout(t.timeline, t.zooms)
+        golden('classic-portrait.html', renderComposition({ ...t, layout: portrait.layout, cursor: portrait.cursor, zooms: portrait.zooms }))
     })
 
     it('places each slot in the stage and scopes it under its id', () => {

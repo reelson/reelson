@@ -34,23 +34,30 @@ export const DRAFT_FLAGS = ['--video-frame-format', 'jpg', '-q', 'draft', '--fps
  * changed since the last render there: index.html, every asset (by size and mtime), the
  * flags and the pinned HyperFrames version. Returns 'rendered' | 'unchanged' | 'failed'.
  */
-export function renderIfChanged(videoDir: string, output: string, flags: string[], force = false): 'rendered' | 'unchanged' | 'failed' {
+export function renderIfChanged(
+    videoDir: string,
+    output: string,
+    flags: string[],
+    force = false,
+    composition = 'index.html',
+): 'rendered' | 'unchanged' | 'failed' {
     const target = resolve(videoDir, output)
     const stamp = `${target}.key`
-    const key = renderKey(videoDir, [...flags, output])
+    const key = renderKey(videoDir, [...flags, output], composition)
     if (!force && existsSync(target) && existsSync(stamp) && readFileSync(stamp, 'utf8') === key) {
         return 'unchanged'
     }
-    if (hyperframes(['render', '.', ...flags, '-o', output], videoDir) !== 0) {
+    const which = composition === 'index.html' ? [] : ['-c', composition]
+    if (hyperframes(['render', '.', ...which, ...flags, '-o', output], videoDir) !== 0) {
         return 'failed'
     }
     writeFileSync(stamp, key)
     return 'rendered'
 }
 
-export function renderKey(videoDir: string, args: string[]): string {
+export function renderKey(videoDir: string, args: string[], composition = 'index.html'): string {
     const hash = createHash('sha1').update(HYPERFRAMES_VERSION).update(JSON.stringify(args))
-    hash.update(readFileSync(resolve(videoDir, 'index.html')))
+    hash.update(readFileSync(resolve(videoDir, composition)))
     const walk = (dir: string): void => {
         for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
             const path = resolve(dir, entry.name)

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, height=1080" />
+    <meta name="viewport" content="width=1080, height=1920" />
     <!-- Vendored (assets/vendor/, copied by reelkit build): renders work offline and never drift. -->
     <script src="assets/vendor/gsap.min.js"></script>
     <style>
@@ -14,7 +14,7 @@
         src: url(assets/vendor/inter-latin-wght-normal.woff2) format('woff2-variations');
         unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b1220; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0b1220; }
       /* Design tokens: the ONLY things sections may assume about the stage (templates/README.md). */
       :root {
         --brand: #6366f1;          /* demo.config.json brand.color */
@@ -25,10 +25,10 @@
         --surface: rgba(255, 255, 255, 0.04);
         --bg: #0b1220;
         --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
-        --stage-h: 1080px;
-        --band-zoom: 1;  /* portrait: 16:9 cards zoomed to the stage width */
+        --stage-h: 1920px;
+        --band-zoom: 0.5625;  /* portrait: 16:9 cards zoomed to the stage width */
       }
-      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
+      #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: var(--font); color: var(--ink);
         background: linear-gradient(160deg, #0b1220 0%, #101a2e 50%, #0c1424 100%); }
       .clip { position: absolute; inset: 0; }
 
@@ -72,7 +72,7 @@
 
       /* Framed recording */
       #screen { display: grid; place-items: center; }
-      #frame { position: relative; width: 1504px; height: 940px; border-radius: 20px; overflow: hidden;
+      #frame { position: relative; width: 1000px; height: 1250px; border-radius: 20px; overflow: hidden;
         /* No will-change here: it makes Chrome rasterize the frame once at 1x and stretch that
            bitmap during zooms, which blurs the 2x capture. */
         background: #fff; border: 1px solid rgba(255, 255, 255, 0.14);
@@ -80,7 +80,7 @@
       /* The footage: fills the frame in landscape; in portrait it is wider than the frame and
          pans with the cursor (DEMO.layout.pan). Videos and the cursor layer ride inside it. */
       #footage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-      #root.portrait #footage { width: 1504px; height: 940px; }
+      #root.portrait #footage { width: 2000px; height: 1250px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
       /* Portrait (1080x1920): the intro, recap, outro and hand-off cards keep their 16:9
@@ -129,44 +129,41 @@
         padding-right: 18px; border-right: 1px solid var(--line); }
 
       /* ---- Sections (intro, recap, outro), each scoped under its #slot id ---- */
-      /* ── intro: split ── */
-      #intro { display: grid; grid-template-columns: 760px 1fr; align-items: center; }
-      #intro .panel { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 0 60px;
-        background: linear-gradient(160deg, color-mix(in srgb, var(--brand) 82%, #000) 0%, color-mix(in srgb, var(--brand) 45%, var(--bg)) 100%);
-        box-shadow: 30px 0 120px rgba(0, 0, 0, 0.45), inset -1px 0 0 rgba(255, 255, 255, 0.12); will-change: transform; }
-      #intro .wordmark { font-size: 96px; color: #fff; will-change: transform; }
-      #intro .brand-line { width: 160px; background: linear-gradient(90deg, #fff, var(--brand-soft)); opacity: 0.85; }
-      #intro .brand-sub { font-size: 26px; color: rgba(255, 255, 255, 0.72); }
-      #intro .text { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; padding: 0 120px 0 130px; will-change: transform, opacity; }
-      #intro .title { font-size: 96px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.04; will-change: transform, opacity; }
-      #intro .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); line-height: 1.35; }
+      /* ── intro: poster ── */
+      #intro { display: grid; place-items: center; }
+      /* gap: room between the tagline and the title, which only rises a little into place */
+      #intro .stack { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 115px; will-change: transform, opacity; }
+      #intro .top, #intro .bottom { display: flex; flex-direction: column; align-items: center; will-change: transform, opacity; }
+      #intro .top { gap: 22px; }
+      #intro .bottom { gap: 24px; }
+      #intro .wordmark { font-size: 99px; }
+      #intro .brand-sub { font-size: 30px; }
+      #intro .brand-line { width: 180px; }
+      #intro .title { font-size: 92px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1380px; will-change: transform, opacity; }
+      #intro .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
 
-      /* ── recap: compact ── */
-      #recap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 64px; padding: 0 140px; text-align: center; }
-      #recap .head { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-      #recap .title { font-size: 96px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
-      #recap .accent { transform-origin: center; }
-      #recap .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 18px; max-width: 1600px; }
-      #recap .chip { display: inline-flex; align-items: center; gap: 14px; padding: 10px 26px 10px 10px; border-radius: 999px;
-        border: 1px solid var(--line); background: var(--surface); font-size: 28px; font-weight: 500; white-space: nowrap; }
-      #recap .chip .n { width: 40px; height: 40px; font-size: 19px; }
-      #recap .chip .who { font-size: 17px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
-        padding-right: 14px; border-right: 1px solid var(--line); }
+      /* ── recap: steps ── */
+      #recap { display: grid; grid-template-columns: 640px 1fr; align-items: center; column-gap: 120px; padding: 0 160px; }
+      #recap .left { display: flex; flex-direction: column; gap: 26px; }
+      #recap .title { font-size: 120px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
+      #recap .steps { display: flex; flex-direction: column; gap: 14px; }
+      #recap .step { display: inline-flex; align-items: center; gap: 18px; font-size: 32px; font-weight: 500; color: var(--ink); white-space: nowrap; }
+      #recap .step .n { font-size: 21px; }
+      #recap .steps.dense { gap: 11px; }
+      #recap .steps.dense .step { font-size: 28px; gap: 16px; }
+      #recap .steps.dense .step .n { width: 38px; height: 38px; font-size: 18px; }
+      /* Split by actor: a titled list per role */
+      #recap .group { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 700; letter-spacing: 0.2em;
+        text-transform: uppercase; color: var(--brand-soft); margin: 18px 0 2px; }
+      #recap .group:first-child { margin-top: 0; }
+      #recap .group::after { content: ""; width: 64px; height: 2px; border-radius: 1px; background: var(--line); }
 
-      /* ── outro: endcard ── */
-      #outro { display: grid; place-items: center; }
-      #outro .card { display: flex; flex-direction: column; align-items: center; gap: 72px; text-align: center; will-change: transform; }
-      #outro .brand { display: flex; flex-direction: column; align-items: center; gap: 26px; }
-      #outro .wordmark { font-size: 120px; }
-      #outro .brand-line { width: 180px; }
-      #outro .what { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-      #outro .title { font-size: 76px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1400px; }
-      #outro .subtitle { font-size: 34px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
-      #outro .subtitle:empty { display: none; }
+      /* ── outro: wordmark ── */
+      #outro { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; }
     </style>
   </head>
   <body>
-    <div id="root" class="landscape" data-composition-id="main" data-start="0" data-duration="26.93" data-width="1920" data-height="1080">
+    <div id="root" class="portrait" data-composition-id="main" data-start="0" data-duration="26.53" data-width="1080" data-height="1920">
 
       <!-- Background (untimed, always on) -->
       <div id="bg" class="clip">
@@ -180,17 +177,19 @@
       </div>
 
       <!-- 1. Intro section: 0 → DEMO.sections.intro.duration. Frame 0 is the poster. -->
-      <!-- ── intro: split ── -->
+      <!-- ── intro: poster ── -->
       <section id="intro" class="clip" data-start="0" data-duration="4" data-track-index="3">
-        <div class="panel">
-          <div class="wordmark" data-text="ACME" data-logo="assets/brand-logo.svg"></div>
-          <div class="brand-line"></div>
-          <div class="brand-sub">PLATFORM</div>
-        </div>
-        <div class="text">
-          <h1 class="title">Plan your day</h1>
-          <p class="subtitle">Add tasks and tick them off</p>
-          <div class="meta" data-chip></div>
+        <div class="stack">
+          <div class="top">
+            <div class="wordmark" data-text="ACME" data-logo=""></div>
+            <div class="brand-line"></div>
+            <div class="brand-sub">PLATFORM</div>
+          </div>
+          <div class="bottom">
+            <h1 class="title">Plan your day</h1>
+            <p class="subtitle">Add tasks and tick them off</p>
+            <div class="meta" data-chip></div>
+          </div>
         </div>
       </section>
 
@@ -209,33 +208,25 @@
 
 
       <!-- Music bed, pre-rendered by reelkit build (trim + loudnorm + fades) -->
-      <audio id="music" class="clip" src="assets/music.m4a" data-start="0" data-duration="26.93" data-track-index="4"></audio>
+      <audio id="music" class="clip" src="assets/music.m4a" data-start="0" data-duration="26.53" data-track-index="4"></audio>
 
       <!-- 3. Recap section (absent when video.json says "recap": "none") -->
-      <!-- ── recap: compact ── -->
-      <section id="recap" class="clip" data-start="20.13" data-duration="3.2" data-track-index="2">
-        <div class="head">
+      <!-- ── recap: steps ── -->
+      <section id="recap" class="clip" data-start="20.13" data-duration="4.2" data-track-index="2">
+        <div class="left">
           <div class="eyebrow">Acme</div>
           <h1 class="title">In short</h1>
           <div class="accent"></div>
         </div>
-        <div class="chips"></div>
+        <div class="steps"></div>
       </section>
 
       <!-- 4. Outro section: ends on the brand, never on an empty frame -->
-      <!-- ── outro: endcard ── -->
-      <section id="outro" class="clip" data-start="22.93" data-duration="4" data-track-index="3">
-        <div class="card">
-          <div class="brand">
-            <div class="wordmark" data-text="ACME" data-logo="assets/brand-logo.svg"></div>
-            <div class="brand-line"></div>
-          </div>
-          <div class="what">
-            <h1 class="title">Plan your day</h1>
-            <p class="subtitle">Add tasks and tick them off</p>
-            <div class="meta" data-chip></div>
-          </div>
-        </div>
+      <!-- ── outro: wordmark ── -->
+      <section id="outro" class="clip" data-start="23.93" data-duration="2.6" data-track-index="3">
+        <div class="wordmark" data-text="ACME" data-logo=""></div>
+        <div class="brand-line"></div>
+        <div class="brand-sub">PLATFORM</div>
       </section>
     </div>
 
@@ -255,7 +246,7 @@
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
       const DEMO = {
-        "total": 26.93,
+        "total": 26.53,
         "clipStart": 3,
         "clipDuration": 17.53,
         "mediaStart": 2.6,
@@ -267,12 +258,12 @@
           },
           "recap": {
             "start": 20.13,
-            "duration": 3.2,
+            "duration": 4.2,
             "maxSteps": 10
           },
           "outro": {
-            "start": 22.93,
-            "duration": 4
+            "start": 23.93,
+            "duration": 2.6
           }
         },
         "callouts": [
@@ -301,9 +292,9 @@
           {
             "at": 11.28,
             "duration": 5.18,
-            "x": 0.399,
+            "x": 0.5522,
             "y": 0.392,
-            "scale": 1.7,
+            "scale": 1.28,
             "in": 0.8,
             "out": 0.8
           }
@@ -312,7 +303,7 @@
           "size": 44,
           "ripple": true,
           "idle": 0,
-          "scale": 1.0444,
+          "scale": 1.3889,
           "path": [
             [3, 720, 470],
             [3.65, 720.4, 418.2],
@@ -344,13 +335,277 @@
           ]
         },
         "layout": {
-          "format": "landscape",
+          "format": "portrait",
           "stage": {
-            "width": 1920,
-            "height": 1080
+            "width": 1080,
+            "height": 1920
           },
-          "bandZoom": 1,
-          "pan": []
+          "bandZoom": 0.5625,
+          "pan": [
+            [3, 500, 0],
+            [3.067, 500, 0],
+            [3.133, 500, 0],
+            [3.2, 500.1, 0],
+            [3.267, 500.2, 0],
+            [3.333, 500.3, 0],
+            [3.4, 500.4, 0],
+            [3.467, 500.5, 0],
+            [3.533, 500.7, 0],
+            [3.6, 500.9, 0],
+            [3.667, 501.1, 0],
+            [3.733, 501.3, 0],
+            [3.8, 501.4, 0],
+            [3.867, 501.6, 0],
+            [3.933, 501.7, 0],
+            [4, 501.8, 0],
+            [4.067, 501.9, 0],
+            [4.133, 502, 0],
+            [4.2, 502.1, 0],
+            [4.267, 502.2, 0],
+            [4.333, 502.2, 0],
+            [4.4, 502.3, 0],
+            [4.467, 502.3, 0],
+            [4.533, 502.4, 0],
+            [4.6, 502.4, 0],
+            [4.667, 502.5, 0],
+            [4.733, 502.5, 0],
+            [4.8, 502.5, 0],
+            [4.867, 502.5, 0],
+            [4.933, 502.6, 0],
+            [5, 502.6, 0],
+            [5.067, 502.6, 0],
+            [5.133, 502.6, 0],
+            [5.2, 502.6, 0],
+            [5.267, 502.7, 0],
+            [5.333, 502.7, 0],
+            [5.4, 502.7, 0],
+            [5.467, 502.7, 0],
+            [5.533, 502.7, 0],
+            [5.6, 502.7, 0],
+            [5.667, 502.7, 0],
+            [5.733, 502.7, 0],
+            [5.8, 502.7, 0],
+            [5.867, 502.7, 0],
+            [5.933, 502.7, 0],
+            [6, 502.7, 0],
+            [6.067, 502.7, 0],
+            [6.133, 502.7, 0],
+            [6.2, 502.8, 0],
+            [6.267, 502.8, 0],
+            [6.333, 502.8, 0],
+            [6.4, 502.8, 0],
+            [6.467, 502.8, 0],
+            [6.533, 502.8, 0],
+            [6.6, 502.8, 0],
+            [6.667, 502.8, 0],
+            [6.733, 502.7, 0],
+            [6.8, 502.7, 0],
+            [6.867, 502.6, 0],
+            [6.933, 502.5, 0],
+            [7, 502.4, 0],
+            [7.067, 502.3, 0],
+            [7.133, 502.2, 0],
+            [7.2, 502.1, 0],
+            [7.267, 502.1, 0],
+            [7.333, 502, 0],
+            [7.4, 501.9, 0],
+            [7.467, 501.9, 0],
+            [7.533, 501.8, 0],
+            [7.6, 501.8, 0],
+            [7.667, 501.7, 0],
+            [7.733, 501.7, 0],
+            [7.8, 501.7, 0],
+            [7.867, 501.6, 0],
+            [7.933, 501.6, 0],
+            [8, 501.6, 0],
+            [8.067, 501.6, 0],
+            [8.133, 501.5, 0],
+            [8.2, 501.5, 0],
+            [8.267, 501.5, 0],
+            [8.333, 501.5, 0],
+            [8.4, 501.5, 0],
+            [8.467, 501.5, 0],
+            [8.533, 501.5, 0],
+            [8.6, 501.5, 0],
+            [8.667, 501.5, 0],
+            [8.733, 501.4, 0],
+            [8.8, 501.4, 0],
+            [8.867, 501.4, 0],
+            [8.933, 501.4, 0],
+            [9, 501.4, 0],
+            [9.067, 501.4, 0],
+            [9.133, 501.4, 0],
+            [9.2, 501.4, 0],
+            [9.267, 501.4, 0],
+            [9.333, 501.4, 0],
+            [9.4, 501.4, 0],
+            [9.467, 501.4, 0],
+            [9.533, 501.4, 0],
+            [9.6, 501.4, 0],
+            [9.667, 501.4, 0],
+            [9.733, 501.4, 0],
+            [9.8, 501.4, 0],
+            [9.867, 501.4, 0],
+            [9.933, 501.4, 0],
+            [10, 501.4, 0],
+            [10.067, 501.4, 0],
+            [10.133, 501.4, 0],
+            [10.2, 501.4, 0],
+            [10.267, 501.4, 0],
+            [10.333, 501.4, 0],
+            [10.4, 501.4, 0],
+            [10.467, 501.4, 0],
+            [10.533, 501.4, 0],
+            [10.6, 501.4, 0],
+            [10.667, 501.4, 0],
+            [10.733, 501.4, 0],
+            [10.8, 501.4, 0],
+            [10.867, 501.4, 0],
+            [10.933, 501.4, 0],
+            [11, 501.4, 0],
+            [11.067, 501.4, 0],
+            [11.133, 501.4, 0],
+            [11.2, 491.6, 0],
+            [11.267, 477.9, 0],
+            [11.333, 460.1, 0],
+            [11.4, 441.9, 0],
+            [11.467, 417.6, 0],
+            [11.533, 390.9, 0],
+            [11.6, 365, 0],
+            [11.667, 341.8, 0],
+            [11.733, 321, 0],
+            [11.8, 302.5, 0],
+            [11.867, 285.8, 0],
+            [11.933, 271, 0],
+            [12, 257.7, 0],
+            [12.067, 245.8, 0],
+            [12.133, 235.1, 0],
+            [12.2, 225.6, 0],
+            [12.267, 217, 0],
+            [12.333, 209.4, 0],
+            [12.4, 202.6, 0],
+            [12.467, 196.5, 0],
+            [12.533, 191, 0],
+            [12.6, 186.1, 0],
+            [12.667, 181.7, 0],
+            [12.733, 177.8, 0],
+            [12.8, 174.3, 0],
+            [12.867, 171.2, 0],
+            [12.933, 168.3, 0],
+            [13, 165.8, 0],
+            [13.067, 163.6, 0],
+            [13.133, 161.6, 0],
+            [13.2, 159.8, 0],
+            [13.267, 158.2, 0],
+            [13.333, 156.7, 0],
+            [13.4, 155.4, 0],
+            [13.467, 160.8, 0],
+            [13.533, 172.9, 0],
+            [13.6, 188, 0],
+            [13.667, 202.9, 0],
+            [13.733, 222.9, 0],
+            [13.8, 245.1, 0],
+            [13.867, 267, 0],
+            [13.933, 286.5, 0],
+            [14, 304, 0],
+            [14.067, 319.6, 0],
+            [14.133, 333.6, 0],
+            [14.2, 346.2, 0],
+            [14.267, 357.4, 0],
+            [14.333, 367.4, 0],
+            [14.4, 376.4, 0],
+            [14.467, 384.4, 0],
+            [14.533, 391.6, 0],
+            [14.6, 398, 0],
+            [14.667, 403.8, 0],
+            [14.733, 409, 0],
+            [14.8, 413.6, 0],
+            [14.867, 417.7, 0],
+            [14.933, 421.4, 0],
+            [15, 424.7, 0],
+            [15.067, 427.6, 0],
+            [15.133, 430.3, 0],
+            [15.2, 432.6, 0],
+            [15.267, 434.8, 0],
+            [15.333, 436.7, 0],
+            [15.4, 438.4, 0],
+            [15.467, 439.9, 0],
+            [15.533, 441.2, 0],
+            [15.6, 442.4, 0],
+            [15.667, 443.5, 0],
+            [15.733, 444.5, 0],
+            [15.8, 445.4, 0],
+            [15.867, 446.1, 0],
+            [15.933, 446.8, 0],
+            [16, 447.5, 0],
+            [16.067, 448, 0],
+            [16.133, 448.5, 0],
+            [16.2, 449, 0],
+            [16.267, 449.4, 0],
+            [16.333, 449.7, 0],
+            [16.4, 450.1, 0],
+            [16.467, 450.3, 0],
+            [16.533, 450.6, 0],
+            [16.6, 450.8, 0],
+            [16.667, 451, 0],
+            [16.733, 451.2, 0],
+            [16.8, 451.4, 0],
+            [16.867, 451.5, 0],
+            [16.933, 451.7, 0],
+            [17, 451.8, 0],
+            [17.067, 451.9, 0],
+            [17.133, 452, 0],
+            [17.2, 452.1, 0],
+            [17.267, 452.1, 0],
+            [17.333, 452.2, 0],
+            [17.4, 452.3, 0],
+            [17.467, 452.3, 0],
+            [17.533, 452.4, 0],
+            [17.6, 452.4, 0],
+            [17.667, 452.4, 0],
+            [17.733, 452.5, 0],
+            [17.8, 452.5, 0],
+            [17.867, 452.5, 0],
+            [17.933, 452.6, 0],
+            [18, 452.6, 0],
+            [18.067, 452.6, 0],
+            [18.133, 452.6, 0],
+            [18.2, 452.6, 0],
+            [18.267, 452.7, 0],
+            [18.333, 452.7, 0],
+            [18.4, 452.7, 0],
+            [18.467, 452.7, 0],
+            [18.533, 452.7, 0],
+            [18.6, 452.7, 0],
+            [18.667, 452.7, 0],
+            [18.733, 452.7, 0],
+            [18.8, 452.7, 0],
+            [18.867, 452.7, 0],
+            [18.933, 452.7, 0],
+            [19, 452.7, 0],
+            [19.067, 452.7, 0],
+            [19.133, 452.7, 0],
+            [19.2, 452.8, 0],
+            [19.267, 452.8, 0],
+            [19.333, 452.8, 0],
+            [19.4, 452.8, 0],
+            [19.467, 452.8, 0],
+            [19.533, 452.8, 0],
+            [19.6, 452.8, 0],
+            [19.667, 452.8, 0],
+            [19.733, 452.8, 0],
+            [19.8, 452.8, 0],
+            [19.867, 452.8, 0],
+            [19.933, 452.8, 0],
+            [20, 452.8, 0],
+            [20.067, 452.8, 0],
+            [20.133, 452.8, 0],
+            [20.2, 452.8, 0],
+            [20.267, 452.8, 0],
+            [20.333, 452.8, 0],
+            [20.4, 452.8, 0],
+            [20.467, 452.8, 0]
+          ]
         },
         "transitions": [],
         "chip": {
@@ -562,49 +817,55 @@
 
       /* ---- Sections: each runs with `section` = its DEMO.sections entry, and may use
        *      tl, DEMO, FADE, later, node, stage. ---- */
-      // ── intro: split ──
+      // ── intro: poster ──
       ;((section) => {
-        // Frame 0 = the poster: the panel is already in place with its wordmark a little big and
-        // 60% transparent, the title legible at 65% slightly to the right. Both settle, subtitle
-        // and chip rise in, the card holds; at section.exit the panel slides out left, the text
-        // out right, and the recording grows out of the middle.
+        // Frame 0 = the poster: letters, line, sub and title are big (130%) and half-transparent,
+        // the letters spread a little. Then everything "breathes" down into place (sine.inOut,
+        // letters 60 ms apart from the centre, no snap anywhere), the subtitle and chip rise in,
+        // the card holds, and at section.exit the whole stack leaves through the top while the
+        // recording arrives from below on the same belt.
         // The from-states below ARE the poster — keep them sharp (no blur, no `later` at t=0).
-        const s0 = section.start + 0.08;
-        tl.fromTo('#intro .panel .wordmark', { scale: 1.18 }, { scale: 1, duration: 1.3, ease: 'sine.inOut' }, s0);
-        tl.fromTo('#intro .panel .l', { opacity: 0.6 }, { opacity: 1, duration: 1.1, ease: 'sine.inOut', stagger: { each: 0.05, from: 'center' } }, s0);
-        tl.fromTo('#intro .brand-line', { scaleX: 0.4 }, { scaleX: 1, duration: 1.1, ease: 'power3.inOut' }, s0 + 0.25);
-        tl.fromTo('#intro .brand-sub', { opacity: 0.6 }, { opacity: 1, duration: 1.0, ease: 'sine.inOut' }, s0 + 0.3);
-        tl.fromTo('#intro .title', { opacity: 0.65, x: 40 }, { opacity: 1, x: 0, duration: 1.3, ease: 'sine.inOut' }, s0 + 0.1);
-        tl.fromTo('#intro .subtitle', { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', ...later }, section.start + 0.8);
-        tl.fromTo('#intro .meta', { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out', ...later }, section.start + 1.0);
-        // The panels are mostly gone before the frame grows in, so the text never shows through it.
-        tl.fromTo('#intro .panel', { x: 0 }, { x: -900, duration: 0.7, ease: 'power3.inOut', ...later }, section.exit - 0.25);
-        tl.fromTo('#intro .text', { x: 0, opacity: 1 }, { x: 1300, opacity: 0, duration: 0.7, ease: 'power3.inOut', ...later }, section.exit - 0.25);
-        stage.enter(section.exit + 0.2, 'zoom');
+        const c0 = section.start + 0.08;
+        tl.fromTo('#intro .l', { scale: 1.3, opacity: 0.6, x: (i, el, all) => (i - (all.length - 1) / 2) * 26 },
+          { scale: 1, opacity: 1, x: 0, duration: 1.4, ease: 'sine.inOut', stagger: { each: 0.06, from: 'center' } }, c0);
+        tl.fromTo('#intro .brand-line', { scaleX: 1.3, opacity: 0.6 }, { scaleX: 1, opacity: 1, duration: 1.3, ease: 'sine.inOut' }, c0 + 0.25);
+        tl.fromTo('#intro .brand-sub', { scale: 1.3, opacity: 0.6 }, { scale: 1, opacity: 1, duration: 1.3, ease: 'sine.inOut' }, c0 + 0.35);
+        tl.fromTo('#intro .title', { scale: 1.3, opacity: 0.65 }, { scale: 1, opacity: 1, duration: 1.4, ease: 'sine.inOut' }, c0 + 0.2);
+        tl.fromTo('#intro .stack', { y: 0 }, { y: -30, duration: 1.2, ease: 'power2.out' }, c0);
+        tl.fromTo('#intro .top', { y: -24 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0);
+        tl.fromTo('#intro .bottom', { y: 33 }, { y: 0, duration: 1.3, ease: 'power2.out' }, c0 + 0.15);
+        tl.fromTo('#intro .subtitle', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, section.start + 0.9);
+        tl.fromTo('#intro .meta', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, section.start + 1.05);
+        tl.fromTo('#intro .stack', { y: -30 }, { y: -1150, duration: 0.9, ease: 'power3.inOut', ...later }, section.exit);
+        stage.enter(section.exit, 'belt');
 
         gsap.set(['#intro .subtitle', '#intro .meta'], { opacity: 0 });
       })(DEMO.sections.intro);
 
-      // ── recap: compact ──
+      // ── recap: steps ──
       ;((section) => {
-        // Head rises, chips pop in one after another, then the card fades.
-        const chips = document.querySelector('#recap .chips');
-        const steps = DEMO.callouts.slice(0, section.maxSteps);
-        const rows = steps.map((c, i) => {
-          const el = node('div', 'chip');
-          el.append(node('span', 'n', String(i + 1)));
-          // Two-actor videos: the role tag opens each role's first chip.
-          if (c.group && c.group !== steps[i - 1]?.group) el.append(node('span', 'who', c.group));
-          el.append(node('span', '', c.text));
-          return chips.appendChild(el);
+        // Left block rises, steps cascade in on the right, then the card fades.
+        const list = document.querySelector('#recap .steps');
+        const steps = DEMO.callouts.slice(0, section.maxSteps); // the card holds this many
+        if (steps.length > 8) list.classList.add('dense');
+        // Two-actor videos: callouts carry a `group` (the role from the hand-off card); each
+        // role gets its own titled list, numbering continues across them.
+        const rows = [];
+        steps.forEach((c, i) => {
+          if (c.group && c.group !== steps[i - 1]?.group) {
+            rows.push(list.appendChild(node('div', 'group', c.group)));
+          }
+          const el = node('div', 'step');
+          el.append(node('span', 'n', String(i + 1)), node('span', '', c.text));
+          rows.push(list.appendChild(el));
         });
         const r0 = section.start;
         tl.fromTo('#recap', { opacity: 0 }, { opacity: 1, duration: FADE, ease: 'power2.inOut', ...later }, r0);
-        tl.fromTo('#recap .eyebrow', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, r0 + 0.05);
-        tl.fromTo('#recap .title', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, r0 + 0.12);
-        tl.fromTo('#recap .accent', { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: 'power3.inOut', ...later }, r0 + 0.35);
+        tl.fromTo('#recap .eyebrow', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, r0 + 0.1);
+        tl.fromTo('#recap .title', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', ...later }, r0 + 0.2);
+        tl.fromTo('#recap .accent', { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: 'power3.inOut', ...later }, r0 + 0.45);
         rows.forEach((row, i) => {
-          tl.fromTo(row, { opacity: 0, y: 18, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: 'back.out(1.6)', ...later }, r0 + 0.4 + i * 0.08);
+          tl.fromTo(row, { opacity: 0, x: 36 }, { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out', ...later }, r0 + 0.5 + i * 0.1);
         });
         tl.fromTo('#recap', { opacity: 1 }, { opacity: 0, duration: FADE, ease: 'power2.in', ...later }, r0 + section.duration - FADE);
 
@@ -612,20 +873,19 @@
         gsap.set('#recap .accent', { scaleX: 0 });
       })(DEMO.sections.recap);
 
-      // ── outro: endcard ──
+      // ── outro: wordmark ──
       ;((section) => {
-        // Waits out the recap's cross-fade (0.3 s) so nothing lands on its text, then letters rise
-        // from the centre, the line wipes open, title / subtitle / chip follow. Then it holds with a barely-there drift and ends
-        // fully visible: the paused last frame is a readable end card.
-        const e0 = section.start + 0.3;
-        tl.fromTo('#outro .l', { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: { each: 0.05, from: 'center' }, ...later }, e0 + 0.1);
-        tl.fromTo('#outro .brand-line', { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: 'power3.inOut', ...later }, e0 + 0.45);
-        tl.fromTo('#outro .title', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', ...later }, e0 + 0.6);
-        tl.fromTo('#outro .subtitle', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, e0 + 0.8);
-        tl.fromTo('#outro .meta', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, e0 + 0.95);
-        tl.fromTo('#outro .card', { scale: 1 }, { scale: 1.02, duration: Math.max(0.5, section.duration - 1.9), ease: 'sine.inOut', ...later }, e0 + 1.6);
+        // Letters drift in from farther out and scale up from 0.88, the line wipes from the left,
+        // then everything zooms out gently at the very end and settles at 15% opacity: the last
+        // frame still shows the wordmark (house rule), never empty.
+        const b0 = section.start;
+        tl.fromTo('#outro .l', { opacity: 0, x: (i, el, all) => (i - all.length / 2) * 44, scale: 0.88, filter: 'blur(12px)' },
+          { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)', duration: 1.1, ease: 'power3.out', stagger: { each: 0.06, from: 'center' }, ...later }, b0 + 0.1);
+        tl.fromTo('#outro .brand-line', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.9, ease: 'power3.inOut', ...later }, b0 + 0.7);
+        tl.fromTo('#outro .brand-sub', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', ...later }, b0 + 0.95);
+        tl.fromTo('#outro', { opacity: 1, scale: 1 }, { opacity: 0.15, scale: 0.96, duration: 0.8, ease: 'power2.in', ...later }, b0 + section.duration - 0.8);
 
-        gsap.set(['#outro .l', '#outro .title', '#outro .subtitle', '#outro .meta'], { opacity: 0 });
+        gsap.set(['#outro .l', '#outro .brand-sub'], { opacity: 0 });
         gsap.set('#outro .brand-line', { scaleX: 0 });
       })(DEMO.sections.outro);
 

@@ -124,11 +124,12 @@ In `stage.html` and every section file:
 | `{{BRAND_COLOR}}`, `{{BRAND_COLOR_SOFT}}`     | `brand.color`, `brand.colorSoft` (sections use `var(--brand)` instead) |
 | `{{TITLE}}`, `{{SUBTITLE}}`, `{{OUTRO_TITLE}}`| video.json title/subtitle, recap title                  |
 | `{{TOTAL}}`, `{{FRAME_W}}`, `{{FRAME_H}}`     | composition length, framed recording size in px         |
+| `{{STAGE_W}}`, `{{STAGE_H}}`, `{{FORMAT}}`, `{{FOOTAGE_W}}`, `{{FOOTAGE_H}}`, `{{BAND_ZOOM}}` | the layout (see **Layouts**): stage size, `landscape` / `portrait`, footage size, card zoom |
 
 Only in sections: `{{START}}`, `{{DURATION}}`, `{{TRACK}}` (put all three on the root
 `<section id="<slot>" class="clip" data-start data-duration data-track-index>`) and `{{ASSETS}}`
 (the section's asset folder). Only in the stage: the slot markers above plus `{{VIDEOS}}`
-(`<video>` clip(s), inside `#frame`), `{{TRANSITIONS}}` (hand-off `<section>`s),
+(`<video>` clip(s), inside `#frame` › `#footage`), `{{TRANSITIONS}}` (hand-off `<section>`s),
 `{{AUDIO}}`, `{{MUSIC}}` and `{{DEMO}}` (`const DEMO = {{DEMO}};`).
 
 `DEMO` holds `total`, `clipStart`, `clipDuration`, `mediaStart`, `sections` (`intro`, `recap` or
@@ -146,6 +147,16 @@ recording CSS px (× `scale` = `#frame` px) and `size` the arrow height in the s
 that gets a `cursor` must draw it — the recording has none. The classic stage draws it inside
 `#frame` (so it rides with the footage), tweens between consecutive points (≤ 0.1 s apart; a
 longer gap is a jump), counter-scales it during zooms and plays a ripple + squash per press.
+
+**Layouts.** The build fills the stage twice: `index.html` (landscape, 1920x1080) and
+`portrait.html` (1080x1920, `reelkit render --portrait`). A stage sizes itself from
+`{{STAGE_W}}`/`{{STAGE_H}}`, puts `{{FORMAT}}` (`landscape` | `portrait`) as a class on
+`#root`, wraps `{{VIDEOS}}` and the cursor layer in `#footage` (`{{FOOTAGE_W}}`/`{{FOOTAGE_H}}`
+in portrait, filling `#frame` in landscape), tweens `#footage` along `DEMO.layout.pan`
+(`[[t, x, y]]`, px, empty in landscape), and moves the recording and hand-off cards by
+`DEMO.layout.stage.height` (cards inside the band: divided by `DEMO.layout.bandZoom`). In
+portrait the classic stage gives the section roots and hand-off cards `zoom: {{BAND_ZOOM}}` —
+sections stay designed for 16:9 and need nothing portrait-specific.
 
 Placeholders are filled in one pass, so text from video.json is never read as one. The build
 fails if a `{{PLACEHOLDER}}` is left unfilled: a file may omit ones it doesn't need but must

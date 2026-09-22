@@ -25,6 +25,8 @@
         --surface: rgba(255, 255, 255, 0.04);
         --bg: #0b1220;
         --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+        --stage-h: 1080px;
+        --band-zoom: 1;  /* portrait: 16:9 cards zoomed to the stage width */
       }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
         background: linear-gradient(160deg, #0b1220 0%, #101a2e 50%, #0c1424 100%); }
@@ -75,7 +77,20 @@
            bitmap during zooms, which blurs the 2x capture. */
         background: #fff; border: 1px solid rgba(255, 255, 255, 0.14);
         box-shadow: 0 50px 140px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+      /* The footage: fills the frame in landscape; in portrait it is wider than the frame and
+         pans with the cursor (DEMO.layout.pan). Videos and the cursor layer ride inside it. */
+      #footage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+      #root.portrait #footage { width: 1504px; height: 940px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+      /* Portrait (1080x1920): the intro, recap, outro and hand-off cards keep their 16:9
+         layout, zoomed to the stage width and centred on the continuous background; the
+         callouts sit below the tall recording frame. */
+      #root.portrait > #intro, #root.portrait > #recap, #root.portrait > #outro, #root.portrait > .transition-card {
+        inset: auto; left: 0; top: calc((var(--stage-h) - 1080px * var(--band-zoom)) / 2 / var(--band-zoom));
+        width: 1920px; height: 1080px; zoom: var(--band-zoom); }
+      #root.portrait #screen { place-items: start center; padding-top: 250px; }
+      #root.portrait .callout { bottom: 150px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
 
       /* Cursor layer (DEMO.cursor): the recorder logs the cursor instead of filming it, and
          the stage draws it — inside #frame, so it rides with the footage. */
@@ -148,7 +163,7 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="26.53" data-width="1920" data-height="1080">
+    <div id="root" class="landscape" data-composition-id="main" data-start="0" data-duration="26.53" data-width="1920" data-height="1080">
 
       <!-- Background (untimed, always on) -->
       <div id="bg" class="clip">
@@ -183,8 +198,10 @@
            carries the timing and #frame's transform/opacity are animated to match. -->
       <section id="screen" class="clip">
         <div id="frame">
+          <div id="footage">
           <video id="recording" class="clip" src="assets/recording.mp4" muted playsinline
             data-start="3" data-duration="17.53" data-media-start="2.6" data-track-index="1"></video>
+          </div>
         </div>
         <div id="callouts"></div>
       </section>
@@ -225,6 +242,7 @@
        *   cursor: { size, ripple, idle, scale, path: [[t, x, y]], presses: [[t, x, y]] } | null
        *           the logged cursor (x/y recording px, × scale = frame px); null = filmed in
        *   transitions: [{ at, gap }]   hand-off cards (fully in at `at`)
+       *   layout: { format, stage: { width, height }, bandZoom, pan: [[t, px]] }   portrait: pan = footage offset
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
       const DEMO = {
@@ -316,6 +334,15 @@
             [14.49, 686, 379]
           ]
         },
+        "layout": {
+          "format": "landscape",
+          "stage": {
+            "width": 1920,
+            "height": 1080
+          },
+          "bandZoom": 1,
+          "pan": []
+        },
         "transitions": [],
         "chip": {
           "steps": "4 steps",
@@ -375,12 +402,15 @@
       // What sections may do to the framed recording. The intro calls stage.enter() once, at
       // its hand-over (usually section.exit); the stage owns #frame because zooms move it too.
       const BELT = 0.9;
+      // How far the recording (and a hand-off card, inside its zoomed band) travels to leave the stage.
+      const BELT_Y = DEMO.layout.stage.height + 70;
+      const CARD_BELT_Y = BELT_Y / DEMO.layout.bandZoom;
       const stage = {
         entered: false,
         enter(at, style = 'fade') {
           stage.entered = true;
           if (style === 'belt') {        // rides in from below (pair with an intro leaving through the top)
-            tl.fromTo('#frame', { opacity: 1, y: 1150 }, { opacity: 1, y: 0, duration: BELT, ease: 'power3.inOut', ...later }, at);
+            tl.fromTo('#frame', { opacity: 1, y: BELT_Y }, { opacity: 1, y: 0, duration: BELT, ease: 'power3.inOut', ...later }, at);
           } else if (style === 'zoom') { // grows out of the middle
             tl.fromTo('#frame', { opacity: 0, scale: 0.84, y: 30 }, { opacity: 1, scale: 1, y: 0, duration: 0.9, ease: 'power3.out', ...later }, at);
           } else {                       // 'fade'
@@ -396,16 +426,16 @@
       // card out through the top, recording back in from below. The "to" role fills red.
       DEMO.transitions.forEach((t, i) => {
         const card = '#transition-' + i;
-        tl.fromTo('#frame', { y: 0 }, { y: -1150, duration: BELT, ease: 'power3.inOut', ...later }, t.at - BELT);
-        tl.fromTo(card + ' .stack', { y: 1150 }, { y: 0, duration: BELT, ease: 'power3.inOut', ...later }, t.at - BELT);
+        tl.fromTo('#frame', { y: 0 }, { y: -BELT_Y, duration: BELT, ease: 'power3.inOut', ...later }, t.at - BELT);
+        tl.fromTo(card + ' .stack', { y: CARD_BELT_Y }, { y: 0, duration: BELT, ease: 'power3.inOut', ...later }, t.at - BELT);
         tl.fromTo(card + ' .role.from', { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out', ...later }, t.at - 0.3);
         tl.fromTo(card + ' .arrow', { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: 'power3.inOut', ...later }, t.at);
         tl.fromTo(card + ' .role.to', { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out', ...later }, t.at + 0.35);
         tl.fromTo(card + ' .role.to .fill', { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: 'power3.inOut', ...later }, t.at + 0.7);
         tl.fromTo(card + ' .subtitle', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, t.at + 0.2);
-        tl.fromTo(card + ' .stack', { y: 0 }, { y: -1150, duration: BELT, ease: 'power3.inOut', ...later }, t.at + t.gap);
-        tl.fromTo('#frame', { y: 1150 }, { y: 0, duration: BELT, ease: 'power3.inOut', ...later }, t.at + t.gap);
-        gsap.set(card + ' .stack', { y: 1150 });
+        tl.fromTo(card + ' .stack', { y: 0 }, { y: -CARD_BELT_Y, duration: BELT, ease: 'power3.inOut', ...later }, t.at + t.gap);
+        tl.fromTo('#frame', { y: BELT_Y }, { y: 0, duration: BELT, ease: 'power3.inOut', ...later }, t.at + t.gap);
+        gsap.set(card + ' .stack', { y: CARD_BELT_Y });
         gsap.set([card + ' .role', card + ' .subtitle'], { opacity: 0 });
         gsap.set([card + ' .arrow', card + ' .role.to .fill'], { scaleX: 0 });
       });
@@ -479,7 +509,7 @@
           });
         }
         layer.append(cursor);
-        document.getElementById('frame').append(layer);
+        document.getElementById('footage').append(layer);
 
         gsap.set(cursor, { ...place(C.path[0]), transformOrigin: tip.x + 'px ' + tip.y + 'px' });
         gsap.set(arrow, { transformOrigin: tip.x + 'px ' + tip.y + 'px' });
@@ -511,6 +541,14 @@
           tl.fromTo(arrow, { scale: 1 }, { scale: 0.82, duration: 0.09, ease: 'power1.out', ...later }, p[0]);
           tl.fromTo(arrow, { scale: 0.82 }, { scale: 1, duration: 0.13, ease: 'power1.out', ...later }, p[0] + 0.09);
         });
+      }
+
+      // Portrait: the footage pans inside the tall frame to keep the cursor in view.
+      const pan = DEMO.layout.pan;
+      if (pan.length) gsap.set('#footage', { x: -pan[0][1], y: -pan[0][2] });
+      for (let i = 1; i < pan.length; i++) {
+        const a = pan[i - 1], b = pan[i];
+        tl.fromTo('#footage', { x: -a[1], y: -a[2] }, { x: -b[1], y: -b[2], duration: b[0] - a[0], ease: 'none', ...later }, a[0]);
       }
 
       /* ---- Sections: each runs with `section` = its DEMO.sections entry, and may use

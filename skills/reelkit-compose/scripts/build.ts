@@ -20,6 +20,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, statSync, wr
 import { basename, extname, resolve } from 'node:path'
 import { countLabel, fromRoot, type LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { renderComposition } from './composition.ts'
+import { portraitLayout } from './portrait.ts'
 import { HYPERFRAMES_VERSION, RENDER_FLAGS } from './hyperframes.ts'
 import {
     readMarkers,
@@ -154,7 +155,7 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     const music = renderMusicBed(spec, config, timeline, resolve(assets, 'music.m4a'), narration, log)
 
     const brand = { ...config.brand, ...spec.brand }
-    const html = renderComposition({
+    const composition = {
         stage: readFileSync(resolve(template.dir, 'stage.html'), 'utf8'),
         sections,
         timeline,
@@ -171,8 +172,15 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
             stepsChip: countLabel(timeline.callouts.length, config.strings.stepsLabel, config.language),
             secondsChip: countLabel(Math.round(timeline.total), config.strings.secondsLabel, config.language),
         },
-    })
+    }
+    const html = renderComposition(composition)
     writeFileSync(resolve(videoDir, 'index.html'), html)
+    // The same video for phones (`reelkit render --portrait`): tall frame, footage panning with the cursor.
+    const portrait = portraitLayout(timeline, result.zooms)
+    writeFileSync(
+        resolve(videoDir, 'portrait.html'),
+        renderComposition({ ...composition, layout: portrait.layout, cursor: portrait.cursor, zooms: portrait.zooms }),
+    )
     writeFileSync(
         resolve(videoDir, 'hyperframes.json'),
         JSON.stringify(
