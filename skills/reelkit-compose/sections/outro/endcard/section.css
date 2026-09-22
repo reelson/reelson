@@ -7,3 +7,11 @@
 #outro .title { font-size: 76px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1400px; }
 #outro .subtitle { font-size: 34px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
 #outro .subtitle:empty { display: none; }
+
+/* Portrait: the same card, sized for a phone screen */
+#root.portrait #outro .card { gap: 90px; padding: 0 80px; }
+#root.portrait #outro .wordmark { font-size: 132px; }
+#root.portrait #outro .brand-sub { font-size: 34px; }
+#root.portrait #outro .title { font-size: 92px; max-width: 920px; }
+#root.portrait #outro .subtitle { font-size: 42px; max-width: 880px; }
+#root.portrait #outro .meta { font-size: 30px; }

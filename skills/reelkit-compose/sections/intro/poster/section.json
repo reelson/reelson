@@ -1,4 +1,8 @@
 {
     "description": "Wordmark, accent line and tagline over the title, subtitle and steps chip, centred. Frame 0 is the poster (everything big and 60% transparent); it breathes into place, holds, and lifts out through the top as the recording rides in on the same belt.",
-    "timing": { "duration": 4.0, "exit": 3.0 }
+    "timing": {
+        "duration": 4.0,
+        "exit": 3.0
+    },
+    "portrait": true
 }

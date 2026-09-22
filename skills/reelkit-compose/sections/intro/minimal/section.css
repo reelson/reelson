@@ -7,3 +7,12 @@
 #intro .accent { width: 180px; }
 #intro .subtitle { font-size: 40px; font-weight: 400; color: var(--muted); line-height: 1.35; max-width: 1300px; }
 #intro .meta { margin-top: 8px; }
+
+/* Portrait: the same left-aligned block, narrower and bigger */
+#root.portrait #intro { padding: 0 90px; }
+#root.portrait #intro .block { gap: 36px; max-width: 900px; }
+#root.portrait #intro .wordmark { font-size: 56px; }
+#root.portrait #intro .brand-sub { font-size: 24px; }
+#root.portrait #intro .title { font-size: 116px; }
+#root.portrait #intro .subtitle { font-size: 44px; max-width: 900px; }
+#root.portrait #intro .meta { font-size: 30px; }

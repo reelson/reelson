@@ -23,6 +23,8 @@ export type LayoutFormat = 'landscape' | 'portrait'
 
 export interface Layout {
     format: LayoutFormat
+    /** Portrait from a phone take (the frame is the phone screen). */
+    phone?: boolean
     stage: { width: number; height: number }
     /** The frame box (desktop portrait: its tallest; its height follows the camera). */
     frame: { width: number; height: number }
@@ -39,9 +41,9 @@ export interface Layout {
 
 export const PORTRAIT = {
     stage: { width: 1080, height: 1920 },
-    frame: { width: 1000, maxHeight: 1250 },
-    /** A mobile recording's frame fits in this box. */
-    phone: { maxWidth: 820, maxHeight: 1500 },
+    frame: { width: 1000, maxHeight: 1450 },
+    /** A mobile recording's frame fits in this box (the stage keeps room for one callout). */
+    phone: { maxWidth: 900, maxHeight: 1660 },
     /** Closest framing: stage px per recording CSS px (1.4 ≈ text at 1.4x its size). */
     maxScale: 1.4,
     /** Room around the framed area, recording CSS px. */
@@ -66,7 +68,7 @@ export function phoneLayout(t: Timeline): { layout: Layout; cursor: Timeline['cu
     const scale = Math.min(PORTRAIT.phone.maxWidth / view.width, PORTRAIT.phone.maxHeight / view.height)
     const box = { width: Math.round(view.width * scale), height: Math.round(view.height * scale) }
     return {
-        layout: { format: 'portrait', stage: PORTRAIT.stage, frame: box, footage: box, bandZoom, camera: [] },
+        layout: { format: 'portrait', phone: true, stage: PORTRAIT.stage, frame: box, footage: box, bandZoom, camera: [] },
         // A phone is tapped: the ripples show where, an arrow would look wrong.
         cursor: t.cursor ? { ...t.cursor, scale: Math.round(scale * 10000) / 10000, touch: true } : null,
         zooms: [],

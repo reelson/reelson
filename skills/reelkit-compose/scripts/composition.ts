@@ -30,6 +30,8 @@ export interface SectionSource {
     js: string
     /** Where the section's own assets/ were copied, relative to video/ ('' if it has none). */
     assets: string
+    /** Has its own portrait layout; otherwise its root gets class "band" (portrait zooms it). */
+    portrait?: boolean
 }
 
 export interface CompositionInput {
@@ -94,7 +96,7 @@ export function renderComposition(input: CompositionInput): string {
         STAGE_W: String(layout.stage.width),
         STAGE_H: String(layout.stage.height),
         BAND_ZOOM: String(layout.bandZoom),
-        FORMAT: layout.format,
+        FORMAT: layout.phone ? `${layout.format} phone` : layout.format,
     }
     const unfilled = new Set<string>()
     const fill = (source: string, values: Record<string, string>): string =>
@@ -122,7 +124,7 @@ export function renderComposition(input: CompositionInput): string {
         return {
             slot: s.slot,
             css: `      /* ── ${label} ── */\n${indent(fill(s.css, values).trim(), 6)}`,
-            html: `      <!-- ── ${label} ── -->\n${indent(fill(s.html, values).trim(), 6)}`,
+            html: `      <!-- ── ${label} ── -->\n${indent(band(fill(s.html, values).trim(), s.portrait), 6)}`,
             js:
                 `      // ── ${label} ──\n      ;((section) => {\n${indent(fill(s.js, values).trim(), 8)}\n` +
                 `      })(DEMO.sections.${s.slot});`,
@@ -154,6 +156,11 @@ export function renderComposition(input: CompositionInput): string {
     }
 
     return html
+}
+
+/** A section without its own portrait layout: mark its root so portrait zooms its 16:9 card. */
+function band(html: string, portrait = false): string {
+    return portrait ? html : html.replace(/^(<section\b[^>]*\bclass=")([^"]*)"/, '$1$2 band"')
 }
 
 function indent(block: string, spaces: number): string {

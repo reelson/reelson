@@ -8,3 +8,11 @@
 #recap .chip .n { width: 40px; height: 40px; font-size: 19px; }
 #recap .chip .who { font-size: 17px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
   padding-right: 14px; border-right: 1px solid var(--line); }
+
+/* Portrait: the chips stack one per row */
+#root.portrait #recap { gap: 80px; padding: 0 80px; }
+#root.portrait #recap .title { font-size: 116px; }
+#root.portrait #recap .chips { flex-direction: column; align-items: center; gap: 22px; max-width: 920px; }
+#root.portrait #recap .chip { font-size: 38px; white-space: normal; text-align: left; padding: 14px 34px 14px 14px; }
+#root.portrait #recap .chip .n { width: 54px; height: 54px; font-size: 26px; }
+#root.portrait #recap .chip .who { font-size: 22px; }

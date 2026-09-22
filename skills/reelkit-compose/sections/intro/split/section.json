@@ -1,4 +1,8 @@
 {
     "description": "A brand-coloured panel on the left with the wordmark (or logo) and tagline; title, subtitle and steps chip on the right. Frame 0 is the poster. At the hand-over the panel slides out left, the text out right, and the recording grows out of the middle.",
-    "timing": { "duration": 4.0, "exit": 3.0 }
+    "timing": {
+        "duration": 4.0,
+        "exit": 3.0
+    },
+    "portrait": true
 }

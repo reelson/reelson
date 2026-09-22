@@ -128,6 +128,8 @@ export interface Section {
     dir: string
     description: string
     timing: Record<string, number>
+    /** Has its own portrait layout (`#root.portrait …` rules); otherwise portrait zooms its 16:9 card. */
+    portrait: boolean
 }
 
 /** A template plus the section chosen for each slot: everything the build draws with. */
@@ -181,11 +183,11 @@ export function findSection(slot: Slot, name: string, config: LoadedConfig): Sec
         )
     }
     const metaPath = resolve(dir, 'section.json')
-    const meta = readJson(metaPath) as { description?: string; timing?: Record<string, number> }
-    unknownKeys(metaPath, meta, ['description', 'timing'])
+    const meta = readJson(metaPath) as { description?: string; timing?: Record<string, number>; portrait?: boolean }
+    unknownKeys(metaPath, meta, ['description', 'timing', 'portrait'])
     unknownKeys(`${metaPath} timing`, meta.timing ?? {}, Object.keys(SECTION_TIMING[slot]))
 
-    return { slot, name, dir, description: meta.description ?? '', timing: { ...SECTION_TIMING[slot], ...meta.timing } }
+    return { slot, name, dir, description: meta.description ?? '', timing: { ...SECTION_TIMING[slot], ...meta.timing }, portrait: meta.portrait === true }
 }
 
 /**
@@ -232,6 +234,7 @@ export function readSection(section: Section): SectionSource {
         css: read('section.css'),
         js: read('section.js'),
         assets: existsSync(resolve(section.dir, 'assets')) ? `assets/sections/${section.slot}-${section.name}` : '',
+        portrait: section.portrait,
     }
 }
 

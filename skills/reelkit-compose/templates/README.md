@@ -155,8 +155,13 @@ longer gap is a jump), counter-scales it during zooms and plays a ripple + squas
 in portrait, filling `#frame` in landscape), tweens `#footage` along `DEMO.layout.pan`
 (`[[t, x, y]]`, px, empty in landscape), and moves the recording and hand-off cards by
 `DEMO.layout.stage.height` (cards inside the band: divided by `DEMO.layout.bandZoom`). In
-portrait the classic stage gives the section roots and hand-off cards `zoom: {{BAND_ZOOM}}` —
-sections stay designed for 16:9 and need nothing portrait-specific.
+portrait a section lays itself out for the tall 1080x1920 stage with `#root.portrait #<slot> …`
+rules in its section.css (stack what sits side by side, bigger type) and says so with
+`"portrait": true` in section.json — every kit section does. A section without it gets class
+`band` and the classic stage shows its 16:9 layout zoomed to the width (`zoom: {{BAND_ZOOM}}`):
+it works, but its text is small. A script can check `DEMO.layout.format === 'portrait'` (the
+poster uses a gentler frame-0 scale there) and should move things off stage by
+`DEMO.layout.stage.height`, not a fixed 1080. `#root.portrait.phone` is a phone take.
 
 Placeholders are filled in one pass, so text from video.json is never read as one. The build
 fails if a `{{PLACEHOLDER}}` is left unfilled: a file may omit ones it doesn't need but must

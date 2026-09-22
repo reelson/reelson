@@ -83,14 +83,22 @@
       #root.portrait #footage { width: 1504px; height: 940px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-      /* Portrait (1080x1920): the intro, recap, outro and hand-off cards keep their 16:9
-         layout, zoomed to the stage width and centred on the continuous background; the
-         callouts sit below the tall recording frame. */
-      #root.portrait > #intro, #root.portrait > #recap, #root.portrait > #outro, #root.portrait > .transition-card {
+      /* Portrait (1080x1920): sections lay themselves out for the tall stage (their
+         `#root.portrait …` rules); one without (class "band") keeps its 16:9 layout, zoomed to
+         the stage width and centred. The callouts sit below the tall recording frame. */
+      #root.portrait > .band {
         inset: auto; left: 0; top: calc((var(--stage-h) - 1080px * var(--band-zoom)) / 2 / var(--band-zoom));
         width: 1920px; height: 1080px; zoom: var(--band-zoom); }
-      #root.portrait #screen { place-items: center; padding-bottom: 300px; }  /* centred above the callouts */
-      #root.portrait .callout { bottom: 150px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
+      #root.portrait .transition-card .stack { gap: 56px; padding: 0 80px; }
+      #root.portrait .transition-card .title { font-size: 96px; max-width: 920px; }
+      #root.portrait .transition-card .subtitle { font-size: 40px; max-width: 900px; }
+      #root.portrait .role { font-size: 38px; padding: 18px 36px; }
+      #root.portrait .roles .arrow { width: 90px; }
+      #root.portrait #screen { place-items: center; padding-bottom: 210px; }  /* centred above the callouts */
+      /* A phone take: the screen as tall as it fits, the callout just below it */
+      #root.portrait.phone #screen { place-items: start center; padding: 40px 0 0; }
+      #root.portrait.phone .callout { bottom: 56px; }
+      #root.portrait .callout { bottom: 70px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
 
       /* Cursor layer (DEMO.cursor): the recorder logs the cursor instead of filming it, and
          the stage draws it — inside #frame, so it rides with the footage. */
@@ -141,6 +149,16 @@
       #intro .title { font-size: 96px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.04; will-change: transform, opacity; }
       #intro .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); line-height: 1.35; }
 
+      /* Portrait: the brand panel on top, the text below */
+      #root.portrait #intro { grid-template-columns: 1fr; grid-template-rows: 820px 1fr; align-items: stretch; }
+      #root.portrait #intro .panel { box-shadow: 0 30px 120px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12); }
+      #root.portrait #intro .wordmark { font-size: 120px; }
+      #root.portrait #intro .brand-sub { font-size: 32px; }
+      #root.portrait #intro .text { justify-content: center; gap: 34px; padding: 0 90px 120px; }
+      #root.portrait #intro .title { font-size: 100px; }
+      #root.portrait #intro .subtitle { font-size: 42px; }
+      #root.portrait #intro .meta { font-size: 30px; }
+
       /* ── recap: compact ── */
       #recap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 64px; padding: 0 140px; text-align: center; }
       #recap .head { display: flex; flex-direction: column; align-items: center; gap: 22px; }
@@ -153,6 +171,14 @@
       #recap .chip .who { font-size: 17px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
         padding-right: 14px; border-right: 1px solid var(--line); }
 
+      /* Portrait: the chips stack one per row */
+      #root.portrait #recap { gap: 80px; padding: 0 80px; }
+      #root.portrait #recap .title { font-size: 116px; }
+      #root.portrait #recap .chips { flex-direction: column; align-items: center; gap: 22px; max-width: 920px; }
+      #root.portrait #recap .chip { font-size: 38px; white-space: normal; text-align: left; padding: 14px 34px 14px 14px; }
+      #root.portrait #recap .chip .n { width: 54px; height: 54px; font-size: 26px; }
+      #root.portrait #recap .chip .who { font-size: 22px; }
+
       /* ── outro: endcard ── */
       #outro { display: grid; place-items: center; }
       #outro .card { display: flex; flex-direction: column; align-items: center; gap: 72px; text-align: center; will-change: transform; }
@@ -163,6 +189,14 @@
       #outro .title { font-size: 76px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1400px; }
       #outro .subtitle { font-size: 34px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
       #outro .subtitle:empty { display: none; }
+
+      /* Portrait: the same card, sized for a phone screen */
+      #root.portrait #outro .card { gap: 90px; padding: 0 80px; }
+      #root.portrait #outro .wordmark { font-size: 132px; }
+      #root.portrait #outro .brand-sub { font-size: 34px; }
+      #root.portrait #outro .title { font-size: 92px; max-width: 920px; }
+      #root.portrait #outro .subtitle { font-size: 42px; max-width: 880px; }
+      #root.portrait #outro .meta { font-size: 30px; }
     </style>
   </head>
   <body>
@@ -411,9 +445,9 @@
       // What sections may do to the framed recording. The intro calls stage.enter() once, at
       // its hand-over (usually section.exit); the stage owns #frame because zooms move it too.
       const BELT = 0.9;
-      // How far the recording (and a hand-off card, inside its zoomed band) travels to leave the stage.
+      // How far the recording and a hand-off card travel to leave the stage.
       const BELT_Y = DEMO.layout.stage.height + 70;
-      const CARD_BELT_Y = BELT_Y / DEMO.layout.bandZoom;
+      const CARD_BELT_Y = BELT_Y;
       const stage = {
         entered: false,
         enter(at, style = 'fade') {

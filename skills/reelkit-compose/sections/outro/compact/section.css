@@ -5,3 +5,11 @@
 #outro .right { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 820px; will-change: transform, opacity; }
 #outro .title { font-size: 54px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
 #outro .brand-sub { font-size: 22px; letter-spacing: 0.36em; padding-left: 0; }
+
+/* Portrait: wordmark, a short line, then the title — stacked */
+#root.portrait #outro .row { flex-direction: column; gap: 44px; padding: 0 80px; text-align: center; }
+#root.portrait #outro .wordmark { font-size: 132px; }
+#root.portrait #outro .divider { width: 160px; height: 6px; background: linear-gradient(90deg, var(--brand), var(--brand-soft)); }
+#root.portrait #outro .right { align-items: center; max-width: 920px; }
+#root.portrait #outro .title { font-size: 64px; }
+#root.portrait #outro .brand-sub { font-size: 30px; }

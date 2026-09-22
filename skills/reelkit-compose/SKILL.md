@@ -137,8 +137,8 @@ reelkit render <slug> [--gif] [--draft]   # build + render video/renders/<slug>.
    frame, taps as ripples; best for any responsive app; `"desktop"` — a camera over the desktop
    recording that frames each element the demo works on (with its label/row) as close as it
    fits, never cutting it — readable for compact UIs, small for wide admin screens; `"auto"`
-   (default) — the phone take when there is one. The intro, recap, outro and hand-off cards keep
-   their 16:9 design, zoomed to the width. `--square` adds a 1080x1080 version (the landscape
+   (default) — the phone take when there is one. The intro, recap, outro and hand-off cards use
+   their portrait layouts: stacked, with bigger type. `--square` adds a 1080x1080 version (the landscape
    video over a blurred, darkened copy of itself). Every render also writes `renders/<slug>.srt` and `.vtt`: the title
    and the callouts as captions, timed to the video. For a quick look, `--draft` renders
    15 fps at draft quality (about 2x faster) to `renders/<slug>.draft.mp4` — or skip rendering

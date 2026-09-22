@@ -8,3 +8,13 @@
 #intro .text { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; padding: 0 120px 0 130px; will-change: transform, opacity; }
 #intro .title { font-size: 96px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.04; will-change: transform, opacity; }
 #intro .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); line-height: 1.35; }
+
+/* Portrait: the brand panel on top, the text below */
+#root.portrait #intro { grid-template-columns: 1fr; grid-template-rows: 820px 1fr; align-items: stretch; }
+#root.portrait #intro .panel { box-shadow: 0 30px 120px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12); }
+#root.portrait #intro .wordmark { font-size: 120px; }
+#root.portrait #intro .brand-sub { font-size: 32px; }
+#root.portrait #intro .text { justify-content: center; gap: 34px; padding: 0 90px 120px; }
+#root.portrait #intro .title { font-size: 100px; }
+#root.portrait #intro .subtitle { font-size: 42px; }
+#root.portrait #intro .meta { font-size: 30px; }

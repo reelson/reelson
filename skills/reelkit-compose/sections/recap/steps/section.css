@@ -12,3 +12,14 @@
   text-transform: uppercase; color: var(--brand-soft); margin: 18px 0 2px; }
 #recap .group:first-child { margin-top: 0; }
 #recap .group::after { content: ""; width: 64px; height: 2px; border-radius: 1px; background: var(--line); }
+
+/* Portrait: the title above the steps, one column */
+#root.portrait #recap { grid-template-columns: 1fr; align-content: center; row-gap: 90px; padding: 0 90px; }
+#root.portrait #recap .title { font-size: 128px; }
+#root.portrait #recap .steps { gap: 26px; }
+#root.portrait #recap .step { font-size: 42px; gap: 24px; white-space: normal; align-items: flex-start; line-height: 1.25; }
+#root.portrait #recap .step .n { width: 58px; height: 58px; font-size: 28px; }
+#root.portrait #recap .steps.dense { gap: 18px; }
+#root.portrait #recap .steps.dense .step { font-size: 36px; }
+#root.portrait #recap .steps.dense .step .n { width: 50px; height: 50px; font-size: 24px; }
+#root.portrait #recap .group { font-size: 28px; margin: 26px 0 4px; }

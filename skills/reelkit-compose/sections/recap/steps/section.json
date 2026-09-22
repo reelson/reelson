@@ -1,4 +1,10 @@
 {
     "description": "Eyebrow, big title and accent line on the left; ONE column of numbered steps on the right (split by role in two-actor videos). Cross-fades in after the recording.",
-    "timing": { "base": 2.4, "perStep": 0.45, "max": 7.5, "maxSteps": 10 }
+    "timing": {
+        "base": 2.4,
+        "perStep": 0.45,
+        "max": 7.5,
+        "maxSteps": 10
+    },
+    "portrait": true
 }

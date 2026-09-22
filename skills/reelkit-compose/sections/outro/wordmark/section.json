@@ -1,4 +1,7 @@
 {
     "description": "Big centred wordmark (or logo): letters drift in from farther out, the line wipes from the left, then it zooms out gently and settles at 15% opacity — the last frame still shows the brand.",
-    "timing": { "duration": 2.6 }
+    "timing": {
+        "duration": 2.6
+    },
+    "portrait": true
 }

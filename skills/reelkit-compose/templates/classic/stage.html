@@ -83,14 +83,22 @@
       #root.portrait #footage { width: {{FOOTAGE_W}}px; height: {{FOOTAGE_H}}px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-      /* Portrait (1080x1920): the intro, recap, outro and hand-off cards keep their 16:9
-         layout, zoomed to the stage width and centred on the continuous background; the
-         callouts sit below the tall recording frame. */
-      #root.portrait > #intro, #root.portrait > #recap, #root.portrait > #outro, #root.portrait > .transition-card {
+      /* Portrait (1080x1920): sections lay themselves out for the tall stage (their
+         `#root.portrait …` rules); one without (class "band") keeps its 16:9 layout, zoomed to
+         the stage width and centred. The callouts sit below the tall recording frame. */
+      #root.portrait > .band {
         inset: auto; left: 0; top: calc((var(--stage-h) - 1080px * var(--band-zoom)) / 2 / var(--band-zoom));
         width: 1920px; height: 1080px; zoom: var(--band-zoom); }
-      #root.portrait #screen { place-items: center; padding-bottom: 300px; }  /* centred above the callouts */
-      #root.portrait .callout { bottom: 150px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
+      #root.portrait .transition-card .stack { gap: 56px; padding: 0 80px; }
+      #root.portrait .transition-card .title { font-size: 96px; max-width: 920px; }
+      #root.portrait .transition-card .subtitle { font-size: 40px; max-width: 900px; }
+      #root.portrait .role { font-size: 38px; padding: 18px 36px; }
+      #root.portrait .roles .arrow { width: 90px; }
+      #root.portrait #screen { place-items: center; padding-bottom: 210px; }  /* centred above the callouts */
+      /* A phone take: the screen as tall as it fits, the callout just below it */
+      #root.portrait.phone #screen { place-items: start center; padding: 40px 0 0; }
+      #root.portrait.phone .callout { bottom: 56px; }
+      #root.portrait .callout { bottom: 70px; font-size: 40px; max-width: 980px; white-space: normal; text-align: left; }
 
       /* Cursor layer (DEMO.cursor): the recorder logs the cursor instead of filming it, and
          the stage draws it — inside #frame, so it rides with the footage. */
@@ -240,9 +248,9 @@
       // What sections may do to the framed recording. The intro calls stage.enter() once, at
       // its hand-over (usually section.exit); the stage owns #frame because zooms move it too.
       const BELT = 0.9;
-      // How far the recording (and a hand-off card, inside its zoomed band) travels to leave the stage.
+      // How far the recording and a hand-off card travel to leave the stage.
       const BELT_Y = DEMO.layout.stage.height + 70;
-      const CARD_BELT_Y = BELT_Y / DEMO.layout.bandZoom;
+      const CARD_BELT_Y = BELT_Y;
       const stage = {
         entered: false,
         enter(at, style = 'fade') {
