@@ -47,15 +47,17 @@ export interface CompositionInput {
     narration: boolean
     /** assets/music.m4a exists. */
     music: boolean
+    /** The voice-over track exists (media.voice). */
+    voice?: boolean
     /** Stage/frame/footage sizes and the portrait camera; default: the landscape stage. */
     layout?: Layout
     /** Overrides the timeline's cursor layer (portrait and square move it into their footage scale). */
     cursor?: Timeline['cursor']
     /** The media files (default assets/recording.mp4, narration.m4a, music.m4a). */
-    media?: { recording: string; narration: string; music: string }
+    media?: { recording: string; narration: string; music: string; voice?: string }
 }
 
-const MEDIA = { recording: 'assets/recording.mp4', narration: 'assets/narration.m4a', music: 'assets/music.m4a' }
+const MEDIA = { recording: 'assets/recording.mp4', narration: 'assets/narration.m4a', music: 'assets/music.m4a', voice: 'assets/voice.m4a' }
 
 /** HyperFrames track per slot: the recap cross-fades with the outro, so they sit on different tracks. */
 const TRACKS: Record<Slot, number> = { intro: 3, recap: 2, outro: 3 }
@@ -72,7 +74,7 @@ export function renderComposition(input: CompositionInput): string {
         clipDuration: t.clipDuration,
         mediaStart: t.mediaStart,
         sections: { intro: t.intro, recap: t.recap, outro: t.outro },
-        callouts: t.callouts.map(({ source: _source, ...c }, i) => (atTop.has(i) ? { ...c, top: true } : c)),
+        callouts: t.callouts.map(({ source: _source, say: _say, ...c }, i) => (atTop.has(i) ? { ...c, top: true } : c)),
         zooms: input.zooms,
         cursor: input.cursor !== undefined ? input.cursor : t.cursor,
         layout: { format: layout.format, stage: layout.stage, bandZoom: layout.bandZoom, camera: layout.camera },
@@ -146,7 +148,9 @@ export function renderComposition(input: CompositionInput): string {
         VIDEOS: renderVideoSegments(t, (input.media ?? MEDIA).recording),
         TRANSITIONS: t.transitions.map((tr, i) => renderTransitionCard(tr, i, t.belt)).join('\n'),
         AUDIO: input.narration ? renderNarration(t, (input.media ?? MEDIA).narration) : '',
-        MUSIC: input.music ? renderMusic(t, (input.media ?? MEDIA).music) : '',
+        MUSIC:
+            (input.music ? renderMusic(t, (input.media ?? MEDIA).music) : '') +
+            (input.voice ? `\n${renderVoice(t, input.media?.voice ?? MEDIA.voice)}` : ''),
         // JSON is valid JS; escaping "<" keeps "</script>" in a callout from closing the tag.
         DEMO: JSON.stringify(demo, null, 2)
             // Number tuples (cursor [t, x, y], camera [t, k, x, y, h]) one per line, not one number per line.
@@ -225,6 +229,11 @@ function renderNarration(t: Timeline, src: string): string {
 function renderMusic(t: Timeline, src: string): string {
     return `      <!-- Music bed, pre-rendered by reelkit build (trim + loudnorm + fades) -->
       <audio id="music" class="clip" src="${src}" data-start="0" data-duration="${t.total}" data-track-index="4"></audio>`
+}
+
+function renderVoice(t: Timeline, src: string): string {
+    return `      <!-- Voice-over, pre-mixed by reelkit build (each callout spoken as it appears) -->
+      <audio id="voice" class="clip" src="${src}" data-start="0" data-duration="${t.total}" data-track-index="5"></audio>`
 }
 
 export function escapeHtml(s: string): string {

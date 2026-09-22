@@ -61,6 +61,14 @@ changing the trim or the template never re-times anything. Validated against
   before the next callout) unless given. `"anchor": "marker"` starts it on the marker instead
   (for a callout about the result). `offset` (seconds, may be negative) nudges it from there and
   keeps it tied to the marker, so it still follows a re-recording.
+- **Voice-over**: `"voice": true` speaks each callout as it appears (OpenAI text-to-speech;
+  needs `OPENAI_API_KEY`). A callout's `say` replaces what is spoken (e.g. a full sentence for a
+  terse pill; `false`: silent); `"voice": { "intro": "…" }` adds a line over the intro, and
+  `voice` / `instructions` there override demo.config.json `voice` (model `gpt-4o-mini-tts`,
+  voice `alloy`, a calm narrator by default). `reelkit voice <slug>` fetches the missing lines
+  (render and build do it for you) into `<demo>/voice/<hash>.mp3` — cached by words + voice, so
+  each line is paid for once; commit the folder to render without a key. Keep lines shorter than
+  their step: the build warns when one runs into the next. The music ducks under it.
 - **Zooms**: use `clicks: [first, last]` (1-based positions in markers.json `clicks`, which
   `demo.click`/`demo.type` log). reelkit computes the focus point and the timing from the
   cursor — in with the glide to the first click, out with the glide to the next target,

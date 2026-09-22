@@ -835,6 +835,9 @@ function inspect(kind, k) {
     const rows = [
       ['text', textInput(src.text, (v) => v ? commit(`Callout ${c.n} text`, (sp) => { sp.callouts[c.source].text = v }) : (toast('A callout needs text — delete it instead', true), renderInspector()))],
     ]
+    if (spec.voice) {
+      rows.push(['say', textInput(typeof src.say === 'string' ? src.say : '', (v) => commit(`Callout ${c.n} voice-over`, (sp) => { if (v) sp.callouts[c.source].say = v; else delete sp.callouts[c.source].say }), src.say === false ? 'silent' : 'the text, spoken')])
+    }
     if (src.marker !== undefined) {
       rows.push(['marker', src.marker])
       rows.push(['offset', numberInput(src.offset, (v) => commit(`Callout ${c.n} offset`, (sp) => { if (v) sp.callouts[c.source].offset = v; else delete sp.callouts[c.source].offset }), { step: 0.1, placeholder: src.anchor === 'marker' ? '0 (on the marker)' : '0 (as its step begins)' })])

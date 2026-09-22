@@ -90,6 +90,17 @@
                 }
             }
         },
+        "voice": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Voice-over, for videos with \"voice\": true in video.json: each callout (its `say`, else its text) spoken by OpenAI text-to-speech. Needs OPENAI_API_KEY; lines are cached in <demo>/voice/.",
+            "properties": {
+                "model": { "type": "string", "description": "OpenAI speech model. Default \"gpt-4o-mini-tts\"." },
+                "voice": { "type": "string", "description": "OpenAI voice: alloy (default), ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer, verse." },
+                "instructions": { "type": "string", "description": "How to speak: tone, pace, accent (models that take instructions)." },
+                "lufs": { "type": "number", "maximum": 0, "description": "Loudness of the voice track. Default -16." }
+            }
+        },
         "music": {
             "type": "object",
             "additionalProperties": false,

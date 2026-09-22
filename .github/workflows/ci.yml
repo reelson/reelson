@@ -25,7 +25,7 @@ jobs:
             - run: npm test
 
     smoke:
-        name: Verify → record → build → check → render (example, every format)
+        name: Verify → record → build → check (example, every take)
         needs: test
         runs-on: ubuntu-latest
         timeout-minutes: 25
@@ -47,28 +47,65 @@ jobs:
               run: npm run example:build
             - name: Check (schemas, zoom timing, hyperframes lint)
               run: npm run example:check
-            - name: Render (landscape, portrait, square)
-              run: npm run example:render
-            - name: Verify the renders
+            - name: Keep the built example for the render jobs
+              uses: actions/upload-artifact@v4
+              with:
+                  name: example-built
+                  path: |
+                      examples/todo-add-item/
+                      !examples/todo-add-item/.raw*
+            - name: Upload a failed take
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: example-failed-take
+                  path: examples/todo-add-item/recording*.failed.*
+                  if-no-files-found: ignore
+
+    render:
+        name: Render (${{ matrix.format }})
+        needs: smoke
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - { format: landscape, suffix: '', size: '1920,1080' }
+                    - { format: portrait, suffix: .portrait, size: '1080,1920' }
+                    - { format: square, suffix: .square, size: '1080,1080' }
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - name: Install ffmpeg
+              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+            - run: npm ci
+            - run: npx playwright install --with-deps chromium
+            - uses: actions/download-artifact@v4
+              with:
+                  name: example-built
+                  path: examples/todo-add-item/
+            - name: Render the ${{ matrix.format }} version
+              run: cd examples && node ../bin/reelkit.ts render todo-add-item --only ${{ matrix.format }} --no-build
+            - name: Verify the render
               run: |
+                  out=examples/todo-add-item/video/renders/todo-add-item${{ matrix.suffix }}.mp4
+                  duration=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out")
+                  size=$(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 "$out")
+                  echo "${{ matrix.format }}: ${duration}s, $size"
+                  awk -v d="$duration" 'BEGIN { exit !(d > 15 && d < 40) }'
+                  test "$size" = "${{ matrix.size }}"
                   mkdir -p frames
-                  for version in "" .portrait .square; do
-                      out=examples/todo-add-item/video/renders/todo-add-item$version.mp4
-                      duration=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out")
-                      size=$(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 "$out")
-                      echo "todo-add-item$version: ${duration}s, $size"
-                      awk -v d="$duration" 'BEGIN { exit !(d > 15 && d < 40) }'
-                      for t in 0 2 8 13; do ffmpeg -y -loglevel error -ss "$t" -i "$out" -frames:v 1 -vf scale=-2:540 "frames/t$t$version.jpg"; done
-                  done
-                  test "$(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 examples/todo-add-item/video/renders/todo-add-item.portrait.mp4)" = "1080,1920"
-                  test "$(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 examples/todo-add-item/video/renders/todo-add-item.square.mp4)" = "1080,1080"
+                  for t in 0 2 8 13; do ffmpeg -y -loglevel error -ss "$t" -i "$out" -frames:v 1 -vf scale=-2:540 "frames/t$t.jpg"; done
             - name: Upload the render and frames
               if: always()
               uses: actions/upload-artifact@v4
               with:
-                  name: example-render
+                  name: example-render-${{ matrix.format }}
                   path: |
                       examples/todo-add-item/video/renders/
-                      examples/todo-add-item/recording*.failed.*
                       frames/
                   if-no-files-found: ignore

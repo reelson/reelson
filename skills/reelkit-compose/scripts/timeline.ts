@@ -126,6 +126,8 @@ export interface CalloutSpec {
     at?: number
     duration?: number
     group?: string
+    /** Voice-over: what is spoken for this step (default: its text); false: nothing. */
+    say?: string | false
 }
 
 export interface ZoomSpec {
@@ -171,6 +173,11 @@ export interface VideoSpec {
      * (default) — the phone take when there is one.
      */
     portrait?: 'auto' | 'mobile' | 'desktop'
+    /**
+     * Voice-over: true speaks each callout (demo.config.json `voice` settings); an object
+     * overrides the voice / instructions for this video and may add a line over the intro.
+     */
+    voice?: boolean | { voice?: string; instructions?: string; intro?: string }
     /** Versions every `reelkit render` adds besides the 16:9 one (as --portrait / --square). */
     formats?: ('portrait' | 'square')[]
 }
@@ -180,6 +187,8 @@ export interface Callout {
     duration: number
     text: string
     group?: string
+    /** Voice-over line, when it differs from the text (false: silent). */
+    say?: string | false
     /** Index in video.json `callouts` (or in the default callouts when it has none). */
     source: number
 }
@@ -330,7 +339,7 @@ export function computeTimeline(
         const before = handOffs.filter((t) => t.at <= c.recordingAt)
         const group = c.group ?? (before.length ? before.at(-1)?.to : handOffs[0]?.from)
 
-        return { at, duration, text: c.text, ...(group ? { group } : {}), source: c.source }
+        return { at, duration, text: c.text, ...(group ? { group } : {}), ...(c.say !== undefined ? { say: c.say } : {}), source: c.source }
     })
     const recapTiming = timing.recap
     if (recapTiming && callouts.length > recapTiming.maxSteps) {

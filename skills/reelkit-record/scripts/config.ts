@@ -61,6 +61,17 @@ export interface DemoConfig {
         lufs: number
         lufsUnderNarration: number
     }
+    /** Voice-over (video.json "voice": true): each callout spoken by OpenAI text-to-speech. */
+    voice: {
+        /** OpenAI speech model. */
+        model: string
+        /** OpenAI voice, e.g. "alloy", "ash", "coral", "nova", "sage". */
+        voice: string
+        /** How to speak (tone, pace, accent) — for models that take instructions. */
+        instructions: string
+        /** Integrated loudness of the voice track. */
+        lufs: number
+    }
     record: {
         viewport: { width: number; height: number }
         /** Capture pixel ratio; 2 keeps UI text sharp in the 1080p frame and under zooms. */
@@ -108,6 +119,12 @@ export const DEFAULTS: DemoConfig = {
         secondsLabel: { one: 'second', other: 'seconds' },
     },
     music: { file: null, lufs: -28, lufsUnderNarration: -34 },
+    voice: {
+        model: 'gpt-4o-mini-tts',
+        voice: 'alloy',
+        instructions: 'A calm, friendly product walkthrough narrator: clear, unhurried, warm; no exaggerated enthusiasm.',
+        lufs: -16,
+    },
     record: {
         viewport: { width: 1440, height: 900 },
         deviceScaleFactor: 2,

@@ -21,6 +21,7 @@ import { basename, extname, resolve } from 'node:path'
 import { countLabel, fromRoot, type LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { renderComposition, type CompositionInput } from './composition.ts'
 import { phoneLayout, portraitLayout, squareLayout } from './portrait.ts'
+import { renderVoiceTrack, voiceLines, voiceSettings } from './voice.ts'
 import { HYPERFRAMES_VERSION, RENDER_FLAGS } from './hyperframes.ts'
 import {
     readMarkers,
@@ -157,7 +158,8 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
     const logo = copyLogo(spec, config, assets, log)
     copyIfChanged(recording, resolve(assets, 'recording.mp4'))
     const narration = extractNarration(recording, resolve(assets, 'narration.m4a'), timeline, log)
-    const music = renderMusicBed(spec, config, timeline, resolve(assets, 'music.m4a'), narration, log)
+    const voice = voiceTrack(demoDir, config, spec, timeline, resolve(assets, 'voice.m4a'), log)
+    const music = renderMusicBed(spec, config, timeline, resolve(assets, 'music.m4a'), narration || voice, log)
 
     const brand = { ...config.brand, ...spec.brand }
     const composition = {
@@ -167,6 +169,7 @@ export function build(demoDir: string, config: LoadedConfig, options: BuildOptio
         zooms: result.zooms,
         narration,
         music,
+        voice,
         text: {
             language: config.language,
             brand,
@@ -263,7 +266,8 @@ function renderPortrait(
             const phone = planSpec(demoDir, { ...spec, zooms: [] }, markers, config)
             copyIfChanged(phoneTake, resolve(assets, 'recording.mobile.mp4'))
             const narration = extractNarration(phoneTake, resolve(assets, 'narration.mobile.m4a'), phone.timeline, () => {})
-            const music = renderMusicBed(spec, config, phone.timeline, resolve(assets, 'music.mobile.m4a'), narration, () => {})
+            const voice = voiceTrack(demoDir, config, spec, phone.timeline, resolve(assets, 'voice.mobile.m4a'), () => {})
+            const music = renderMusicBed(spec, config, phone.timeline, resolve(assets, 'music.mobile.m4a'), narration || voice, () => {})
             const layout = phoneLayout(phone.timeline)
             log(`  portrait: the phone take (${markers.viewport.width}x${markers.viewport.height}), ${phone.timeline.total}s`)
             const html = renderComposition({
@@ -274,7 +278,13 @@ function renderPortrait(
                 zooms: [],
                 narration,
                 music,
-                media: { recording: 'assets/recording.mobile.mp4', narration: 'assets/narration.mobile.m4a', music: 'assets/music.mobile.m4a' },
+                voice,
+                media: {
+                    recording: 'assets/recording.mobile.mp4',
+                    narration: 'assets/narration.mobile.m4a',
+                    music: 'assets/music.mobile.m4a',
+                    voice: 'assets/voice.mobile.m4a',
+                },
                 text: {
                     ...composition.text,
                     stepsChip: countLabel(phone.timeline.callouts.length, config.strings.stepsLabel, config.language),
@@ -321,7 +331,8 @@ function renderSquare(
         const plan = planSpec(demoDir, sameClicks ? spec : { ...spec, zooms: [] }, markers, config)
         copyIfChanged(take, resolve(assets, 'recording.square.mp4'))
         const narration = extractNarration(take, resolve(assets, 'narration.square.m4a'), plan.timeline, () => {})
-        const music = renderMusicBed(spec, config, plan.timeline, resolve(assets, 'music.square.m4a'), narration, () => {})
+        const voice = voiceTrack(demoDir, config, spec, plan.timeline, resolve(assets, 'voice.square.m4a'), () => {})
+        const music = renderMusicBed(spec, config, plan.timeline, resolve(assets, 'music.square.m4a'), narration || voice, () => {})
         const layout = squareLayout(plan.timeline)
         log(`  square: the square take (${markers.viewport.width}x${markers.viewport.height}), ${plan.timeline.total}s`)
         const html = renderComposition({
@@ -332,7 +343,13 @@ function renderSquare(
             zooms: plan.zooms,
             narration,
             music,
-            media: { recording: 'assets/recording.square.mp4', narration: 'assets/narration.square.m4a', music: 'assets/music.square.m4a' },
+            voice,
+            media: {
+                recording: 'assets/recording.square.mp4',
+                narration: 'assets/narration.square.m4a',
+                music: 'assets/music.square.m4a',
+                voice: 'assets/voice.square.m4a',
+            },
             text: {
                 ...composition.text,
                 stepsChip: countLabel(plan.timeline.callouts.length, config.strings.stepsLabel, config.language),
@@ -344,6 +361,15 @@ function renderSquare(
         log(`  warning: the square take does not fit video.json (${(error as Error).message}) — re-record it: \`reelkit record ${basename(demoDir)} --square\``)
         return null
     }
+}
+
+/** The voice-over track for one version (see voice.ts); false when the video has none. */
+function voiceTrack(demoDir: string, config: LoadedConfig, spec: VideoSpec, t: Timeline, target: string, log: (l: string) => void): boolean {
+    const settings = voiceSettings(spec, config)
+    if (!settings) {
+        return false
+    }
+    return renderVoiceTrack(voiceLines(t, spec, settings), settings, resolve(demoDir, 'voice'), t.total, target, log)
 }
 
 function applyOptions(spec: VideoSpec, o: BuildOptions): void {
@@ -369,7 +395,7 @@ export function serializeVideoSpec(spec: VideoSpec, demoDir: string, config: Loa
 /** video.json in a stable, readable key order, without `$schema` (re-added on write). */
 function withoutSchema(spec: VideoSpec): VideoSpec {
     const { $schema: _ignored, ...rest } = spec as VideoSpec & { $schema?: string }
-    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms', 'cursor', 'portrait', 'formats']
+    const order: (keyof VideoSpec)[] = ['title', 'subtitle', 'template', 'sections', 'recapTitle', 'brand', 'trim', 'music', 'callouts', 'zooms', 'cursor', 'voice', 'portrait', 'formats']
     const known = order.filter((k) => rest[k] !== undefined).map((k) => [k, rest[k]])
     const others = Object.entries(rest).filter(([k]) => !order.includes(k as keyof VideoSpec))
 

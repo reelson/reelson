@@ -74,9 +74,25 @@
                     "offset": { "type": "number", "description": "Seconds after that start (negative: before). Keeps the callout tied to its marker when you nudge it." },
                     "at": { "type": "number", "minimum": 0, "description": "Recording time instead of a marker (manual recordings)." },
                     "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds on screen. Default: through its step and 1.2 s past its marker (at least 3 s), ending before the next callout." },
-                    "group": { "type": "string", "description": "Role tag (two-actor videos). Default: taken from the hand-off cards." }
+                    "group": { "type": "string", "description": "Role tag (two-actor videos). Default: taken from the hand-off cards." },
+                    "say": { "type": ["string", "boolean"], "not": { "const": true }, "description": "Voice-over (\"voice\": true): what is spoken for this step, when it should differ from the text (e.g. a full sentence); false: nothing." }
                 }
             }
+        },
+        "voice": {
+            "description": "Voice-over: true speaks each callout (its `say`, else its text) with OpenAI text-to-speech — demo.config.json `voice` sets the model, voice and delivery; needs OPENAI_API_KEY, lines are cached in <demo>/voice/. An object turns it on with this video's own voice / instructions and may add an `intro` line spoken over the intro.",
+            "oneOf": [
+                { "type": "boolean" },
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "voice": { "type": "string" },
+                        "instructions": { "type": "string" },
+                        "intro": { "type": "string", "description": "Spoken over the intro, e.g. the title as a sentence." }
+                    }
+                }
+            ]
         },
         "formats": {
             "type": "array",

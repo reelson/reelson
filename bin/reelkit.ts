@@ -14,6 +14,7 @@ import { build, plan, type BuildOptions } from '../skills/reelkit-compose/script
 import { captionCues, toSrt, toVtt } from '../skills/reelkit-compose/scripts/captions.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
 import { studio } from '../skills/reelkit-compose/scripts/studio.ts'
+import { fetchLines, spokenTexts, voiceSettings } from '../skills/reelkit-compose/scripts/voice.ts'
 import { TAKES, verify } from '../skills/reelkit-compose/scripts/verify.ts'
 import { DRAFT_FLAGS, FPS, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelkit-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
@@ -35,6 +36,8 @@ Usage: reelkit <command> [options]
       --title, --subtitle, --template <name>
       --intro <name>, --recap <name|none>, --outro <name>
       --trim-start <s|auto>, --trim-end <s>, --music <file> | --no-music
+  voice <slug>                  speak the voice-over lines not spoken yet (video.json "voice": true;
+                                OpenAI text-to-speech, needs OPENAI_API_KEY; cached in <demo>/voice/)
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
   verify <slug...> | --all [--update]
                                 re-record every take (desktop, phone, square) headless into a
@@ -46,12 +49,14 @@ Usage: reelkit <command> [options]
                                 preview + edit on a timeline of every layer (saves video.json)
   preview <slug>                open the HyperFrames studio (raw composition)
   templates                     list templates and intro/recap/outro sections
-  render <slug...> | --all [--gif] [--square] [--portrait] [--all-formats] [--draft] [--force] [--no-build]
+  render <slug...> | --all [--gif] [--square] [--portrait] [--all-formats] [--only <format>]
+         [--draft] [--force] [--no-build]
                                 build + render video/renders/<slug>.mp4 + .srt/.vtt captions;
                                 skips a video unchanged since its last render (--force);
                                 --gif, --square (1080², the square take filling the frame),
                                 --portrait (1080x1920 phone layout) add versions, --all-formats
                                 both (also video.json "formats": ["portrait", "square"]);
+                                --only landscape|portrait|square renders just that version;
                                 --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
 
 <slug> is a folder under videosDir, or a path to a demo folder or its scenario.ts.
@@ -92,6 +97,8 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             return record(argv)
         case 'build':
             return buildCommand(argv)
+        case 'voice':
+            return voiceCommand(argv)
         case 'check':
             return checkCommand(argv)
         case 'verify':
@@ -103,7 +110,7 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
         case 'preview':
             return preview(argv)
         case 'render':
-            return render(argv)
+            return await render(argv)
         case 'templates':
             return templates()
         default:
@@ -275,10 +282,49 @@ function buildOptions(argv: string[]): { options: BuildOptions; positionals: str
     return { options, positionals }
 }
 
-function buildCommand(argv: string[]): number {
+async function buildCommand(argv: string[]): Promise<number> {
     const { options, positionals } = buildOptions(argv)
     const cfg = config()
-    build(resolveDemoDir(one(positionals, 'build <slug> [options]'), cfg), cfg, options)
+    const dir = resolveDemoDir(one(positionals, 'build <slug> [options]'), cfg)
+    build(dir, cfg, options)
+    // Voice-over lines not spoken yet: fetch them, then build again to mix them in.
+    if (await speak(dir, cfg)) {
+        build(dir, cfg, { log: () => {} })
+    }
+    return 0
+}
+
+/**
+ * Fetches the voice-over lines this demo is missing (see voice.ts); how many it fetched.
+ * Unless `strict`, a failure (no OPENAI_API_KEY, offline) is a warning: the video is built
+ * with the lines it has.
+ */
+async function speak(dir: string, cfg: LoadedConfig, strict = false): Promise<number> {
+    const { spec, timeline } = plan(dir, cfg)
+    const settings = voiceSettings(spec, cfg)
+    if (!settings) {
+        return 0
+    }
+    try {
+        return await fetchLines(spokenTexts(spec, timeline.callouts), settings, resolve(dir, 'voice'), console.log)
+    } catch (error) {
+        if (strict || !(error instanceof ReelkitError || error instanceof TypeError)) {
+            throw error
+        }
+        console.warn(`reelkit: ${error.message} — building without those lines`)
+        return 0
+    }
+}
+
+async function voiceCommand(argv: string[]): Promise<number> {
+    const { positionals } = parseArgs({ args: argv, allowPositionals: true })
+    const cfg = config()
+    const dir = resolveDemoDir(one(positionals, 'voice <slug>'), cfg)
+    if (!voiceSettings(plan(dir, cfg).spec, cfg)) {
+        throw new ReelkitError(`${basename(dir)} has no voice-over — set "voice": true in its video.json`)
+    }
+    const fetched = await speak(dir, cfg, true)
+    console.log(fetched ? `spoke ${fetched} line(s) into ${resolve(dir, 'voice')}` : 'every line is already spoken')
     return 0
 }
 
@@ -403,7 +449,7 @@ function preview(argv: string[]): number {
     return hyperframes(['preview', '.'], builtVideoDir(one(positionals, 'preview <slug>')))
 }
 
-function render(argv: string[]): number {
+async function render(argv: string[]): Promise<number> {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
@@ -413,11 +459,15 @@ function render(argv: string[]): number {
             square: { type: 'boolean' },
             portrait: { type: 'boolean' },
             'all-formats': { type: 'boolean' },
+            only: { type: 'string' },
             draft: { type: 'boolean' },
             force: { type: 'boolean' },
             'no-build': { type: 'boolean' },
         },
     })
+    if (values.only && !['landscape', 'portrait', 'square'].includes(values.only)) {
+        throw new ReelkitError(`--only expects landscape, portrait or square, got "${values.only}"`)
+    }
     const cfg = config()
     const dirs = values.all ? listDemos(cfg) : positionals.map((p) => resolveDemoDir(p, cfg))
     if (!dirs.length) {
@@ -427,6 +477,9 @@ function render(argv: string[]): number {
     let failures = 0
     for (const dir of dirs) {
         const slug = basename(dir)
+        if (!values['no-build']) {
+            await speak(dir, cfg)
+        }
         const result = values['no-build'] ? { ...plan(dir, cfg), versions: null } : build(dir, cfg)
         const videoDir = resolve(dir, 'video')
         mkdirSync(resolve(videoDir, 'renders'), { recursive: true })
@@ -452,12 +505,15 @@ function render(argv: string[]): number {
             }
             console.log(`${outcome === 'unchanged' ? 'up to date' : 'rendered'} ${resolve(videoDir, output)}`)
         }
-        for (const [output, flags] of outputs) {
-            report(renderIfChanged(videoDir, output, flags, values.force), output)
+        if (!values.only || values.only === 'landscape') {
+            for (const [output, flags] of outputs) {
+                report(renderIfChanged(videoDir, output, flags, values.force), output)
+            }
         }
-        // Asked for here (--portrait, --square, --all-formats) or in video.json "formats".
+        // Asked for here (--portrait, --square, --all-formats, --only) or in video.json "formats".
         const wanted = new Set(result.spec.formats ?? [])
-        const asked = (format: 'portrait' | 'square') => values[format] || values['all-formats'] || wanted.has(format)
+        const asked = (format: 'portrait' | 'square') =>
+            values.only ? values.only === format : values[format] || values['all-formats'] || wanted.has(format)
         // Portrait: its own composition (tall frame, footage panning with the cursor).
         if (asked('portrait')) {
             if (result.versions) captions(result.versions.portrait, `${slug}.portrait`)
@@ -471,7 +527,7 @@ function render(argv: string[]): number {
             if (existsSync(resolve(videoDir, 'square.html'))) {
                 if (result.versions?.square) captions(result.versions.square, `${slug}.square`)
                 report(renderIfChanged(videoDir, output, outputs[0][1], values.force, 'square.html'), output)
-            } else if (values.square) {
+            } else if (values.square || values.only === 'square') {
                 failures++
                 console.error(`reelkit: no square take for ${slug} — ${hint}`)
             } else {
