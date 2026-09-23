@@ -4,7 +4,9 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
-## Unreleased
+## 0.7.2 — 2026-09-23
+
+The first release published by CI (staged, then approved on npm).
 
 ### Changed
 - The README clip is re-rendered by CI on every push to main and served from the rolling `demo`
