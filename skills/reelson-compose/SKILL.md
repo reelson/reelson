@@ -77,7 +77,7 @@ changing the trim or the template never re-times anything. Validated against
   `speed` uses the provider's own rate (ElevenLabs 0.7–1.2, Piper, OpenAI tts-1; for
   gpt-4o-mini-tts ask for the pace in `instructions`); `options` passes extra request fields
   (e.g. ElevenLabs `{"voice_settings": {"stability": 0.4}}`) or Piper flags. Keys come from the
-  environment or a `.env` next to demo.config.json or in the reelson checkout. A callout's `say`
+  environment or a `.env` next to demo.config.json or in the reelson install (a checkout or the npm package). A callout's `say`
   replaces what is spoken (a full sentence for a terse pill — "→" reads as a pause; `false`:
   silent); `"voice": { "intro": "…" }` adds a line over the intro, and `provider` / `model` /
   `voice` / `instructions` / `speed` there override the project for one video. `reelson voice

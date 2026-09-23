@@ -25,6 +25,13 @@ jobs:
               run: sudo apt-get update && sudo apt-get install -y ffmpeg
             - run: npm run typecheck
             - run: npm test
+            - name: The npm package installs and runs (compiled, from under node_modules)
+              run: |
+                  npm pack
+                  npm install -g ./reelson-*.tgz
+                  mkdir -p "$RUNNER_TEMP/project"
+                  reelson install "$RUNNER_TEMP/project" --no-browser
+                  cd "$RUNNER_TEMP/project" && reelson new hello && reelson templates
 
     smoke:
         name: Verify → record → build → check (example, every take)

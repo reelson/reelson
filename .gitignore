@@ -15,3 +15,7 @@ node_modules/
 # Licensed music stays out of git; see music/README.md
 music/*
 !music/README.md
+
+# Compiled by `npm run build` for the published package (removed again after packing)
+/bin/reelson.js
+/skills/*/scripts/*.js

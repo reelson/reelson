@@ -4,7 +4,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
-import { basename, dirname, relative, resolve } from 'node:path'
+import { basename, dirname, extname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fromRoot, type LoadedConfig } from '../../reelson-record/scripts/config.ts'
 import { closest, loadSchema, validate } from '../../reelson-record/scripts/validate.ts'
@@ -23,6 +23,8 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const KIT_ROOT = resolve(HERE, '../../..')
+/** The recorder, run in its own process: record.ts in a checkout, record.js in the published package (compiled beside it). */
+export const RECORD_SCRIPT = resolve(KIT_ROOT, `skills/reelson-record/scripts/record${extname(fileURLToPath(import.meta.url))}`)
 export const VIDEO_SCHEMA_PATH = resolve(HERE, '../schemas/video.schema.json')
 export const BUILTIN_TEMPLATES = resolve(HERE, '../templates')
 export const BUILTIN_SECTIONS = resolve(HERE, '../sections')

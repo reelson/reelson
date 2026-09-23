@@ -1,0 +1,11 @@
+{
+    // `npm run build` (run by `npm pack` / `npm publish`): compiles bin/ and skills/ to .js beside
+    // each .ts, with the imports rewritten to .js. `npm run clean` removes them again.
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "rewriteRelativeImportExtensions": true,
+        "removeComments": false
+    },
+    "include": ["bin/**/*.ts", "skills/**/*.ts"]
+}

@@ -20,7 +20,7 @@ video.json (title, trim, callouts, zooms) ┴──reelson build──▶ video/
 
 ## Requirements
 
-- Node 22.18+ (TypeScript runs directly, no build step) and `ffmpeg` (`brew install ffmpeg`)
+- Node 22.18+ and `ffmpeg` (`brew install ffmpeg`)
 - The app you record, running locally
 - HyperFrames is fetched by `npx` on first use (version pinned in
   [hyperframes.ts](skills/reelson-compose/scripts/hyperframes.ts))
@@ -28,15 +28,23 @@ video.json (title, trim, callouts, zooms) ┴──reelson build──▶ video/
 ## Install
 
 ```bash
-git clone git@github.com:reelson/reelson.git ~/workspace/my-projects/reelson
-~/workspace/my-projects/reelson/install.sh ~/code/my-app     # or --global for ~/.claude/skills
+npm install -g reelson
+reelson install ~/code/my-app     # or: reelson install --global  (~/.claude/skills, every project)
 ```
 
-`install.sh` installs Playwright + Chromium, links the `reelson` command (`npm link`), links
-both skills into `my-app/.claude/skills/`, creates `my-app/demo.config.json` and prints the
-`.gitignore` lines. The links point at this checkout, so `git pull` here updates every project.
+`reelson install` downloads Playwright's Chromium, links both skills into
+`my-app/.claude/skills/`, creates `my-app/demo.config.json` and prints the `.gitignore` lines.
+The links point at the installed package, so `npm update -g reelson` updates every project.
 
-reelson was called reelkit before 0.7. Re-run `install.sh` for each project: it drops the old
+To work on reelson itself, install from a checkout instead: the `reelson` command then runs the
+TypeScript sources directly and `git pull` updates every project.
+
+```bash
+git clone git@github.com:reelson/reelson.git ~/workspace/my-projects/reelson
+~/workspace/my-projects/reelson/install.sh ~/code/my-app     # npm link + reelson install
+```
+
+reelson was called reelkit before 0.7. Re-run `reelson install` (or `install.sh`) for each project: it drops the old
 `reelkit` command and `reelkit-*` skill links. Then point scenario imports and `$schema` paths
 at `.claude/skills/reelson-*`.
 
@@ -136,10 +144,24 @@ npm run example:record && npm run example:build && npm run example:check && npm 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the type check and tests, then
 records the TodoMVC example, builds, checks and renders it, and uploads the MP4 and frames.
 
+### Publish to npm
+
+Node will not run TypeScript from under `node_modules`, so the package ships `.js` compiled beside
+each `.ts` (`npm run build`; `npm pack` / `npm publish` build first and clean up after).
+`bin/run.js` picks the compiled CLI when installed from npm and the sources in a checkout.
+
+1. Bump `version` in package.json, commit, tag `vX.Y.Z` and push the tag.
+2. [.github/workflows/publish.yml](.github/workflows/publish.yml) runs the checks and publishes
+   with npm trusted publishing (OIDC, with provenance; no token). Set it up once on npmjs.com →
+   the package → Settings → Trusted publishing: GitHub Actions, `reelson/reelson`, `publish.yml`.
+
+The very first release has to be published by hand (trusted publishing needs the package to
+exist): `npm login && npm publish`. Check the contents first with `npm pack --dry-run`.
+
 ## Layout
 
 ```
-bin/reelson.ts          the CLI
+bin/reelson.ts  the CLI (run.js: the npm entry point)
 skills/
   reelson-record/  SKILL.md, scripts/ (record, scenario, cursor-overlay, config, validate), schemas/
   reelson-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
@@ -150,4 +172,4 @@ test/           unit + golden tests, fixtures
 music/          local-only tracks (git-ignored; licences are per project)
 ```
 
-Third-party code and fonts: [NOTICE.md](NOTICE.md).
+MIT licence ([LICENSE](LICENSE)). Third-party code and fonts: [NOTICE.md](NOTICE.md).

@@ -111,7 +111,7 @@ reader could follow without the video. If you can't write the callouts, the vide
 - **Blurry UI text (worst in zooms)**: capture must be 2x (`ffprobe recording.mp4` →
   2880x1800), `hyperframes.json` `autoProxy: false`, no `will-change` on `#frame`.
 - **Callout clipped during a zoom**: it ended up inside `#frame`; callouts live in `#callouts`.
-- **`Cannot find module '@playwright/test'`** or **`reelson: command not found`**: run the kit's
-  `install.sh` (or `npm run setup && npm link` in the kit).
+- **`Cannot find module '@playwright/test'`** or **`reelson: command not found`**: run
+  `npm install -g reelson && reelson install` (or the kit checkout's `install.sh`).
 - **`… is invalid: … unknown key — did you mean …`**: a typo in demo.config.json or video.json;
   the message names the path. Editors autocomplete both through their `$schema`.

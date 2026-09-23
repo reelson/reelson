@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import type { LoadedConfig } from '../../reelson-record/scripts/config.ts'
 import { planSpec } from './build.ts'
-import { KIT_ROOT, readMarkers, readVideoSpec, ReelsonError } from './project.ts'
+import { readMarkers, RECORD_SCRIPT, readVideoSpec, ReelsonError } from './project.ts'
 import type { Markers, TrimPoint, VideoSpec } from './timeline.ts'
 import { checkZoom, zoomOverlaps } from './zooms.ts'
 
@@ -142,7 +142,7 @@ function verifyTake(demoDir: string, scenario: string, take: Take, config: Loade
     const markersFile = `markers${take.suffix}.json`
     const dir = mkdtempSync(join(tmpdir(), `reelson-verify-${basename(demoDir)}${take.suffix}-`))
     log(`${slug}: recording…`)
-    const run = spawnSync(process.execPath, [resolve(KIT_ROOT, 'skills/reelson-record/scripts/record.ts'), scenario, '--out', dir, ...take.flags], {
+    const run = spawnSync(process.execPath, [RECORD_SCRIPT, scenario, '--out', dir, ...take.flags], {
         encoding: 'utf8',
     })
     if (run.status !== 0) {

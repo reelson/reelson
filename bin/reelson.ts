@@ -5,7 +5,9 @@
  * demo.config.json (walking up from the working directory).
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { homedir } from 'node:os'
 import { basename, relative, resolve } from 'node:path'
 import { parseArgs, parseEnv } from 'node:util'
 import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
@@ -18,13 +20,18 @@ import { fetchLines, spokenTexts, voiceSettings, type VoiceSettings } from '../s
 import { listVoices, missingSetup, PROVIDERS, type Provider } from '../skills/reelson-compose/scripts/tts.ts'
 import { TAKES, verify } from '../skills/reelson-compose/scripts/verify.ts'
 import { DRAFT_FLAGS, FPS, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelson-compose/scripts/hyperframes.ts'
-import { catalog, KIT_ROOT, listDemos, ReelsonError, resolveDemoDir } from '../skills/reelson-compose/scripts/project.ts'
+import { catalog, KIT_ROOT, listDemos, RECORD_SCRIPT, ReelsonError, resolveDemoDir } from '../skills/reelson-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice, type Timeline } from '../skills/reelson-compose/scripts/timeline.ts'
 
 const HELP = `reelson — scripted walkthroughs → branded demo videos
 
 Usage: reelson <command> [options]
 
+  install [<project-dir>] [--global] [--no-browser]
+                                link the reelson-record + reelson-compose skills into
+                                <project>/.claude/skills/ (default: this directory; --global:
+                                ~/.claude/skills/), create demo.config.json if missing and
+                                download Playwright's Chromium (--no-browser: skip it)
   init                          create demo.config.json in this directory
   doctor                        check the tools and that the cursor layer lines up here
   new <slug> [--url <origin>]   start <videosDir>/<slug>/scenario.ts
@@ -114,6 +121,8 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
         case '-v':
             console.log(JSON.parse(readFileSync(resolve(KIT_ROOT, 'package.json'), 'utf8')).version)
             return 0
+        case 'install':
+            return install(argv)
         case 'init':
             return init()
         case 'doctor':
@@ -173,17 +182,88 @@ function one(positionals: string[], usage: string): string {
     return positionals[0]
 }
 
-function init(): number {
-    const target = resolve(process.cwd(), 'demo.config.json')
+/**
+ * `reelson install`: links the skills into a project (or ~/.claude) and prepares the machine. The links
+ * point at this installation, so `npm update -g reelson` (or `git pull` in a checkout) updates every project.
+ */
+function install(argv: string[]): number {
+    const skillNames = ['reelson-record', 'reelson-compose']
+    // Names used before 0.7 (demo-* before that): their links are dropped when they point at a reelson install.
+    const oldNames = ['demo-record', 'demo-video', 'reelkit-record', 'reelkit-compose']
+    const { values, positionals } = parseArgs({
+        args: argv,
+        allowPositionals: true,
+        options: { global: { type: 'boolean' }, 'no-browser': { type: 'boolean' } },
+    })
+    if (positionals.length > 1 || (values.global && positionals.length)) {
+        throw new ReelsonError('usage: reelson install [<project-dir> | --global] [--no-browser]')
+    }
+    const target = values.global ? homedir() : resolve(positionals[0] ?? '.')
+    if (!existsSync(target)) {
+        throw new ReelsonError(`${target} does not exist`)
+    }
+    if (spawnSync('ffmpeg', ['-version']).status !== 0) {
+        console.warn('warning: ffmpeg not found — brew install ffmpeg')
+    }
+    if (!values['no-browser']) {
+        console.log('Installing Playwright\'s Chromium (skipped when it is already there)…')
+        const cli = createRequire(import.meta.url).resolve('@playwright/test/cli')
+        const status = spawnSync(process.execPath, [cli, 'install', 'chromium'], { stdio: 'inherit' }).status
+        if (status !== 0) {
+            throw new ReelsonError('could not install Chromium — run `npx playwright install chromium`')
+        }
+    }
+
+    const skills = resolve(target, '.claude/skills')
+    mkdirSync(skills, { recursive: true })
+    const isLink = (path: string): boolean => lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink() ?? false
+    for (const old of oldNames) {
+        const link = resolve(skills, old)
+        if (isLink(link) && (resolve(skills, readlinkSync(link)).startsWith(`${KIT_ROOT}/`) || /[\\/]skills[\\/](reelkit|reelson)-/.test(readlinkSync(link)))) {
+            rmSync(link)
+            console.log(`  removed old link ${link}`)
+        }
+    }
+    for (const skill of skillNames) {
+        const link = resolve(skills, skill)
+        if (existsSync(link) && !isLink(link)) {
+            throw new ReelsonError(`${link} is a folder, not a link to reelson — move it away and run install again`)
+        }
+        if (isLink(link)) {
+            rmSync(link)
+        }
+        symlinkSync(resolve(KIT_ROOT, 'skills', skill), link, 'dir')
+        console.log(`  linked ${link}`)
+    }
+
+    if (!values.global) {
+        if (!existsSync(resolve(target, 'demo.config.json'))) {
+            init(target)
+        }
+        const videos = loadConfig(target).videosDir.replace(/^\.?\/+|\/+$/g, '')
+        console.log(`
+Add to ${resolve(target, '.gitignore')}:
+
+    /${videos}/**/recording*.mp4
+    /${videos}/**/.raw*/
+    /${videos}/**/video/
+    /${videos}/**/*.openscreen`)
+    }
+    console.log('\nDone. Try: reelson doctor')
+    return 0
+}
+
+function init(dir = process.cwd()): number {
+    const target = resolve(dir, 'demo.config.json')
     if (existsSync(target)) {
         throw new ReelsonError(`${target} already exists`)
     }
     const example = JSON.parse(readFileSync(resolve(KIT_ROOT, 'demo.config.example.json'), 'utf8'))
     delete example.$comment
     delete example.$schema
-    const viaProject = resolve(process.cwd(), '.claude/skills/reelson-record/schemas/demo.config.schema.json')
+    const viaProject = resolve(dir, '.claude/skills/reelson-record/schemas/demo.config.schema.json')
     const schema = existsSync(viaProject) ? viaProject : CONFIG_SCHEMA_PATH
-    let schemaRef = relative(process.cwd(), schema)
+    let schemaRef = relative(dir, schema)
     if (!/^\.{1,2}\//.test(schemaRef) && !schemaRef.startsWith('/')) {
         schemaRef = `./${schemaRef}`
     }
@@ -264,12 +344,11 @@ function record(argv: string[]): number {
     if (!existsSync(scenario)) {
         throw new ReelsonError(`no scenario at ${scenario} — create one with \`reelson new\``)
     }
-    const script = resolve(KIT_ROOT, 'skills/reelson-record/scripts/record.ts')
     const takes = values['all-takes']
         ? TAKES.map((take) => take.flags)
         : [[...(values.mobile ? ['--mobile'] : []), ...(values.square ? ['--square'] : [])]]
     for (const flags of takes) {
-        const args = [script, scenario, ...(values.headed ? ['--headed'] : []), ...flags, ...(values.out ? ['--out', values.out] : [])]
+        const args = [RECORD_SCRIPT, scenario, ...(values.headed ? ['--headed'] : []), ...flags, ...(values.out ? ['--out', values.out] : [])]
         const status = spawnSync(process.execPath, args, { stdio: 'inherit' }).status ?? 1
         if (status !== 0) {
             return status

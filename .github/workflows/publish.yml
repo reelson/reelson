@@ -1,0 +1,31 @@
+name: Publish
+
+# Publishes to npm when a vX.Y.Z tag is pushed, through npm trusted publishing (OIDC): no
+# npm token is stored; set the package's trusted publisher to this repo + publish.yml on npmjs.com.
+on:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: read
+    id-token: write
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  registry-url: https://registry.npmjs.org
+                  cache: npm
+            # Trusted publishing needs npm 11.5.1+.
+            - run: npm install -g npm@latest
+            - run: npm ci
+            - name: Install ffmpeg (the voice-over tests speak and trim a line)
+              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+            - name: The tag matches package.json
+              run: test "${GITHUB_REF_NAME}" = "v$(node -p 'require("./package.json").version')"
+            # prepublishOnly runs the type check and tests; prepack compiles.
+            - run: npm publish --provenance --access public

@@ -1,12 +1,42 @@
 {
     "name": "reelson",
     "version": "0.7.0",
-    "private": true,
     "type": "module",
     "description": "Claude Code skills + CLI that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
-    "bin": {
-        "reelson": "bin/reelson.ts"
+    "keywords": [
+        "demo-video",
+        "screencast",
+        "playwright",
+        "hyperframes",
+        "claude-code",
+        "skills",
+        "product-demo",
+        "video"
+    ],
+    "license": "MIT",
+    "author": "Ion Caliman <icaliman92@gmail.com>",
+    "homepage": "https://github.com/reelson/reelson#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/reelson/reelson.git"
     },
+    "bugs": {
+        "url": "https://github.com/reelson/reelson/issues"
+    },
+    "bin": {
+        "reelson": "bin/run.js"
+    },
+    "files": [
+        "bin/",
+        "skills/",
+        "docs/",
+        "examples/demo.config.json",
+        "examples/todo-add-item/scenario.ts",
+        "examples/todo-add-item/video.json",
+        "demo.config.example.json",
+        "NOTICE.md",
+        "music/README.md"
+    ],
     "engines": {
         "node": ">=22.18"
     },
@@ -15,6 +45,11 @@
         "test": "node --test --test-reporter=spec \"test/**/*.test.ts\"",
         "test:update-golden": "UPDATE_GOLDEN=1 node --test \"test/**/*.test.ts\"",
         "typecheck": "tsc --noEmit",
+        "build": "tsc -p tsconfig.build.json",
+        "clean": "find bin skills -name '*.js' -path '*/scripts/*' -delete; rm -f bin/reelson.js",
+        "prepack": "npm run clean && npm run build",
+        "postpack": "npm run clean",
+        "prepublishOnly": "npm run ci",
         "ci": "npm run typecheck && npm test",
         "example:verify": "cd examples && node ../bin/reelson.ts verify todo-add-item",
         "example:record": "cd examples && node ../bin/reelson.ts record todo-add-item --all-takes",

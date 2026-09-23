@@ -21,7 +21,7 @@ with raw Playwright calls.
 ```
 
 `recording.mp4` + `markers.json` are the input contract of the `reelson-compose` skill. Everything
-runs through the `reelson` CLI (`reelson help`); if it is missing, run the kit's `install.sh`.
+runs through the `reelson` CLI (`reelson help`); if it is missing, install it: `npm install -g reelson && reelson install` (or the kit checkout's `install.sh`).
 
 ## Project config
 
@@ -75,8 +75,8 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 ## Prerequisites
 
 - The app running and reachable at the scenario's `baseURL`.
-- reelson installed once per machine (`install.sh` in the kit: Playwright + Chromium, the
-  `reelson` command, the skill links).
+- reelson installed once per machine (`npm install -g reelson`, then `reelson install` in the
+  project: Playwright's Chromium and the skill links; a kit checkout's `install.sh` does both).
 - `ffmpeg` on PATH (`brew install ffmpeg`). Node 22.18+ (TypeScript runs directly).
 - `reelson doctor` checks the tools and films a local test page to confirm the cursor layer
   lines up with the footage on this machine (offset and px error; run it on a new machine).
