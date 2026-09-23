@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { frameSchedule } from '../skills/reelkit-record/scripts/capture.ts'
-import { cursorOverlayScript, hideDevChromeScript } from '../skills/reelkit-record/scripts/cursor-overlay.ts'
+import { frameSchedule } from '../skills/reelson-record/scripts/capture.ts'
+import { cursorOverlayScript, hideDevChromeScript } from '../skills/reelson-record/scripts/cursor-overlay.ts'
 
 /** The init scripts run in the recorded page: a syntax error there fails silently. */
 const parses = (script: string): void => {

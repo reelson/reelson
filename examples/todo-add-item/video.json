@@ -1,5 +1,5 @@
 {
-    "$schema": "../../skills/reelkit-compose/schemas/video.schema.json",
+    "$schema": "../../skills/reelson-compose/schemas/video.schema.json",
     "title": "Plan your day",
     "subtitle": "Add tasks and tick them off",
     "trim": {

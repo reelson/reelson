@@ -1,0 +1,172 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "reelson video (video.json)",
+    "description": "The source of truth for one video. `reelson build` regenerates video/index.html from it; every time in here is a RECORDING time (seconds in recording.mp4, as in markers.json), so trims and templates can change without re-timing anything.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["title"],
+    "properties": {
+        "title": { "type": "string", "description": "Cover title: the task, e.g. \"Find a customer\"." },
+        "subtitle": { "type": "string", "description": "Cover subtitle: the benefit or context." },
+        "template": { "type": "string", "description": "Overrides demo.config.json `template` for this video." },
+        "sections": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Overrides demo.config.json `sections` per slot, e.g. { \"intro\": \"minimal\", \"recap\": \"none\" }. Run `reelson templates` for the list.",
+            "properties": {
+                "intro": { "type": "string", "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split." },
+                "recap": { "type": "string", "description": "Steps card after the recording, or \"none\". Kit: steps, compact, none." },
+                "outro": { "type": "string", "description": "Closing brand card. Kit: wordmark, compact, endcard." }
+            }
+        },
+        "recapTitle": { "type": "string", "description": "Overrides demo.config.json `strings.recapTitle`." },
+        "brand": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Per-video overrides of demo.config.json `brand` text.",
+            "properties": {
+                "name": { "type": "string" },
+                "tagline": { "type": "string" },
+                "eyebrow": { "type": "string" },
+                "logo": { "type": ["string", "null"], "description": "Overrides demo.config.json `brand.logo`: an .svg/.png/.webp relative to the project root, or null for the text wordmark." }
+            }
+        },
+        "trim": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "The part of the recording the video uses. Prefer \"auto\" or a marker/click anchor: a plain number goes stale when the demo is re-recorded.",
+            "properties": {
+                "start": {
+                    "description": "Where the footage starts: \"auto\" (just before the first glide or marker, i.e. after the login), { \"marker\": label, \"offset\"?: s }, { \"click\": n, \"offset\"?: s } (from the glide towards click n), or recording seconds.",
+                    "anyOf": [
+                        { "type": "number", "minimum": 0 },
+                        { "enum": ["auto"] },
+                        { "$ref": "#/definitions/markerPoint" },
+                        { "$ref": "#/definitions/clickPoint" }
+                    ]
+                },
+                "end": {
+                    "description": "Where the footage stops: { \"marker\": label, \"offset\"?: s }, { \"click\": n, \"offset\"?: s }, or recording seconds. Default: the end of the recording.",
+                    "anyOf": [
+                        { "type": "number", "exclusiveMinimum": 0 },
+                        { "$ref": "#/definitions/markerPoint" },
+                        { "$ref": "#/definitions/clickPoint" }
+                    ]
+                }
+            }
+        },
+        "music": {
+            "type": ["string", "boolean", "null"],
+            "description": "Music bed: a file (relative to the project root) for this video only, false for none, null/omitted for demo.config.json `music.file`."
+        },
+        "callouts": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "Numbered step pills over the recording; they also become the recap. Give each a `marker` (a markers.json label) or an `at`.",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["text"],
+                "properties": {
+                    "text": { "type": "string", "description": "Imperative step in the UI's language, ≤ 6 words." },
+                    "marker": { "type": "string", "description": "markers.json label this callout is timed from." },
+                    "anchor": { "enum": ["step", "marker"], "description": "Where a marker callout starts: step (default) — as the step it names begins (the first glide/click after the previous marker; a marker comes right after its action); marker — on the marker itself." },
+                    "offset": { "type": "number", "description": "Seconds after that start (negative: before). Keeps the callout tied to its marker when you nudge it." },
+                    "at": { "type": "number", "minimum": 0, "description": "Recording time instead of a marker (manual recordings)." },
+                    "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds on screen. Default: through its step and 1.2 s past its marker (at least 3 s), ending before the next callout." },
+                    "group": { "type": "string", "description": "Role tag (two-actor videos). Default: taken from the hand-off cards." },
+                    "say": { "type": ["string", "boolean"], "not": { "const": true }, "description": "Voice-over (\"voice\": true): what is spoken for this step, when it should differ from the text (e.g. a full sentence); false: nothing." }
+                }
+            }
+        },
+        "voice": {
+            "description": "Voice-over: true speaks each callout (its `say`, else its text) with the demo.config.json `voice` provider (OpenAI by default; ElevenLabs, a local Piper voice or a local command); lines are cached in <demo>/voice/. An object turns it on with this video's own provider / model / voice / instructions / speed and may add an `intro` line spoken over the intro.",
+            "oneOf": [
+                { "type": "boolean" },
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "provider": { "enum": ["openai", "elevenlabs", "piper", "command"], "description": "This video's provider, from its defaults (baseURL, command and options stay with the project's provider)." },
+                        "model": { "type": "string" },
+                        "voice": { "type": "string" },
+                        "instructions": { "type": "string" },
+                        "speed": { "type": "number", "minimum": 0.5, "maximum": 2 },
+                        "intro": { "type": "string", "description": "Spoken over the intro, e.g. the title as a sentence." }
+                    }
+                }
+            ]
+        },
+        "formats": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["portrait", "square"] },
+            "description": "Versions every `reelson render` adds besides the 16:9 one, as with --portrait / --square. A square version needs the square take (`reelson record --square`); without one it is skipped with a note."
+        },
+        "portrait": {
+            "enum": ["auto", "mobile", "desktop"],
+            "description": "Source of `reelson render --portrait`: mobile = the phone take (`reelson record --mobile`), desktop = a camera framing each element on the desktop recording, auto (default) = the phone take when there is one."
+        },
+        "cursor": {
+            "description": "The cursor layer (recordings with record.cursor \"layer\", the default since reelson 0.4): false hides it, or tune it. Has no effect when the cursor is filmed in.",
+            "anyOf": [
+                { "enum": [false] },
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "size": { "type": "number", "minimum": 16, "maximum": 120, "description": "Arrow size in recording CSS px. Default 44 (the classic macOS-style arrow)." },
+                        "ripple": { "type": "boolean", "description": "The brand-coloured ring on each press. Default true." },
+                        "idle": { "type": "number", "minimum": 0, "maximum": 30, "description": "Fade the cursor out after this many seconds without moving or clicking, back in as it moves again. Default 0 (always shown)." }
+                    }
+                }
+            ]
+        },
+        "zooms": {
+            "type": "array",
+            "description": "Zoom-ins on the framed recording. Prefer `clicks`: timing and focus are computed from the cursor so the zoom rides along with the glide.",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["scale"],
+                "properties": {
+                    "clicks": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": { "type": "integer", "minimum": 1 },
+                        "description": "[first, last] click numbers (1-based, markers.json `clicks`) the zoom frames. Timing and focus are computed."
+                    },
+                    "scale": { "type": "number", "minimum": 1.1, "maximum": 4, "description": "1.5–2.0 reads well." },
+                    "follow": { "type": "boolean", "description": "Pan with the cursor while zoomed, so the clicks need not fit one view (recordings with a logged cursor, record.cursor \"layer\"). Default false." },
+                    "x": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame width. Default: centred on the clicks." },
+                    "y": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame height." },
+                    "at": { "type": "number", "minimum": 0, "description": "Manual zoom: recording time the zoom-in starts (instead of `clicks`)." },
+                    "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Manual zoom: seconds from zoom-in start to zoomed-out." },
+                    "in": { "type": "number", "minimum": 0.4, "description": "Zoom-in ease seconds (default 0.8)." },
+                    "out": { "type": "number", "minimum": 0.4, "description": "Zoom-out ease seconds (default 0.8)." }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "markerPoint": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["marker"],
+            "properties": {
+                "marker": { "type": "string", "description": "markers.json label." },
+                "offset": { "type": "number", "description": "Seconds after the marker (negative: before)." }
+            }
+        },
+        "clickPoint": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["click"],
+            "properties": {
+                "click": { "type": "integer", "minimum": 1, "description": "1-based click in markers.json `clicks`: the time the cursor starts gliding towards it." },
+                "offset": { "type": "number", "description": "Seconds after that (negative: before)." }
+            }
+        }
+    }
+}

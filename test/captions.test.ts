@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { captionCues, toSrt, toVtt } from '../skills/reelkit-compose/scripts/captions.ts'
-import { computeTimeline } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { captionCues, toSrt, toVtt } from '../skills/reelson-compose/scripts/captions.ts'
+import { computeTimeline } from '../skills/reelson-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
 describe('captions', () => {

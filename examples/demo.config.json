@@ -1,13 +1,13 @@
 {
-    "$schema": "../skills/reelkit-record/schemas/demo.config.schema.json",
+    "$schema": "../skills/reelson-record/schemas/demo.config.schema.json",
     "$comment": "Config for the bundled examples. A real project keeps its own demo.config.json at its root (copy demo.config.example.json).",
     "videosDir": ".",
     "language": "en",
     "locale": "en-US",
     "brand": {
-        "name": "REELKIT",
+        "name": "REELSON",
         "tagline": "EXAMPLE",
-        "eyebrow": "Reelkit",
+        "eyebrow": "Reelson",
         "color": "#6366f1",
         "colorSoft": "#a5b4fc"
     },

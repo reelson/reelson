@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { computeTimeline, round, stepStart, suggestTrimStart, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { computeTimeline, round, stepStart, suggestTrimStart, TIMING_DEFAULTS, TimelineError, type VideoSpec } from '../skills/reelson-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
 const spec = (extra: Partial<VideoSpec> = {}): VideoSpec => ({ title: 'T', trim: { start: 1 }, ...extra })

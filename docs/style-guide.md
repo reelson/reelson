@@ -50,7 +50,7 @@ accounts), but should not loosen them without a reason.
     A zoom holds its own clicks (plus a click in view right after them, < 1 s), not everything
     still on screen; when the next glide is > 3 s away it lingers 1.2 s and leaves. No easing during a click. No extra pauses in the scenario to make room
     for zooms — shorten the ease (≥ 0.4 s) instead. A zoom anchored with `clicks` in video.json
-    is timed this way automatically; `reelkit check` enforces it for every zoom.
+    is timed this way automatically; `reelson check` enforces it for every zoom.
 
 ## What makes a video good
 
@@ -87,7 +87,7 @@ reader could follow without the video. If you can't write the callouts, the vide
 
 **Verify the artifact, not the log**
 
-1. `reelkit check <slug>` says "ready to render" (schemas, zoom timing, `hyperframes check`).
+1. `reelson check <slug>` says "ready to render" (schemas, zoom timing, `hyperframes check`).
 2. Extract and look at frames: t=0, settled intro, each callout, the zoom, the recap, the end.
 3. `ffprobe` duration matches the timeline the build printed.
 4. Watch it once at 1x. If a step is unreadable, pause longer in the scenario, not in the
@@ -97,10 +97,10 @@ reader could follow without the video. If you can't write the callouts, the vide
 
 | Want to change            | Do                                                                          |
 |---------------------------|-----------------------------------------------------------------------------|
-| Callout text, zoom, trims | Edit `video.json`, `reelkit render <slug>` (it rebuilds).                   |
-| Pacing, missing step      | Edit `scenario.ts`, `reelkit record`, add the new marker to video.json, render. |
-| UI changed                | `reelkit record` then `reelkit render`: callouts follow their markers, zooms their click numbers (re-check if the clicks changed). |
-| Look of intro/recap/outro | Pick another section (`reelkit templates`), or make one (`templates/README.md`) — never per-video edits. |
+| Callout text, zoom, trims | Edit `video.json`, `reelson render <slug>` (it rebuilds).                   |
+| Pacing, missing step      | Edit `scenario.ts`, `reelson record`, add the new marker to video.json, render. |
+| UI changed                | `reelson record` then `reelson render`: callouts follow their markers, zooms their click numbers (re-check if the clicks changed). |
+| Look of intro/recap/outro | Pick another section (`reelson templates`), or make one (`templates/README.md`) — never per-video edits. |
 
 ## Troubleshooting
 
@@ -111,7 +111,7 @@ reader could follow without the video. If you can't write the callouts, the vide
 - **Blurry UI text (worst in zooms)**: capture must be 2x (`ffprobe recording.mp4` →
   2880x1800), `hyperframes.json` `autoProxy: false`, no `will-change` on `#frame`.
 - **Callout clipped during a zoom**: it ended up inside `#frame`; callouts live in `#callouts`.
-- **`Cannot find module '@playwright/test'`** or **`reelkit: command not found`**: run the kit's
+- **`Cannot find module '@playwright/test'`** or **`reelson: command not found`**: run the kit's
   `install.sh` (or `npm run setup && npm link` in the kit).
 - **`… is invalid: … unknown key — did you mean …`**: a typo in demo.config.json or video.json;
   the message names the path. Editors autocomplete both through their `$schema`.

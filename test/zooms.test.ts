@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { computeTimeline } from '../skills/reelkit-compose/scripts/timeline.ts'
-import { checkZoom, compositionClicks, followPath, planZoom, zoomOverlaps, ZoomError, type CompClick, type Zoom } from '../skills/reelkit-compose/scripts/zooms.ts'
+import { computeTimeline } from '../skills/reelson-compose/scripts/timeline.ts'
+import { checkZoom, compositionClicks, followPath, planZoom, zoomOverlaps, ZoomError, type CompClick, type Zoom } from '../skills/reelson-compose/scripts/zooms.ts'
 import { fixture } from './helpers.ts'
 
 function setup(name: 'todo' | 'handoff' = 'todo', trimStart = 2.6) {

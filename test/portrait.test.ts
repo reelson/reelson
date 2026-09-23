@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { calloutsAtTop, landscapeLayout, PORTRAIT, phoneLayout, portraitLayout, SQUARE, squareLayout } from '../skills/reelkit-compose/scripts/portrait.ts'
-import { computeTimeline, type Markers } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { calloutsAtTop, landscapeLayout, PORTRAIT, phoneLayout, portraitLayout, SQUARE, squareLayout } from '../skills/reelson-compose/scripts/portrait.ts'
+import { computeTimeline, type Markers } from '../skills/reelson-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
 // The todo fixture (1440x900) plus what the demo worked on: a wide field, then a small button.

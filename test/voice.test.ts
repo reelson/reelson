@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { DEFAULTS, type LoadedConfig } from '../skills/reelkit-record/scripts/config.ts'
-import { computeTimeline, type VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { DEFAULTS, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
+import { computeTimeline, type VideoSpec } from '../skills/reelson-compose/scripts/timeline.ts'
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { commandArgs, missingSetup, piperVoiceURL } from '../skills/reelkit-compose/scripts/tts.ts'
-import { fetchLines, lineHash, spokenTexts, voiceLines, voiceSettings } from '../skills/reelkit-compose/scripts/voice.ts'
+import { commandArgs, missingSetup, piperVoiceURL } from '../skills/reelson-compose/scripts/tts.ts'
+import { fetchLines, lineHash, spokenTexts, voiceLines, voiceSettings } from '../skills/reelson-compose/scripts/voice.ts'
 import { fixture } from './helpers.ts'
 
 const config = { ...DEFAULTS, root: '/tmp', path: null } as unknown as LoadedConfig
@@ -117,7 +117,7 @@ describe('voice-over providers', () => {
 
     const noFfmpeg = spawnSync('ffmpeg', ['-version']).status !== 0 && 'needs ffmpeg'
     it('speaks with a local command and trims the silence around the line', { skip: noFfmpeg }, async () => {
-        const dir = mkdtempSync(join(tmpdir(), 'reelkit-voice-test-'))
+        const dir = mkdtempSync(join(tmpdir(), 'reelson-voice-test-'))
         try {
             // Half a second of silence, one second of tone, half a second of silence: the cached line keeps the tone.
             const tone = 'sine=frequency=440:duration=1,adelay=500:all=1,apad=pad_dur=0.5'

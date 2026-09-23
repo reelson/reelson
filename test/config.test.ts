@@ -3,17 +3,17 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, it } from 'node:test'
-import { CONFIG_SCHEMA_PATH, ConfigError, countLabel, DEFAULTS, loadConfig } from '../skills/reelkit-record/scripts/config.ts'
-import { LANGUAGE_STRINGS } from '../skills/reelkit-record/scripts/languages.ts'
-import { loadSchema, validate } from '../skills/reelkit-record/scripts/validate.ts'
-import { VIDEO_SCHEMA_PATH } from '../skills/reelkit-compose/scripts/project.ts'
+import { CONFIG_SCHEMA_PATH, ConfigError, countLabel, DEFAULTS, loadConfig } from '../skills/reelson-record/scripts/config.ts'
+import { LANGUAGE_STRINGS } from '../skills/reelson-record/scripts/languages.ts'
+import { loadSchema, validate } from '../skills/reelson-record/scripts/validate.ts'
+import { VIDEO_SCHEMA_PATH } from '../skills/reelson-compose/scripts/project.ts'
 import { KIT } from './helpers.ts'
 
 const configSchema = loadSchema(CONFIG_SCHEMA_PATH)
 const videoSchema = loadSchema(VIDEO_SCHEMA_PATH)
 
 function projectWith(config: unknown): string {
-    const dir = mkdtempSync(join(tmpdir(), 'reelkit-'))
+    const dir = mkdtempSync(join(tmpdir(), 'reelson-'))
     writeFileSync(join(dir, 'demo.config.json'), JSON.stringify(config))
     return dir
 }
@@ -61,7 +61,7 @@ describe('schemas', () => {
 
 describe('loadConfig', () => {
     it('falls back to defaults without a config file', () => {
-        const config = loadConfig(mkdtempSync(join(tmpdir(), 'reelkit-')))
+        const config = loadConfig(mkdtempSync(join(tmpdir(), 'reelson-')))
         // (it walks up from the temp dir; nothing there)
         assert.equal(config.template, DEFAULTS.template)
     })

@@ -1,20 +1,20 @@
-# reelkit
+# reelson
 
 Turn a prompt into a finished, branded demo video of a web app. Two
-[Claude Code](https://claude.com/claude-code) skills plus a `reelkit` CLI:
+[Claude Code](https://claude.com/claude-code) skills plus a `reelson` CLI:
 
 | Skill                                    | Does                                                                        | Output                                   |
 |------------------------------------------|-----------------------------------------------------------------------------|------------------------------------------|
-| [`reelkit-record`](skills/reelkit-record/)     | Playwright walkthrough with a visible human-paced cursor, dev chrome hidden, step markers and logged clicks | `<slug>/recording.mp4` + `markers.json` |
-| [`reelkit-compose`](skills/reelkit-compose/)       | [HyperFrames](https://hyperframes.heygen.com) composition from a template + mix-and-match intro/recap/outro sections: poster intro, framed recording, callouts, cursor-timed zooms, recap, brand outro, music | `<slug>/video/renders/<slug>.mp4` |
+| [`reelson-record`](skills/reelson-record/)     | Playwright walkthrough with a visible human-paced cursor, dev chrome hidden, step markers and logged clicks | `<slug>/recording.mp4` + `markers.json` |
+| [`reelson-compose`](skills/reelson-compose/)       | [HyperFrames](https://hyperframes.heygen.com) composition from a template + mix-and-match intro/recap/outro sections: poster intro, framed recording, callouts, cursor-timed zooms, recap, brand outro, music | `<slug>/video/renders/<slug>.mp4` |
 
 The same prompt re-creates the video after a UI change: a scenario re-records in ~20 s,
 headless, with identical pacing, and callouts/zooms follow their markers and clicks.
 
 ```
-scenario.ts ──reelkit record──▶ recording.mp4 + markers.json
+scenario.ts ──reelson record──▶ recording.mp4 + markers.json
                                           │
-video.json (title, trim, callouts, zooms) ┴──reelkit build──▶ video/ ──reelkit render──▶ .mp4 / .gif
+video.json (title, trim, callouts, zooms) ┴──reelson build──▶ video/ ──reelson render──▶ .mp4 / .gif
           demo.config.json (brand, logo, language, music) + template + sections ┘
 ```
 
@@ -23,23 +23,27 @@ video.json (title, trim, callouts, zooms) ┴──reelkit build──▶ video/
 - Node 22.18+ (TypeScript runs directly, no build step) and `ffmpeg` (`brew install ffmpeg`)
 - The app you record, running locally
 - HyperFrames is fetched by `npx` on first use (version pinned in
-  [hyperframes.ts](skills/reelkit-compose/scripts/hyperframes.ts))
+  [hyperframes.ts](skills/reelson-compose/scripts/hyperframes.ts))
 
 ## Install
 
 ```bash
-git clone git@github.com:reelkit/reelkit.git ~/workspace/my-projects/reelkit
-~/workspace/my-projects/reelkit/install.sh ~/code/my-app     # or --global for ~/.claude/skills
+git clone git@github.com:reelson/reelson.git ~/workspace/my-projects/reelson
+~/workspace/my-projects/reelson/install.sh ~/code/my-app     # or --global for ~/.claude/skills
 ```
 
-`install.sh` installs Playwright + Chromium, links the `reelkit` command (`npm link`), links
+`install.sh` installs Playwright + Chromium, links the `reelson` command (`npm link`), links
 both skills into `my-app/.claude/skills/`, creates `my-app/demo.config.json` and prints the
 `.gitignore` lines. The links point at this checkout, so `git pull` here updates every project.
+
+reelson was called reelkit before 0.7. Re-run `install.sh` for each project: it drops the old
+`reelkit` command and `reelkit-*` skill links. Then point scenario imports and `$schema` paths
+at `.claude/skills/reelson-*`.
 
 ## Configure per project — `demo.config.json`
 
 Everything project-specific lives in one file at the project root. It is validated against
-[a JSON Schema](skills/reelkit-record/schemas/demo.config.schema.json) (editors autocomplete it; a
+[a JSON Schema](skills/reelson-record/schemas/demo.config.schema.json) (editors autocomplete it; a
 typo is an error with a "did you mean" hint).
 
 ```jsonc
@@ -80,18 +84,18 @@ More prompts in [docs/prompting.md](docs/prompting.md); the rules every video fo
 [docs/style-guide.md](docs/style-guide.md). By hand:
 
 ```bash
-reelkit doctor                                          # tools + cursor/footage sync on this machine
-reelkit new customers-search --url https://app.test    # scenario stub
-reelkit record customers-search [--headed]            # --mobile / --square: the takes for --portrait / --square; --all-takes: all three
-reelkit build customers-search --title "Find a customer"   # creates video.json on first run
+reelson doctor                                          # tools + cursor/footage sync on this machine
+reelson new customers-search --url https://app.test    # scenario stub
+reelson record customers-search [--headed]            # --mobile / --square: the takes for --portrait / --square; --all-takes: all three
+reelson build customers-search --title "Find a customer"   # creates video.json on first run
 #   edit video.json: callout wording, { "clicks": [2, 3], "scale": 1.8 } zooms, trim ("auto" or a marker)
-reelkit voice customers-search                          # "voice": true in video.json: speak the callouts (voice.provider: openai, elevenlabs, piper, command)
-reelkit check customers-search                          # schemas, zoom timing, hyperframes lint
-reelkit verify --all                                    # after an app change: every demo still records and fits
-reelkit studio customers-search                         # preview + edit on a layer timeline (saves video.json)
-reelkit templates                                       # templates and intro/recap/outro sections
-reelkit render customers-search [--gif] [--square] [--portrait] [--all-formats] [--draft]   # + .srt/.vtt captions
-reelkit render --all                                    # every demo; skips the unchanged ones
+reelson voice customers-search                          # "voice": true in video.json: speak the callouts (voice.provider: openai, elevenlabs, piper, command)
+reelson check customers-search                          # schemas, zoom timing, hyperframes lint
+reelson verify --all                                    # after an app change: every demo still records and fits
+reelson studio customers-search                         # preview + edit on a layer timeline (saves video.json)
+reelson templates                                       # templates and intro/recap/outro sections
+reelson render customers-search [--gif] [--square] [--portrait] [--all-formats] [--draft]   # + .srt/.vtt captions
+reelson render --all                                    # every demo; skips the unchanged ones
 ```
 
 Per video, commit `scenario.ts`, `markers.json` and `video.json`; everything else is generated.
@@ -115,7 +119,7 @@ A video is a **template** (the stage: background, framed recording, callouts) pl
 Every intro keeps frame 0 as the poster and every outro ends on the brand, so any mix keeps
 the house style. `brand.logo` (an SVG, or a PNG ≥ 340 px tall) replaces the text wordmark in all
 of them. `classic` is the only template today. The contract for new templates and sections is in
-[templates/README.md](skills/reelkit-compose/templates/README.md); a project can keep its own under
+[templates/README.md](skills/reelson-compose/templates/README.md); a project can keep its own under
 `<videosDir>/_templates/<name>/` and `<videosDir>/_sections/<slot>/<name>/`. Templates ship
 their scripts and fonts (no CDN).
 
@@ -135,10 +139,10 @@ records the TodoMVC example, builds, checks and renders it, and uploads the MP4 
 ## Layout
 
 ```
-bin/reelkit.ts          the CLI
+bin/reelson.ts          the CLI
 skills/
-  reelkit-record/  SKILL.md, scripts/ (record, scenario, cursor-overlay, config, validate), schemas/
-  reelkit-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
+  reelson-record/  SKILL.md, scripts/ (record, scenario, cursor-overlay, config, validate), schemas/
+  reelson-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
                 schemas/, templates/<name>/ (stages), sections/<slot>/<name>/
 docs/           style-guide.md, prompting.md
 examples/       demo.config.json + todo-add-item/ (scenario, markers, video.json)

@@ -1,11 +1,11 @@
 {
-    "name": "reelkit",
-    "version": "0.6.0",
+    "name": "reelson",
+    "version": "0.7.0",
     "private": true,
     "type": "module",
     "description": "Claude Code skills + CLI that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
     "bin": {
-        "reelkit": "bin/reelkit.ts"
+        "reelson": "bin/reelson.ts"
     },
     "engines": {
         "node": ">=22.18"
@@ -16,11 +16,11 @@
         "test:update-golden": "UPDATE_GOLDEN=1 node --test \"test/**/*.test.ts\"",
         "typecheck": "tsc --noEmit",
         "ci": "npm run typecheck && npm test",
-        "example:verify": "cd examples && node ../bin/reelkit.ts verify todo-add-item",
-        "example:record": "cd examples && node ../bin/reelkit.ts record todo-add-item --all-takes",
-        "example:build": "cd examples && node ../bin/reelkit.ts build todo-add-item",
-        "example:check": "cd examples && node ../bin/reelkit.ts check todo-add-item",
-        "example:render": "cd examples && node ../bin/reelkit.ts render todo-add-item --all-formats"
+        "example:verify": "cd examples && node ../bin/reelson.ts verify todo-add-item",
+        "example:record": "cd examples && node ../bin/reelson.ts record todo-add-item --all-takes",
+        "example:build": "cd examples && node ../bin/reelson.ts build todo-add-item",
+        "example:check": "cd examples && node ../bin/reelson.ts check todo-add-item",
+        "example:render": "cd examples && node ../bin/reelson.ts render todo-add-item --all-formats"
     },
     "dependencies": {
         "@playwright/test": "^1.55.0"

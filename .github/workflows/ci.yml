@@ -91,7 +91,7 @@ jobs:
                   name: example-built
                   path: examples/todo-add-item/
             - name: Render the ${{ matrix.format }} version
-              run: cd examples && node ../bin/reelkit.ts render todo-add-item --only ${{ matrix.format }} --no-build
+              run: cd examples && node ../bin/reelson.ts render todo-add-item --only ${{ matrix.format }} --no-build
             - name: Verify the render
               run: |
                   out=examples/todo-add-item/video/renders/todo-add-item${{ matrix.suffix }}.mp4

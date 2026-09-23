@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Markers } from '../skills/reelkit-compose/scripts/timeline.ts'
-import { DEFAULTS, type LoadedConfig } from '../skills/reelkit-record/scripts/config.ts'
+import type { Markers } from '../skills/reelson-compose/scripts/timeline.ts'
+import { DEFAULTS, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
 
 export const TEST_DIR = dirname(fileURLToPath(import.meta.url))
 export const KIT = resolve(TEST_DIR, '..')

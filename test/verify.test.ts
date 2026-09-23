@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import type { Markers, VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
-import { compareRecordings } from '../skills/reelkit-compose/scripts/verify.ts'
+import type { Markers, VideoSpec } from '../skills/reelson-compose/scripts/timeline.ts'
+import { compareRecordings } from '../skills/reelson-compose/scripts/verify.ts'
 import { fixture } from './helpers.ts'
 
 describe('compareRecordings', () => {

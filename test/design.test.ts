@@ -3,13 +3,13 @@ import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { BUILTIN_SECTIONS, catalog, resolveDesign } from '../skills/reelkit-compose/scripts/project.ts'
-import { DEFAULTS, type LoadedConfig } from '../skills/reelkit-record/scripts/config.ts'
+import { BUILTIN_SECTIONS, catalog, resolveDesign } from '../skills/reelson-compose/scripts/project.ts'
+import { DEFAULTS, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
 import { kitConfig } from './helpers.ts'
 
 /** A project with its own videos dir, for project-local templates and sections. */
 function project(): LoadedConfig {
-    const root = mkdtempSync(join(tmpdir(), 'reelkit-design-'))
+    const root = mkdtempSync(join(tmpdir(), 'reelson-design-'))
     mkdirSync(join(root, 'videos'))
     return { ...DEFAULTS, root, path: join(root, 'demo.config.json'), videosDir: 'videos' }
 }

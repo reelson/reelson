@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reelson studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%235aa9ff%22/%3E%3Cpath d=%22M6 4.5v7l5.5-3.5z%22 fill=%22%230e1116%22/%3E%3C/svg%3E">
+<script src="/hf/player.js"></script>
+<link rel="stylesheet" href="/studio/studio.css">
+</head>
+<body>
+<header>
+  <h1 id="title">reelson studio</h1>
+  <span class="slug" id="slug"></span>
+  <div class="chips" id="design"></div>
+  <span class="status" id="status">starting…</span>
+</header>
+<main>
+  <div class="stage">
+    <pre class="banner" id="banner"></pre>
+    <div class="viewer" id="viewer"><hyperframes-player id="player"></hyperframes-player></div>
+    <div class="transport">
+      <button id="start" title="Start (Home)">⏮</button>
+      <button id="back" title="Back one frame (←)">◀︎</button>
+      <button id="play" title="Play / pause (Space)">▶︎</button>
+      <button id="fwd" title="Forward one frame (→)">▶︎|</button>
+      <button id="end" title="Last frame (End)">⏭</button>
+      <span class="time" id="time">0.00 / 0.00<span class="frame"></span></span>
+      <span class="spacer"></span>
+      <button id="mute" title="Mute (M)">🔊</button>
+    </div>
+  </div>
+  <aside>
+    <section class="inspector">
+      <h2>Selected</h2>
+      <div id="inspector"><p class="empty">Click an item on the timeline.</p></div>
+    </section>
+    <section>
+      <h2>Warnings</h2>
+      <ul class="warnings" id="warnings"></ul>
+    </section>
+    <section>
+      <h2>Keys</h2>
+      <div class="keys">
+        <kbd>Space</kbd><span>play / pause</span>
+        <kbd>← →</kbd><span>one frame (Shift: one second)</span>
+        <kbd>[ ]</kbd><span>previous / next item edge</span>
+        <kbd>Home End</kbd><span>first / last frame</span>
+        <kbd>+ − 0</kbd><span>zoom timeline / fit</span>
+        <kbd>M</kbd><span>mute</span>
+        <kbd>C</kbd><span>callout at the playhead</span>
+        <kbd>Delete</kbd><span>delete the selected callout / zoom</span>
+        <kbd>⌘Z ⇧⌘Z</kbd><span>undo / redo</span>
+      </div>
+    </section>
+  </aside>
+</main>
+<section class="timeline">
+  <div class="tl-bar">
+    <button id="add-callout" title="Add a callout at the playhead (C)">+ Callout</button>
+    <button id="undo" title="Undo (⌘Z)" disabled>↶ Undo</button>
+    <button id="redo" title="Redo (⇧⌘Z)" disabled>↷ Redo</button>
+    <span class="toast" id="toast"></span>
+    <span class="hint">Drag callouts to move them, their right edge to resize · drag the recording’s edges to trim · edits save to video.json</span>
+    <span class="spacer"></span>
+    <button id="zoom-out" title="Zoom out (−)">−</button>
+    <button id="zoom-fit" title="Fit (0)">Fit</button>
+    <button id="zoom-in" title="Zoom in (+)">+</button>
+  </div>
+  <div class="tl-body" id="tl-body">
+    <div class="tl-inner" id="tl-inner">
+      <div class="labels" id="labels"></div>
+      <div class="tracks" id="tracks"></div>
+    </div>
+  </div>
+</section>
+<div class="tooltip" id="tooltip"></div>
+
+<script src="/studio/studio.js"></script>
+</body>
+</html>

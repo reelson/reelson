@@ -3,11 +3,11 @@ import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { RENDER_FLAGS, renderKey } from '../skills/reelkit-compose/scripts/hyperframes.ts'
+import { RENDER_FLAGS, renderKey } from '../skills/reelson-compose/scripts/hyperframes.ts'
 
 describe('renderKey', () => {
     it('changes with the page, any asset or the flags — and only then', () => {
-        const dir = mkdtempSync(join(tmpdir(), 'reelkit-render-'))
+        const dir = mkdtempSync(join(tmpdir(), 'reelson-render-'))
         mkdirSync(join(dir, 'assets/vendor'), { recursive: true })
         writeFileSync(join(dir, 'index.html'), '<html>1</html>')
         writeFileSync(join(dir, 'assets/recording.mp4'), 'footage')

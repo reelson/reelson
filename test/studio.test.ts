@@ -3,14 +3,14 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { plan } from '../skills/reelkit-compose/scripts/build.ts'
-import { applyEdit, specRevision, studioData } from '../skills/reelkit-compose/scripts/studio.ts'
-import type { VideoSpec } from '../skills/reelkit-compose/scripts/timeline.ts'
+import { plan } from '../skills/reelson-compose/scripts/build.ts'
+import { applyEdit, specRevision, studioData } from '../skills/reelson-compose/scripts/studio.ts'
+import type { VideoSpec } from '../skills/reelson-compose/scripts/timeline.ts'
 import { fixture, kitConfig } from './helpers.ts'
 
 /** A demo folder holding a fixture's markers.json and the given video.json. */
 function demo(name: 'todo' | 'handoff', spec: VideoSpec): string {
-    const dir = mkdtempSync(join(tmpdir(), 'reelkit-studio-'))
+    const dir = mkdtempSync(join(tmpdir(), 'reelson-studio-'))
     writeFileSync(join(dir, 'markers.json'), JSON.stringify(fixture(name)))
     writeFileSync(join(dir, 'video.json'), JSON.stringify(spec))
     return dir

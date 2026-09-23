@@ -1,0 +1,269 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "reelson project config (demo.config.json)",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "videosDir": {
+            "type": "string",
+            "description": "Where <slug>/ folders live, relative to the project root. Default docs/videos."
+        },
+        "language": {
+            "type": "string",
+            "description": "BCP 47 language of the product UI (en, ro, de-DE…). Drives <html lang>, plural rules and persona names."
+        },
+        "locale": {
+            "type": "string",
+            "description": "Browser locale while recording (Accept-Language, Intl formatting). Default en-US."
+        },
+        "brand": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Wordmark on the cover and the closing card."
+                },
+                "tagline": {
+                    "type": "string",
+                    "description": "Small spaced line under the wordmark. Empty hides it."
+                },
+                "eyebrow": {
+                    "type": "string",
+                    "description": "Label above the recap title."
+                },
+                "color": {
+                    "type": "string",
+                    "description": "Primary accent: numbers, lines, click ring. Any CSS colour."
+                },
+                "colorSoft": {
+                    "type": "string",
+                    "description": "Lighter accent for gradients."
+                },
+                "logo": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Logo image (.svg, .png or .webp; relative to the project root) drawn instead of the text wordmark. SVG stays sharpest; a PNG should be ≥ 340 px tall. null = text wordmark."
+                }
+            }
+        },
+        "template": {
+            "type": "string",
+            "description": "Template (the stage: background, frame, callouts) folder name: skills/reelson-compose/templates/<name> or <videosDir>/_templates/<name>. Default classic."
+        },
+        "sections": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Section per slot, over the template's defaults (classic: poster / steps / wordmark). Run `reelson templates` for the list.",
+            "properties": {
+                "intro": {
+                    "type": "string",
+                    "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split."
+                },
+                "recap": {
+                    "type": "string",
+                    "description": "Steps card after the recording, or \"none\". Kit: steps, compact, none."
+                },
+                "outro": {
+                    "type": "string",
+                    "description": "Closing brand card. Kit: wordmark, compact, endcard."
+                }
+            }
+        },
+        "strings": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "recapTitle": {
+                    "type": "string",
+                    "description": "Title of the recap card."
+                },
+                "stepsLabel": {
+                    "$ref": "#/definitions/label",
+                    "description": "Cover chip noun after the step count: a string, or plural forms (see definitions.plural)."
+                },
+                "secondsLabel": {
+                    "$ref": "#/definitions/label",
+                    "description": "Cover chip noun after the length in seconds; same forms as stepsLabel."
+                }
+            }
+        },
+        "voice": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Voice-over, for videos with \"voice\": true in video.json: each callout (its `say`, else its text) spoken by a text-to-speech provider. Lines are trimmed and cached in <demo>/voice/, so each is made once.",
+            "properties": {
+                "provider": { "enum": ["openai", "elevenlabs", "piper", "command"], "description": "openai (default; OPENAI_API_KEY — or a local OpenAI-compatible server via baseURL), elevenlabs (ELEVENLABS_API_KEY), piper (a local neural voice: pipx install piper-tts; the voice downloads on first use), command (any local program). Keys can live in a .env next to demo.config.json." },
+                "model": { "type": "string", "description": "The provider's model. Defaults: openai gpt-4o-mini-tts, elevenlabs eleven_multilingual_v2 (eleven_flash_v2_5 is faster and cheaper, eleven_v3 the most expressive)." },
+                "voice": { "type": "string", "description": "The provider's voice. openai: alloy (default), ash, ballad, cedar, coral, echo, fable, marin, nova, onyx, sage, shimmer, verse. elevenlabs: a voice id or the name of a voice in your account (default George). piper: a voice name like ro_RO-mihai-medium (default: one for `language`)." },
+                "instructions": { "type": "string", "description": "How to speak: tone, pace, accent (gpt-4o-mini-tts; other providers ignore it)." },
+                "speed": { "type": "number", "minimum": 0.5, "maximum": 2, "description": "Speaking rate, 1 = normal. openai: tts-1 / tts-1-hd (for gpt-4o-mini-tts describe the pace in instructions); elevenlabs: 0.7–1.2; piper; command: {speed}." },
+                "baseURL": { "type": "string", "description": "openai: the API root of a local OpenAI-compatible server, e.g. http://localhost:8880/v1 (Kokoro-FastAPI). No key needed unless the server wants one." },
+                "command": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "command: the program and its arguments; {text} {out} {voice} {model} {speed} {language} are filled in and the text also comes on stdin. It must write the line to {out} (any audio ffmpeg reads)." },
+                "options": { "type": "object", "description": "Passed through: extra request fields (openai; elevenlabs, e.g. {\"voice_settings\": {\"stability\": 0.4}}) or --flags (piper, e.g. {\"sentence-silence\": 0.1})." },
+                "lufs": { "type": "number", "maximum": 0, "description": "Loudness of the voice track. Default -16." }
+            }
+        },
+        "music": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "file": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Music bed under every video, relative to the project root. null = no music."
+                },
+                "lufs": {
+                    "type": "number",
+                    "maximum": 0,
+                    "description": "Bed loudness under silent footage. Default -28."
+                },
+                "lufsUnderNarration": {
+                    "type": "number",
+                    "maximum": 0,
+                    "description": "Bed loudness under narration. Default -34."
+                }
+            }
+        },
+        "record": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "viewport": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "width",
+                        "height"
+                    ],
+                    "properties": {
+                        "width": {
+                            "type": "integer",
+                            "minimum": 320
+                        },
+                        "height": {
+                            "type": "integer",
+                            "minimum": 240
+                        }
+                    }
+                },
+                "deviceScaleFactor": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                },
+                "extraHTTPHeaders": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "description": "Sent with every request while recording. Default { \"X-Demo-Recording\": \"1\" }."
+                },
+                "cursor": {
+                    "enum": [
+                        "layer",
+                        "recorded"
+                    ],
+                    "description": "layer (default): the cursor is logged, not filmed, and the video draws it — same size under zooms, restyled without re-recording. recorded: drawn into the page and filmed (the pre-0.4 behaviour)."
+                },
+                "mobile": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "device": {
+                            "type": "string",
+                            "description": "Playwright device for `reelson record --mobile` (the phone take behind the portrait video), e.g. \"Pixel 7\" (default), \"iPhone 14\", \"Galaxy S9+\"."
+                        }
+                    }
+                },
+                "square": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "viewport": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "width",
+                                "height"
+                            ],
+                            "properties": {
+                                "width": {
+                                    "type": "integer",
+                                    "minimum": 320
+                                },
+                                "height": {
+                                    "type": "integer",
+                                    "minimum": 320
+                                }
+                            },
+                            "description": "Browser size (CSS px) for `reelson record --square` (the take behind the square video). Default 1080x1080: shown at 1:1 on the 1080x1080 stage. Keep it square; go smaller (e.g. 900x900) for bigger text if the app still shows its desktop layout at that width."
+                        }
+                    }
+                },
+                "capture": {
+                    "enum": [
+                        "screencast",
+                        "playwright"
+                    ],
+                    "description": "screencast (default): every frame Chrome paints, up to 60 fps, assembled into a smooth 30 fps recording. playwright: Playwright's own 25 fps video (stutters one frame in six at 30 fps)."
+                },
+                "hideSelectors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "CSS selectors hidden on every recorded page (dev toolbars, env badges)."
+                },
+                "personaDomain": {
+                    "type": "string",
+                    "description": "Email domain for demo.persona()."
+                }
+            }
+        }
+    },
+    "definitions": {
+        "label": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "$ref": "#/definitions/plural"
+                }
+            ]
+        },
+        "plural": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "other"
+            ],
+            "properties": {
+                "zero": {
+                    "type": "string"
+                },
+                "one": {
+                    "type": "string"
+                },
+                "two": {
+                    "type": "string"
+                },
+                "few": {
+                    "type": "string"
+                },
+                "many": {
+                    "type": "string"
+                },
+                "other": {
+                    "type": "string"
+                }
+            },
+            "description": "Plural forms keyed by Intl.PluralRules category, e.g. { \"one\": \"step\", \"other\": \"steps\" }."
+        }
+    }
+}
