@@ -25,6 +25,9 @@ export const STAGE_TIMING = {
     maxW: 1600, // the framed recording's box inside the 1920x1080 stage
     maxH: 940,
 }
+/** A spoken callout stays up this long after its line ends (a breath before the next step). */
+const SPOKEN_TAIL = 0.3
+
 export const SECTION_TIMING = {
     intro: {
         duration: 4.0, // intro clip length
@@ -240,6 +243,11 @@ export function computeTimeline(
     markers: Markers,
     spec: VideoSpec,
     timing: Timing = TIMING_DEFAULTS,
+    /**
+     * Voice-over: seconds from a callout appearing until its spoken line is done (0: silent or
+     * not spoken yet). Such a callout stays up at least that long, and the next one waits.
+     */
+    spoken: (c: { text: string; say?: string | false }) => number = () => 0,
 ): { timeline: Timeline; warnings: string[] } {
     const warnings: string[] = []
     const mediaStart = Math.max(0, resolveTrimPoint(spec.trim?.start, markers, 'start') ?? 0)
@@ -310,12 +318,16 @@ export function computeTimeline(
     // When each shows. A step that starts as the footage does waits for the recording to
     // arrive; one that starts right after the previous (a step that was only a page load) waits
     // until that one has been up long enough to read. An explicit `at` is kept as given.
+    // With a voice-over, that is until its line has been said (and never past the recording).
+    const speaking = timed.map((c) => spoken(c))
+    const minimum = (i: number): number => Math.max(stage.calloutMinimum, speaking[i] ? speaking[i] + SPOKEN_TAIL : 0)
     const starts: number[] = []
     timed.forEach((c, i) => {
         const at = toComposition(c.recordingAt)
+        const after = i ? starts[i - 1] + minimum(i - 1) : 0
         starts.push(
             c.at === undefined
-                ? round(Math.max(at, clipStart + stage.belt, i ? starts[i - 1] + stage.calloutMinimum : 0))
+                ? round(Math.max(at, clipStart + stage.belt, Math.min(after, Math.max(at, clipEnd - stage.calloutMinimum))))
                 : at,
         )
     })
@@ -330,10 +342,16 @@ export function computeTimeline(
             clipEnd - 0.3,
         )
         // Through its step, and a moment on its result (the marker), at least calloutDuration.
-        const wanted = Math.max(stage.calloutDuration, toComposition(c.shownUntil) - at + stage.calloutHold)
+        const wanted = Math.max(stage.calloutDuration, toComposition(c.shownUntil) - at + stage.calloutHold, speaking[i])
         const duration = round(c.duration ?? Math.max(1, Math.min(wanted, cap - at)))
         if (c.duration !== undefined && at + c.duration > cap + 0.01) {
             warnings.push(`callout "${c.text}" (${c.duration}s) overlaps the next step or the end of the recording`)
+        }
+        if (speaking[i] > duration + 0.25) {
+            warnings.push(
+                `voice-over: "${c.say || c.text}" is still being said ${round(speaking[i] - duration)}s after its callout goes — ` +
+                    'shorten its `say`, or pause longer in the scenario',
+            )
         }
         // Two-actor videos: tag each step with who does it (the hand-off card's roles).
         const before = handOffs.filter((t) => t.at <= c.recordingAt)

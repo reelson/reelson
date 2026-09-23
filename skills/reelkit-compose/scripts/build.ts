@@ -21,7 +21,7 @@ import { basename, extname, resolve } from 'node:path'
 import { countLabel, fromRoot, type LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { renderComposition, type CompositionInput } from './composition.ts'
 import { phoneLayout, portraitLayout, squareLayout } from './portrait.ts'
-import { renderVoiceTrack, voiceLines, voiceSettings } from './voice.ts'
+import { renderVoiceTrack, spokenLength, voiceLines, voiceSettings } from './voice.ts'
 import { HYPERFRAMES_VERSION, RENDER_FLAGS } from './hyperframes.ts'
 import {
     readMarkers,
@@ -91,7 +91,9 @@ export function planSpec(demoDir: string, spec: VideoSpec, markers: Markers, con
     const design = resolveDesign(spec.template ?? config.template, [config.sections, spec.sections], config)
     let computed
     try {
-        computed = computeTimeline(markers, spec, design.timing)
+        // With a voice-over, the callouts wait for their (cached) lines to be said.
+        const voice = voiceSettings(spec, config)
+        computed = computeTimeline(markers, spec, design.timing, voice ? spokenLength(voice, resolve(demoDir, 'voice')) : undefined)
     } catch (error) {
         throw new ReelkitError(`${resolve(demoDir, 'video.json')}: ${(error as Error).message}`)
     }

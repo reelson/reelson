@@ -30,6 +30,22 @@ describe('computeTimeline', () => {
         })
     })
 
+    it('keeps a spoken callout up until its line is said, and the next one waits', () => {
+        const plain = computeTimeline(fixture('todo'), spec({ trim: { start: 2.6 } })).timeline.callouts
+        const first = (c: { text: string }) => (c.text.startsWith('Type') ? 4 : 0)
+        const { timeline: t, warnings } = computeTimeline(fixture('todo'), spec({ trim: { start: 2.6 } }), TIMING_DEFAULTS, first)
+        assert.equal(t.callouts[0].at, plain[0].at)
+        assert.ok(t.callouts[0].duration >= 4, 'up while it is said')
+        assert.ok(t.callouts[1].at >= t.callouts[0].at + 4.3 - 1e-9, 'the next step waits for the line')
+        assert.deepEqual(t.callouts.slice(2), plain.slice(2), 'later steps keep their time when there is room')
+        assert.deepEqual(warnings, [])
+    })
+
+    it('warns when a spoken line cannot fit before the next step', () => {
+        const { warnings } = computeTimeline(fixture('todo'), spec({ trim: { start: 2.6 } }), TIMING_DEFAULTS, () => 9)
+        assert.ok(warnings.some((w) => /voice-over: "Filter what is left" is still being said/.test(w)))
+    })
+
     it('sizes the recap and the total from the step count', () => {
         const { timeline: t } = computeTimeline(fixture('todo'), spec({ trim: { start: 2.6 } }))
         assert.deepEqual(t.recap, { start: 20.13, duration: 4.2, maxSteps: 10 }) // 2.4 + 0.45 × 4

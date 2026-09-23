@@ -33,6 +33,8 @@ export interface VoiceLine {
     file: string
     /** When the next line (or the end of the recording) comes — the line should be done by then. */
     until: number
+    /** The line over the intro (the steps' lines are checked by the timeline). */
+    intro?: true
 }
 
 /** A line starts this long after its callout appears (the pill is read, then heard). */
@@ -55,9 +57,9 @@ export function voiceSettings(spec: VideoSpec, config: LoadedConfig): VoiceSetti
 /** Everything spoken in this video, in order, timed to `t`. Pure. */
 export function voiceLines(t: Timeline, spec: VideoSpec, settings: VoiceSettings): VoiceLine[] {
     const intro = typeof spec.voice === 'object' ? spec.voice.intro : undefined
-    const spoken: { at: number; text: string }[] = [
-        ...(intro ? [{ at: round(t.intro.start + 0.4), text: intro }] : []),
-        ...t.callouts.filter((c) => c.say !== false).map((c) => ({ at: round(c.at + LEAD_IN), text: (c.say || c.text).trim() })),
+    const spoken: { at: number; text: string; intro?: true }[] = [
+        ...(intro ? [{ at: round(t.intro.start + 0.4), text: intro, intro: true as const }] : []),
+        ...t.callouts.map((c) => ({ at: round(c.at + LEAD_IN), text: lineOf(c) })),
     ].filter((l) => l.text)
     return spoken.map((line, i) => ({
         ...line,
@@ -71,10 +73,34 @@ export function lineHash(text: string, s: VoiceSettings): string {
     return createHash('sha1').update(JSON.stringify([s.model, s.voice, s.instructions, text])).digest('hex').slice(0, 16)
 }
 
+/** What a callout says (its `say`, else its text); '' when it is silent. */
+function lineOf(c: { text: string; say?: string | false }): string {
+    return c.say === false ? '' : (c.say || c.text).trim()
+}
+
+/**
+ * For the timeline: seconds from a callout appearing until its cached line is done (the lead-in
+ * plus the line); 0 when it is silent or not spoken yet.
+ */
+export function spokenLength(settings: VoiceSettings, cacheDir: string): (c: { text: string; say?: string | false }) => number {
+    const lengths = new Map<string, number>()
+    return (c) => {
+        const text = lineOf(c)
+        const file = resolve(cacheDir, `${lineHash(text, settings)}.mp3`)
+        if (!text || !existsSync(file)) {
+            return 0
+        }
+        if (!lengths.has(file)) {
+            lengths.set(file, lengthOf(file))
+        }
+        return round(LEAD_IN + (lengths.get(file) as number))
+    }
+}
+
 /** Every line the video would speak, without a timeline (for fetching). */
 export function spokenTexts(spec: VideoSpec, callouts: { text: string; say?: string | false }[]): string[] {
     const intro = typeof spec.voice === 'object' ? spec.voice.intro : undefined
-    return [intro, ...callouts.filter((c) => c.say !== false).map((c) => (c.say || c.text).trim())].filter((t): t is string => !!t)
+    return [intro, ...callouts.map(lineOf)].filter((t): t is string => !!t)
 }
 
 /**
@@ -88,7 +114,7 @@ export async function fetchLines(texts: string[], settings: VoiceSettings, cache
     }
     const key = process.env.OPENAI_API_KEY
     if (!key) {
-        throw new ReelkitError(`voice-over: ${missing.length} line(s) to speak and no OPENAI_API_KEY — set it (export OPENAI_API_KEY=…) or turn "voice" off in video.json`)
+        throw new ReelkitError(`voice-over: ${missing.length} line(s) to speak and no OPENAI_API_KEY — set it (export OPENAI_API_KEY=…, or put it in a .env next to demo.config.json) or turn "voice" off in video.json`)
     }
     mkdirSync(cacheDir, { recursive: true })
     for (const text of missing) {
@@ -120,7 +146,7 @@ function lengthOf(file: string): number {
 
 /**
  * Mixes the cached lines into one track as long as the video (`target`, m4a). Returns false
- * when none is cached. Warns about missing lines and lines that run into the next one.
+ * when none is cached. Warns about missing lines and an intro line that outlasts the intro.
  */
 export function renderVoiceTrack(
     lines: VoiceLine[],
@@ -138,22 +164,24 @@ export function renderVoiceTrack(
     if (!cached.length) {
         return false
     }
-    for (const line of cached) {
+    for (const line of cached.filter((l) => l.intro)) {
         const length = lengthOf(resolve(cacheDir, line.file))
         if (line.at + length > line.until + 0.05) {
-            log(`  warning: voice-over: "${line.text}" (${length.toFixed(1)}s) runs ${(line.at + length - line.until).toFixed(1)}s into the next step — shorten its \`say\`, or pause longer in the scenario`)
+            log(`  warning: voice-over: "${line.text}" (${length.toFixed(1)}s) runs ${(line.at + length - line.until).toFixed(1)}s into the recording — shorten \`voice.intro\``)
         }
     }
-    const key = JSON.stringify({ lines: cached.map((l) => [l.at, l.file]), total, lufs: settings.lufs })
+    const key = JSON.stringify({ lines: cached.map((l) => [l.at, l.file]), total, lufs: settings.lufs, v: 2 })
     const stamp = `${target}.key`
     if (existsSync(target) && existsSync(stamp) && readFileSync(stamp, 'utf8') === key) {
         return true
     }
     const inputs = cached.flatMap((l) => ['-i', resolve(cacheDir, l.file)])
     const delayed = cached.map((l, i) => `[${i}:a]aresample=48000,adelay=${Math.round(l.at * 1000)}:all=1[v${i}]`).join(';')
+    // 0.1 s past the video: AAC's encoder padding would otherwise leave the track a frame or
+    // two short of its slot. loudnorm works at 192 kHz, hence the resample back.
     const mix =
         `${delayed};${cached.map((_, i) => `[v${i}]`).join('')}amix=inputs=${cached.length}:normalize=0,` +
-        `loudnorm=I=${settings.lufs}:TP=-1.5:LRA=11,apad,atrim=0:${total}[out]`
+        `loudnorm=I=${settings.lufs}:TP=-1.5:LRA=11,aresample=48000,apad,atrim=0:${round(total + 0.1)}[out]`
     const render = spawnSync(
         'ffmpeg',
         ['-y', '-loglevel', 'error', ...inputs, '-filter_complex', mix, '-map', '[out]', '-c:a', 'aac', '-b:a', '160k', target],

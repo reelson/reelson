@@ -7,7 +7,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, relative, resolve } from 'node:path'
-import { parseArgs } from 'node:util'
+import { parseArgs, parseEnv } from 'node:util'
 import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfig } from '../skills/reelkit-record/scripts/config.ts'
 import { doctor } from '../skills/reelkit-record/scripts/doctor.ts'
 import { build, plan, type BuildOptions } from '../skills/reelkit-compose/scripts/build.ts'
@@ -63,8 +63,10 @@ Usage: reelkit <command> [options]
 Docs: ${KIT_ROOT}/README.md`
 
 const [command, ...rest] = process.argv.slice(2)
+const SECRETS = ['OPENAI_API_KEY']
 
 try {
+    loadSecrets()
     process.exitCode = await run(command, rest)
 } catch (error) {
     if (error instanceof ReelkitError || error instanceof ConfigError) {
@@ -72,6 +74,25 @@ try {
         process.exitCode = 1
     } else {
         throw error
+    }
+}
+
+/**
+ * Picks the secrets reelkit reads (OPENAI_API_KEY) up from a .env next to demo.config.json, else from one in the reelkit checkout;
+ * a variable already in the environment wins. The rest of those files is left alone.
+ */
+function loadSecrets(): void {
+    for (const dir of [loadConfig(process.cwd()).root, KIT_ROOT]) {
+        const file = resolve(dir, '.env')
+        if (!existsSync(file)) {
+            continue
+        }
+        const values = parseEnv(readFileSync(file, 'utf8'))
+        for (const name of SECRETS) {
+            if (!process.env[name] && values[name]) {
+                process.env[name] = values[name]
+            }
+        }
     }
 }
 
