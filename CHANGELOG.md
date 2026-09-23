@@ -30,12 +30,11 @@ The first release on npm.
   reelson install; the environment wins.
 
 ### Fixed
+- `render --gif` works again: the GIF (720 px, 12 fps) is now cut from the rendered MP4 with ffmpeg
+  instead of HyperFrames' GIF encoder, which failed with ffmpeg 7.0 and rendered every frame a second
+  time. It is skipped while the MP4 is unchanged.
 - `moveTo` scrolls an out-of-sight target into view smoothly instead of jumping.
 - The voice track is resampled to 48 kHz and padded so it never falls short of its slot.
-
-### Known issues
-- `render --gif` fails in HyperFrames' GIF encoder with ffmpeg 7.0 ("Internal bug, should not have
-  happened"). Convert the MP4 with ffmpeg instead.
 
 ## 0.6.0 — 2026-09-22
 

@@ -78,6 +78,39 @@ export function renderIfChanged(
     return 'rendered'
 }
 
+/** The README-sized GIF `render --gif` makes: width (px), frame rate and palette size. */
+export const GIF = { width: 720, fps: 12, colors: 128 }
+
+/**
+ * Converts a rendered MP4 (relative to `videoDir`) to `output` with ffmpeg — a palette made for this
+ * video, no dithering (it turns the soft backgrounds into noise and doubles the size). Skipped when the
+ * MP4 has not been re-rendered since (its .key is unchanged). HyperFrames' own GIF encoder is not used:
+ * it fails with ffmpeg 7.0 and renders every frame a second time.
+ */
+export function gifIfChanged(videoDir: string, source: string, output: string, force = false): 'rendered' | 'unchanged' | 'failed' {
+    const target = resolve(videoDir, output)
+    const stamp = `${target}.key`
+    const sourceKey = resolve(videoDir, `${source}.key`)
+    const key = createHash('sha1')
+        .update(existsSync(sourceKey) ? readFileSync(sourceKey) : String(statSync(resolve(videoDir, source)).mtimeMs))
+        .update(JSON.stringify(GIF))
+        .digest('hex')
+    if (!force && existsSync(target) && existsSync(stamp) && readFileSync(stamp, 'utf8') === key) {
+        return 'unchanged'
+    }
+    const filter =
+        `fps=${GIF.fps},scale=${GIF.width}:-2:flags=lanczos,split[a][b];` +
+        `[a]palettegen=stats_mode=diff:max_colors=${GIF.colors}[p];[b][p]paletteuse=dither=none:diff_mode=rectangle`
+    const run = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', resolve(videoDir, source), '-vf', filter, '-loop', '0', target], {
+        stdio: 'inherit',
+    })
+    if (run.status !== 0) {
+        return 'failed'
+    }
+    writeFileSync(stamp, key)
+    return 'rendered'
+}
+
 export function renderKey(videoDir: string, args: string[], composition = 'index.html'): string {
     const hash = createHash('sha1').update(HYPERFRAMES_VERSION).update(JSON.stringify(args))
     hash.update(readFileSync(resolve(videoDir, composition)))

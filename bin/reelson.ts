@@ -19,7 +19,7 @@ import { studio } from '../skills/reelson-compose/scripts/studio.ts'
 import { fetchLines, spokenTexts, voiceSettings, type VoiceSettings } from '../skills/reelson-compose/scripts/voice.ts'
 import { listVoices, missingSetup, PROVIDERS, type Provider } from '../skills/reelson-compose/scripts/tts.ts'
 import { TAKES, verify } from '../skills/reelson-compose/scripts/verify.ts'
-import { DRAFT_FLAGS, FPS, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelson-compose/scripts/hyperframes.ts'
+import { DRAFT_FLAGS, FPS, gifIfChanged, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelson-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, RECORD_SCRIPT, ReelsonError, resolveDemoDir } from '../skills/reelson-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice, type Timeline } from '../skills/reelson-compose/scripts/timeline.ts'
 
@@ -629,12 +629,7 @@ async function render(argv: string[]): Promise<number> {
             writeFileSync(resolve(videoDir, `renders/${name}.vtt`), toVtt(cues))
         }
         captions(result.timeline, slug)
-        const outputs: [string, string[]][] = values.draft
-            ? [[`renders/${slug}.draft.mp4`, DRAFT_FLAGS]]
-            : [[`renders/${slug}.mp4`, RENDER_FLAGS]]
-        if (values.gif) {
-            outputs.push([`renders/${slug}.gif`, [...RENDER_FLAGS, '--format', 'gif', '--fps', '15']])
-        }
+        const [video, flags] = values.draft ? [`renders/${slug}.draft.mp4`, DRAFT_FLAGS] : [`renders/${slug}.mp4`, RENDER_FLAGS]
         const report = (outcome: 'rendered' | 'unchanged' | 'failed', output: string): void => {
             if (outcome === 'failed') {
                 failures++
@@ -644,8 +639,12 @@ async function render(argv: string[]): Promise<number> {
             console.log(`${outcome === 'unchanged' ? 'up to date' : 'rendered'} ${resolve(videoDir, output)}`)
         }
         if (!values.only || values.only === 'landscape') {
-            for (const [output, flags] of outputs) {
-                report(renderIfChanged(videoDir, output, flags, values.force), output)
+            const outcome = renderIfChanged(videoDir, video, flags, values.force)
+            report(outcome, video)
+            // The GIF is cut from the MP4 just rendered (ffmpeg), not rendered a second time.
+            if (values.gif && outcome !== 'failed') {
+                const gif = video.replace(/\.mp4$/, '.gif')
+                report(gifIfChanged(videoDir, video, gif, values.force), gif)
             }
         }
         // Asked for here (--portrait, --square, --all-formats, --only) or in video.json "formats".
@@ -655,16 +654,16 @@ async function render(argv: string[]): Promise<number> {
         // Portrait: its own composition (tall frame, footage panning with the cursor).
         if (asked('portrait')) {
             if (result.versions) captions(result.versions.portrait, `${slug}.portrait`)
-            const output = outputs[0][0].replace(/\.mp4$/, '.portrait.mp4')
-            report(renderIfChanged(videoDir, output, outputs[0][1], values.force, 'portrait.html'), output)
+            const output = video.replace(/\.mp4$/, '.portrait.mp4')
+            report(renderIfChanged(videoDir, output, flags, values.force, 'portrait.html'), output)
         }
         // Square: its own composition, from the square take (`reelson record --square`).
         if (asked('square')) {
-            const output = outputs[0][0].replace(/\.mp4$/, '.square.mp4')
+            const output = video.replace(/\.mp4$/, '.square.mp4')
             const hint = `run \`reelson record ${slug} --square\` (a square browser), then render again`
             if (existsSync(resolve(videoDir, 'square.html'))) {
                 if (result.versions?.square) captions(result.versions.square, `${slug}.square`)
-                report(renderIfChanged(videoDir, output, outputs[0][1], values.force, 'square.html'), output)
+                report(renderIfChanged(videoDir, output, flags, values.force, 'square.html'), output)
             } else if (values.square || values.only === 'square') {
                 failures++
                 console.error(`reelson: no square take for ${slug} — ${hint}`)
