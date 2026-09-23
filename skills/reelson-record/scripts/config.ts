@@ -225,6 +225,23 @@ export function countLabel(count: number, label: Label, language: string): strin
 }
 
 /** Resolves a path from the config against the project root. */
+/**
+ * Where a project links the skills, in order: .agents/skills (Codex and the other agents that read
+ * Agent Skills), then .claude/skills (Claude Code; `reelson install` links it to the first).
+ */
+export const SKILL_DIRS = ['.agents/skills', '.claude/skills']
+
+/** `<skill>/<path>` inside the project's first skill folder that has it (a portable path to commit), else null. */
+export function viaProjectSkills(root: string, path: string): string | null {
+    for (const dir of SKILL_DIRS) {
+        const candidate = resolve(root, dir, path)
+        if (existsSync(candidate)) {
+            return candidate
+        }
+    }
+    return null
+}
+
 export function fromRoot(config: LoadedConfig, path: string): string {
     return isAbsolute(path) ? path : resolve(config.root, path)
 }

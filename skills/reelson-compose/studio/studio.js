@@ -33,7 +33,7 @@ async function load() {
   if (!body.data) return
   const first = !data
   data = body.data
-  // Undo writes back a whole earlier video.json; after a change from elsewhere (Claude, an
+  // Undo writes back a whole earlier video.json; after a change from elsewhere (the agent, an
   // editor) that would silently revert it, so the history starts over.
   if (!first && body.revision !== revision && (history.undo.length || history.redo.length)) {
     history.undo = []

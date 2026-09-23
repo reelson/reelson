@@ -5,12 +5,13 @@
  * demo.config.json (walking up from the working directory).
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
+import { createInterface } from 'node:readline/promises'
 import { basename, relative, resolve } from 'node:path'
 import { parseArgs, parseEnv } from 'node:util'
-import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
+import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, viaProjectSkills, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
 import { doctor } from '../skills/reelson-record/scripts/doctor.ts'
 import { build, plan, type BuildOptions } from '../skills/reelson-compose/scripts/build.ts'
 import { captionCues, toSrt, toVtt } from '../skills/reelson-compose/scripts/captions.ts'
@@ -27,11 +28,13 @@ const HELP = `reelson — scripted walkthroughs → branded demo videos
 
 Usage: reelson <command> [options]
 
-  install [<project-dir>] [--global] [--no-browser]
+  install [<project-dir> | --global] [-y] [--no-browser]
                                 link the reelson-record + reelson-compose skills into
-                                <project>/.claude/skills/ (default: this directory; --global:
-                                ~/.claude/skills/), create demo.config.json if missing and
-                                download Playwright's Chromium (--no-browser: skip it)
+                                .agents/skills/ (Codex and other agents) and .claude/skills/
+                                (Claude Code): --global in ~/ for every project, or in a
+                                project (which also gets a demo.config.json); asks which when
+                                neither is given (-y, or no terminal: --global). Downloads
+                                Playwright's Chromium (--no-browser: skip it)
   init                          create demo.config.json in this directory
   doctor                        check the tools and that the cursor layer lines up here
   new <slug> [--url <origin>]   start <videosDir>/<slug>/scenario.ts
@@ -122,7 +125,7 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             console.log(JSON.parse(readFileSync(resolve(KIT_ROOT, 'package.json'), 'utf8')).version)
             return 0
         case 'install':
-            return install(argv)
+            return await install(argv)
         case 'init':
             return init()
         case 'doctor':
@@ -183,22 +186,25 @@ function one(positionals: string[], usage: string): string {
 }
 
 /**
- * `reelson install`: links the skills into a project (or ~/.claude) and prepares the machine. The links
+ * `reelson install`: links the skills into a project (or the home folder) and prepares the machine. The links
  * point at this installation, so `npm update -g reelson` (or `git pull` in a checkout) updates every project.
  */
-function install(argv: string[]): number {
+async function install(argv: string[]): Promise<number> {
     const skillNames = ['reelson-record', 'reelson-compose']
     // Names used before 0.7 (demo-* before that): their links are dropped when they point at a reelson install.
     const oldNames = ['demo-record', 'demo-video', 'reelkit-record', 'reelkit-compose']
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { global: { type: 'boolean' }, 'no-browser': { type: 'boolean' } },
+        options: { global: { type: 'boolean' }, yes: { type: 'boolean', short: 'y' }, 'no-browser': { type: 'boolean' } },
     })
     if (positionals.length > 1 || (values.global && positionals.length)) {
-        throw new ReelsonError('usage: reelson install [<project-dir> | --global] [--no-browser]')
+        throw new ReelsonError('usage: reelson install [<project-dir> | --global] [-y] [--no-browser]')
     }
-    const target = values.global ? homedir() : resolve(positionals[0] ?? '.')
+    // Asked only when neither --global nor a folder is given and someone is at the terminal.
+    const where = values.global ? null : positionals.length ? resolve(positionals[0]) : values.yes || !process.stdin.isTTY ? null : await askWhere()
+    const global = where === null
+    const target = where ?? homedir()
     if (!existsSync(target)) {
         throw new ReelsonError(`${target} does not exist`)
     }
@@ -214,43 +220,90 @@ function install(argv: string[]): number {
         }
     }
 
-    const skills = resolve(target, '.claude/skills')
-    mkdirSync(skills, { recursive: true })
+    // .agents/skills links to this installation; .claude/skills links to .agents/skills (unless the
+    // whole folder already is a link to it), so both agents see the same skills.
+    const agents = resolve(target, '.agents/skills')
+    const claude = resolve(target, '.claude/skills')
+    mkdirSync(agents, { recursive: true })
+    mkdirSync(claude, { recursive: true })
+    const shared = realpathSync(agents) === realpathSync(claude)
     const isLink = (path: string): boolean => lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink() ?? false
-    for (const old of oldNames) {
-        const link = resolve(skills, old)
-        if (isLink(link) && (resolve(skills, readlinkSync(link)).startsWith(`${KIT_ROOT}/`) || /[\\/]skills[\\/](reelkit|reelson)-/.test(readlinkSync(link)))) {
-            rmSync(link)
-            console.log(`  removed old link ${link}`)
+    const link = (path: string, to: string): void => {
+        if (existsSync(path) && !isLink(path)) {
+            throw new ReelsonError(`${path} is a folder, not a link to reelson — move it away and run install again`)
+        }
+        if (isLink(path)) {
+            rmSync(path)
+        }
+        symlinkSync(to, path, 'dir')
+        console.log(`  linked ${path} → ${to}`)
+    }
+    for (const dir of shared ? [agents] : [agents, claude]) {
+        for (const old of oldNames) {
+            const path = resolve(dir, old)
+            if (isLink(path) && (resolve(dir, readlinkSync(path)).startsWith(`${KIT_ROOT}/`) || /[\\/]skills[\\/](reelkit|reelson)-/.test(readlinkSync(path)))) {
+                rmSync(path)
+                console.log(`  removed old link ${path}`)
+            }
         }
     }
     for (const skill of skillNames) {
-        const link = resolve(skills, skill)
-        if (existsSync(link) && !isLink(link)) {
-            throw new ReelsonError(`${link} is a folder, not a link to reelson — move it away and run install again`)
+        link(resolve(agents, skill), resolve(KIT_ROOT, 'skills', skill))
+        if (!shared) {
+            link(resolve(claude, skill), relative(claude, resolve(agents, skill)))
         }
-        if (isLink(link)) {
-            rmSync(link)
-        }
-        symlinkSync(resolve(KIT_ROOT, 'skills', skill), link, 'dir')
-        console.log(`  linked ${link}`)
     }
 
-    if (!values.global) {
+    if (!global) {
         if (!existsSync(resolve(target, 'demo.config.json'))) {
             init(target)
         }
         const videos = loadConfig(target).videosDir.replace(/^\.?\/+|\/+$/g, '')
         console.log(`
-Add to ${resolve(target, '.gitignore')}:
+Add to ${resolve(target, '.gitignore')} (the skill links point at this machine's reelson):
 
+    /.agents/skills/reelson-*
+    /.claude/skills/reelson-*
     /${videos}/**/recording*.mp4
     /${videos}/**/.raw*/
     /${videos}/**/video/
     /${videos}/**/*.openscreen`)
     }
-    console.log('\nDone. Try: reelson doctor')
+    console.log(global ? '\nDone — every project sees the skills. In a project: reelson init, then reelson doctor' : '\nDone. Try: reelson doctor')
     return 0
+}
+
+/** `reelson install`'s question: every project (the default), this one, or another folder → null for global, else the project. */
+async function askWhere(): Promise<string | null> {
+    const home = (path: string): string => (path.startsWith(homedir()) ? `~${path.slice(homedir().length)}` : path)
+    const here = process.cwd()
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    try {
+        console.log(`Where should reelson install its skills?
+  1. Every project (default): ~/.agents/skills, linked from ~/.claude/skills
+  2. This project: ${home(here)}/.agents/skills, linked from .claude/skills
+  3. Another project…`)
+        for (;;) {
+            const answer = (await rl.question('Choose [1]: ')).trim()
+            if (answer === '' || answer === '1') return null
+            if (answer === '2') return here
+            if (answer === '3') {
+                const dir = (await rl.question('Project folder: ')).trim().replace(/^~(?=$|\/)/, homedir())
+                if (dir && existsSync(dir)) return resolve(dir)
+                console.log(`  no folder ${dir || '(empty)'}`)
+                continue
+            }
+            console.log('  type 1, 2 or 3 (Enter: 1)')
+        }
+    } catch (error) {
+        // Ctrl+D (or Ctrl+C) at the question: stop quietly, nothing linked yet.
+        if ((error as Error).name === 'AbortError') {
+            throw new ReelsonError('install cancelled — nothing was changed')
+        }
+        throw error
+    } finally {
+        rl.close()
+    }
 }
 
 function init(dir = process.cwd()): number {
@@ -261,8 +314,7 @@ function init(dir = process.cwd()): number {
     const example = JSON.parse(readFileSync(resolve(KIT_ROOT, 'demo.config.example.json'), 'utf8'))
     delete example.$comment
     delete example.$schema
-    const viaProject = resolve(dir, '.claude/skills/reelson-record/schemas/demo.config.schema.json')
-    const schema = existsSync(viaProject) ? viaProject : CONFIG_SCHEMA_PATH
+    const schema = viaProjectSkills(dir, 'reelson-record/schemas/demo.config.schema.json') ?? CONFIG_SCHEMA_PATH
     let schemaRef = relative(dir, schema)
     if (!/^\.{1,2}\//.test(schemaRef) && !schemaRef.startsWith('/')) {
         schemaRef = `./${schemaRef}`
@@ -286,8 +338,8 @@ function create(argv: string[]): number {
         throw new ReelsonError(`${scenario} already exists`)
     }
     mkdirSync(dir, { recursive: true })
-    const viaProject = resolve(cfg.root, '.claude/skills/reelson-record/scripts/scenario.ts')
-    const typesFile = existsSync(viaProject) ? viaProject : resolve(KIT_ROOT, 'skills/reelson-record/scripts/scenario.ts')
+    const typesFile =
+        viaProjectSkills(cfg.root, 'reelson-record/scripts/scenario.ts') ?? resolve(KIT_ROOT, 'skills/reelson-record/scripts/scenario.ts')
     let importPath = relative(dir, typesFile)
     if (!/^\.{1,2}\//.test(importPath)) {
         importPath = `./${importPath}`

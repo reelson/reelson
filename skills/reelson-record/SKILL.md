@@ -75,8 +75,9 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 ## Prerequisites
 
 - The app running and reachable at the scenario's `baseURL`.
-- reelson installed once per machine (`npm install -g reelson`, then `reelson install` in the
-  project: Playwright's Chromium and the skill links; a kit checkout's `install.sh` does both).
+- reelson installed once per machine (`npm install -g reelson`, then `reelson install --global`
+  for every project or `reelson install <project>` for one: Playwright's Chromium and the skill
+  links; a kit checkout's `install.sh` does both). Pass one of them: without either it asks the user.
 - `ffmpeg` on PATH (`brew install ffmpeg`). Node 22.18+ (TypeScript runs directly).
 - `reelson doctor` checks the tools and films a local test page to confirm the cursor layer
   lines up with the footage on this machine (offset and px error; run it on a new machine).
@@ -85,7 +86,7 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
 
 1. **Pick the origin, panel and account.** Look for existing e2e helpers in the project
    (login, table/modal locators) and reuse them from the scenario — a scenario is mostly an
-   e2e test with a cursor. Check the project's CLAUDE.md / e2e docs for seeded accounts.
+   e2e test with a cursor. Check the project's AGENTS.md / CLAUDE.md / e2e docs for seeded accounts.
 
 2. **Write `<videosDir>/<slug>/scenario.ts`.** `reelson new <slug> --url <origin>` creates a
    stub with the right type import; the kit's `examples/todo-add-item/scenario.ts` is a full

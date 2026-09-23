@@ -1,7 +1,8 @@
 # reelson
 
 Turn a prompt into a finished, branded demo video of a web app. Two
-[Claude Code](https://claude.com/claude-code) skills plus a `reelson` CLI:
+[Agent Skills](https://agentskills.io) plus a `reelson` CLI, for Claude Code, Codex or any agent
+that reads `SKILL.md` skills:
 
 | Skill                                    | Does                                                                        | Output                                   |
 |------------------------------------------|-----------------------------------------------------------------------------|------------------------------------------|
@@ -34,24 +35,33 @@ video.json (title, trim, callouts, zooms) ┴──reelson build──▶ video/
 
 ```bash
 npm install -g reelson
-reelson install ~/code/my-app     # or: reelson install --global  (~/.claude/skills, every project)
+reelson install        # asks: every project (default), this project, or another folder
 ```
 
-`reelson install` downloads Playwright's Chromium, links both skills into
-`my-app/.claude/skills/`, creates `my-app/demo.config.json` and prints the `.gitignore` lines.
-The links point at the installed package, so `npm update -g reelson` updates every project.
+`reelson install` downloads Playwright's Chromium and links both skills into `.agents/skills/`
+(Codex and the other agents that read Agent Skills) and `.claude/skills/` (Claude Code, linked to
+the first — or nothing to do when the whole folder already links to `.agents/skills`):
+
+- **every project**: in `~/.agents/skills` and `~/.claude/skills` (`reelson install --global`);
+  run `reelson init` in a project for its `demo.config.json`;
+- **one project**: in `my-app/.agents/skills` and `my-app/.claude/skills`
+  (`reelson install ~/code/my-app`); also creates `my-app/demo.config.json` and prints the
+  `.gitignore` lines.
+
+`-y` takes the default without asking; without a terminal (CI, scripts) it never asks. The links
+point at the installed package, so `npm update -g reelson` updates every project.
 
 To work on reelson itself, install from a checkout instead: the `reelson` command then runs the
 TypeScript sources directly and `git pull` updates every project.
 
 ```bash
 git clone git@github.com:reelson/reelson.git ~/reelson
-~/reelson/install.sh ~/code/my-app     # npm link + reelson install
+~/reelson/install.sh     # npm link + reelson install (same question; or --global / <project-dir>)
 ```
 
 reelson was called reelkit before 0.7. Re-run `reelson install` (or `install.sh`) for each project: it drops the old
 `reelkit` command and `reelkit-*` skill links. Then point scenario imports and `$schema` paths
-at `.claude/skills/reelson-*`.
+at `.agents/skills/reelson-*` (`.claude/skills/reelson-*` works too).
 
 ## Configure per project — `demo.config.json`
 
@@ -87,7 +97,7 @@ typo is an error with a "did you mean" hint).
 
 ## Use
 
-Ask Claude in the project, e.g.:
+Ask your agent in the project, e.g.:
 
 > Make a demo video of searching a customer. Admin area on https://app.test as the admin.
 > Steps: open Customers, type a name in the table search, hover the match. Title "Find a

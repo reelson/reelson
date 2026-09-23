@@ -1,7 +1,7 @@
 # How to ask for a video
 
 The prompt is the spec. A complete prompt has six parts; the more you give, the fewer guesses
-Claude makes and the fewer re-renders you need.
+the agent makes and the fewer re-renders you need.
 
 ```
 Make a demo video of <FEATURE>.
@@ -14,7 +14,7 @@ Emphasis:   zoom on <what> during step <n>     only where the UI is small
 Output:     mp4 (default) / also gif           slug: <kebab-case>
 ```
 
-Claude writes the scenario, records, verifies frames, builds the composition, words the
+The agent writes the scenario, records, verifies frames, builds the composition, words the
 callouts in video.json, checks, renders, and reports the file path with a few extracted frames.
 
 ## Example prompts

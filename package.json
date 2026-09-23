@@ -1,8 +1,8 @@
 {
     "name": "reelson",
-    "version": "0.7.0",
+    "version": "0.7.1",
     "type": "module",
-    "description": "Claude Code skills + CLI that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
+    "description": "Agent Skills (Claude Code, Codex, …) + CLI that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
     "keywords": [
         "demo-video",
         "screencast",
@@ -11,7 +11,9 @@
         "claude-code",
         "skills",
         "product-demo",
-        "video"
+        "video",
+        "agent-skills",
+        "codex"
     ],
     "license": "MIT",
     "author": "Ion Caliman <icaliman92@gmail.com>",

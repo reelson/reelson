@@ -4,6 +4,19 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
+## 0.7.1 — 2026-09-23
+
+### Changed
+- **Works with any agent that reads Agent Skills**, not only Claude Code: `reelson install` links the
+  skills into `.agents/skills/` (Codex and others) and links `.claude/skills/` to them (nothing to do
+  when the whole `.claude/skills` folder already links to `.agents/skills`); `--global` does the same
+  in the home folder. New `demo.config.json` `$schema` paths and scenario imports go through
+  `.agents/skills`; existing `.claude/skills` paths keep working. The `.gitignore` hint adds the links.
+- **`reelson install` asks where** when neither `--global` nor a folder is given: every project
+  (the default: `~/.agents/skills` + `~/.claude/skills`), this project, or another folder. `-y` takes
+  the default; without a terminal it never asks. (0.7.0 installed into the current folder.)
+- Agent-neutral wording in the README, the skills and the prompting guide.
+
 ## 0.7.0 — 2026-09-23
 
 The first release on npm.

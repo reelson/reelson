@@ -3,16 +3,17 @@
 # `reelson install` — the reelson-record + reelson-compose skills per project, or globally.
 # (Without a checkout: `npm install -g reelson && reelson install <project-dir>`.)
 #
-#   ./install.sh <project-dir>   link the skills into <project>/.claude/skills/ and create
+#   ./install.sh                 ask where (default: every project)
+#   ./install.sh --global        link the skills into ~/.agents + ~/.claude (every project)
+#   ./install.sh <project-dir>   link the skills into <project>/.agents/skills/ + .claude/skills/, create
 #                                <project>/demo.config.json if it is missing
-#   ./install.sh --global        link the skills into ~/.claude/skills/ (every project)
 #
 # Skills are symlinks to this checkout, so `git pull` here updates every project.
 set -euo pipefail
 
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
-    sed -n '2,10p' "$0"; exit $(( $# == 0 ? 2 : 0 ))
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,11p' "$0"; exit 0
 fi
 
 node_major="$(node -p 'process.versions.node.split(".").map(Number).slice(0,2).join(".")')"

@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { basename, dirname, extname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { fromRoot, type LoadedConfig } from '../../reelson-record/scripts/config.ts'
+import { fromRoot, viaProjectSkills, type LoadedConfig } from '../../reelson-record/scripts/config.ts'
 import { closest, loadSchema, validate } from '../../reelson-record/scripts/validate.ts'
 import type { SectionSource } from './composition.ts'
 import {
@@ -102,13 +102,13 @@ export function validateVideoSpec(raw: unknown, where: string): VideoSpec {
 }
 
 /**
- * `$schema` for a new video.json: through the project's .claude/skills link
- * when there is one (portable), else straight to the kit.
+ * `$schema` for a new video.json: through the project's skill link (.agents/skills or
+ * .claude/skills) when it points at this reelson (portable), else straight to the kit.
  */
 export function videoSchemaRef(demoDir: string, config: LoadedConfig): string {
-    const viaProject = resolve(config.root, '.claude/skills/reelson-compose/schemas/video.schema.json')
+    const viaProject = viaProjectSkills(config.root, 'reelson-compose/schemas/video.schema.json')
     const target =
-        existsSync(viaProject) && realpathSync(viaProject) === realpathSync(VIDEO_SCHEMA_PATH)
+        viaProject && realpathSync(viaProject) === realpathSync(VIDEO_SCHEMA_PATH)
             ? viaProject
             : VIDEO_SCHEMA_PATH
 
