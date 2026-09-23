@@ -11,6 +11,11 @@ Turn a prompt into a finished, branded demo video of a web app. Two
 The same prompt re-creates the video after a UI change: a scenario re-records in ~20 s,
 headless, with identical pacing, and callouts/zooms follow their markers and clicks.
 
+![The TodoMVC example: poster intro, the recorded walkthrough with callouts and zooms, recap and outro](https://cdn.jsdelivr.net/npm/reelson/docs/demo.webp)
+
+<sub>The [example](examples/todo-add-item/scenario.ts), rendered by CI on every push
+(`docs/demo.webp` is a 960 px cut of it).</sub>
+
 ```
 scenario.ts ──reelson record──▶ recording.mp4 + markers.json
                                           │
@@ -40,8 +45,8 @@ To work on reelson itself, install from a checkout instead: the `reelson` comman
 TypeScript sources directly and `git pull` updates every project.
 
 ```bash
-git clone git@github.com:reelson/reelson.git ~/workspace/my-projects/reelson
-~/workspace/my-projects/reelson/install.sh ~/code/my-app     # npm link + reelson install
+git clone git@github.com:reelson/reelson.git ~/reelson
+~/reelson/install.sh ~/code/my-app     # npm link + reelson install
 ```
 
 reelson was called reelkit before 0.7. Re-run `reelson install` (or `install.sh`) for each project: it drops the old
@@ -166,7 +171,7 @@ skills/
   reelson-record/  SKILL.md, scripts/ (record, scenario, cursor-overlay, config, validate), schemas/
   reelson-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
                 schemas/, templates/<name>/ (stages), sections/<slot>/<name>/
-docs/           style-guide.md, prompting.md
+docs/           style-guide.md, prompting.md, demo.webp (the README clip)
 examples/       demo.config.json + todo-add-item/ (scenario, markers, video.json)
 test/           unit + golden tests, fixtures
 music/          local-only tracks (git-ignored; licences are per project)
