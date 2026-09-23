@@ -15,6 +15,10 @@ updates:
       # Wait a week before proposing a new release: most malicious versions are caught and pulled by then.
       cooldown:
           default-days: 7
+      ignore:
+          # Types follow the oldest Node reelson supports (engines: 22.18+), not the newest Node.
+          - dependency-name: '@types/node'
+            update-types: ['version-update:semver-major']
       groups:
           dependencies:
               patterns: ['*']
