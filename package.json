@@ -1,6 +1,6 @@
 {
     "name": "reelson",
-    "version": "0.7.1",
+    "version": "0.7.2",
     "type": "module",
     "description": "Agent Skills (Claude Code, Codex, …) + CLI that turn a scripted Playwright walkthrough into a branded HyperFrames demo video.",
     "keywords": [
