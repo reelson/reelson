@@ -12,6 +12,7 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
 - Hardened publishing: actions pinned to commit SHAs (Dependabot keeps them current, npm updates
   after a 7-day cooldown), npm pinned, no install scripts or cache in the publish job, no token left
   in the checkout, and the publish runs in the `npm` environment (approval before each release).
+  CI only **stages** a release (`npm stage publish`); it goes live once approved on npm with 2FA.
 - README: a pipeline diagram that renders the same in every font, commands with their notes above them.
 
 ## 0.7.1 — 2026-09-23

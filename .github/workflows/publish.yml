@@ -1,8 +1,11 @@
 name: Publish
 
-# Publishes to npm when a vX.Y.Z tag is pushed, through npm trusted publishing (OIDC): no npm token
-# exists anywhere. One-time setup on npmjs.com → reelson → Settings → Trusted publishing:
-# GitHub Actions, reelson / reelson, workflow publish.yml, environment npm.
+# Stages a release on npm when a vX.Y.Z tag is pushed, through npm trusted publishing (OIDC): no
+# npm token exists anywhere. The staged version goes live only once a maintainer approves it with
+# 2FA — `npm stage list reelson`, then `npm stage approve <id>` (or on npmjs.com) — so neither a
+# compromised GitHub account nor CI can release on its own. One-time setup on npmjs.com → reelson →
+# Settings → Trusted publisher: GitHub Actions, reelson / reelson, publish.yml, environment npm,
+# "Allow npm publish" left off (the publisher may only stage).
 #
 # Hardening: actions pinned to commit SHAs (Dependabot bumps them), npm pinned, dependencies
 # installed without their install scripts, no shared cache, no token left in the checkout, and
@@ -39,6 +42,6 @@ jobs:
             - run: npm ci --ignore-scripts
             - name: The tag matches package.json
               run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
-            # prepublishOnly runs the type check and tests (CI ran the ffmpeg ones on this commit);
-            # prepack compiles. Provenance is added by trusted publishing once the repository is public.
-            - run: npm publish --access public
+            # Like npm publish (prepublishOnly runs the type check and tests — CI ran the ffmpeg ones on
+            # this commit — and prepack compiles), but held until approved; provenance comes with it.
+            - run: npm stage publish

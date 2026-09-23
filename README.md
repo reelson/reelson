@@ -188,15 +188,18 @@ each `.ts` (`npm run build`; `npm pack` / `npm publish` build first and clean up
 1. Add the release to CHANGELOG.md, then `npm version patch` (or `minor` / `major`: bumps
    package.json, commits, tags `vX.Y.Z`) and `git push --follow-tags`.
 2. [.github/workflows/publish.yml](.github/workflows/publish.yml) checks the tag matches
-   package.json, runs the checks and publishes with npm trusted publishing (OIDC: no npm token
-   exists anywhere; provenance is added once the repository is public). It runs in the `npm`
-   environment, so with a required reviewer every publish waits for your approval.
+   package.json, runs the checks and **stages** the release with npm trusted publishing (OIDC: no
+   npm token exists anywhere; with provenance). It runs in the `npm` environment, so it first
+   waits for a required reviewer on GitHub.
+3. Approve it on npm with 2FA: `npm stage list reelson`, then `npm stage approve <id>` (or on
+   npmjs.com). Until then nobody can install it.
 
 One-time setup:
 
-- npmjs.com → the package → Settings → **Trusted publishing**: GitHub Actions, `reelson` /
-  `reelson`, workflow `publish.yml`, environment `npm`. Under **Publishing access**, pick
-  "Require two-factor authentication and disallow tokens".
+- npmjs.com → the package → Settings → **Trusted publisher**: GitHub Actions, `reelson` /
+  `reelson`, workflow `publish.yml`, environment `npm`, **"Allow npm publish" off** (it may only
+  stage). Under **Publishing access**, pick "Require two-factor authentication and disallow
+  bypass 2fa tokens".
 - GitHub → Settings → **Environments** → `npm`: add yourself as a required reviewer and allow
   only `v*` tags to deploy. Settings → Rules → **Rulesets**: restrict creating `v*` tags to
   yourself. (Both need a public repository, or a paid plan for a private one.)
