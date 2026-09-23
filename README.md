@@ -12,16 +12,24 @@ that reads `SKILL.md` skills:
 The same prompt re-creates the video after a UI change: a scenario re-records in ~20 s,
 headless, with identical pacing, and callouts/zooms follow their markers and clicks.
 
-![The TodoMVC example: poster intro, the recorded walkthrough with callouts and zooms, recap and outro](https://cdn.jsdelivr.net/npm/reelson/docs/demo.webp)
+![The TodoMVC example: poster intro, the recorded walkthrough with callouts and zooms, recap and outro](https://github.com/reelson/reelson/releases/download/demo/demo.webp)
 
-<sub>The [example](examples/todo-add-item/scenario.ts), rendered by CI on every push
-(`docs/demo.webp` is a 960 px cut of it).</sub>
+<sub>The [TodoMVC example](examples/todo-add-item/scenario.ts), recorded and rendered by CI on every
+push to main.</sub>
 
 ```
-scenario.ts ──reelson record──▶ recording.mp4 + markers.json
-                                          │
-video.json (title, trim, callouts, zooms) ┴──reelson build──▶ video/ ──reelson render──▶ .mp4 / .gif
-          demo.config.json (brand, logo, language, music) + template + sections ┘
+scenario.ts
+    |  reelson record
+    v
+recording.mp4 + markers.json
+    |  reelson build  <--  video.json        (title, trim, callouts, zooms)
+    |                 <--  demo.config.json  (brand, logo, language, music)
+    |                 <--  template + sections
+    v
+video/                     a HyperFrames project
+    |  reelson render
+    v
+video/renders/<slug>.mp4   + .gif, portrait, square, .srt/.vtt captions
 ```
 
 ## Requirements
@@ -107,18 +115,30 @@ More prompts in [docs/prompting.md](docs/prompting.md); the rules every video fo
 [docs/style-guide.md](docs/style-guide.md). By hand:
 
 ```bash
-reelson doctor                                          # tools + cursor/footage sync on this machine
-reelson new customers-search --url https://app.test    # scenario stub
-reelson record customers-search [--headed]            # --mobile / --square: the takes for --portrait / --square; --all-takes: all three
-reelson build customers-search --title "Find a customer"   # creates video.json on first run
-#   edit video.json: callout wording, { "clicks": [2, 3], "scale": 1.8 } zooms, trim ("auto" or a marker)
-reelson voice customers-search                          # "voice": true in video.json: speak the callouts (voice.provider: openai, elevenlabs, piper, command)
-reelson check customers-search                          # schemas, zoom timing, hyperframes lint
-reelson verify --all                                    # after an app change: every demo still records and fits
-reelson studio customers-search                         # preview + edit on a layer timeline (saves video.json)
-reelson templates                                       # templates and intro/recap/outro sections
-reelson render customers-search [--gif] [--square] [--portrait] [--all-formats] [--draft]   # + .srt/.vtt captions
-reelson render --all                                    # every demo; skips the unchanged ones
+# tools + cursor/footage sync on this machine
+reelson doctor
+# a scenario stub
+reelson new customers-search --url https://app.test
+# --mobile / --square: the takes for --portrait / --square; --all-takes: all three
+reelson record customers-search [--headed]
+# creates video.json on the first run; then edit it: callout wording,
+# { "clicks": [2, 3], "scale": 1.8 } zooms, trim ("auto" or a marker)
+reelson build customers-search --title "Find a customer"
+# "voice": true in video.json: speak the callouts
+# (voice.provider: openai, elevenlabs, piper, command)
+reelson voice customers-search
+# schemas, zoom timing, hyperframes lint
+reelson check customers-search
+# after an app change: every demo still records and fits
+reelson verify --all
+# preview + edit on a layer timeline (saves video.json)
+reelson studio customers-search
+# templates and intro/recap/outro sections
+reelson templates
+# the MP4 + .srt/.vtt captions; --gif, --square, --portrait, --all-formats, --draft
+reelson render customers-search
+# every demo; skips the unchanged ones
+reelson render --all
 ```
 
 Per video, commit `scenario.ts`, `markers.json` and `video.json`; everything else is generated.
@@ -165,10 +185,25 @@ Node will not run TypeScript from under `node_modules`, so the package ships `.j
 each `.ts` (`npm run build`; `npm pack` / `npm publish` build first and clean up after).
 `bin/run.js` picks the compiled CLI when installed from npm and the sources in a checkout.
 
-1. Bump `version` in package.json, commit, tag `vX.Y.Z` and push the tag.
-2. [.github/workflows/publish.yml](.github/workflows/publish.yml) runs the checks and publishes
-   with npm trusted publishing (OIDC, with provenance; no token). Set it up once on npmjs.com →
-   the package → Settings → Trusted publishing: GitHub Actions, `reelson/reelson`, `publish.yml`.
+1. Add the release to CHANGELOG.md, then `npm version patch` (or `minor` / `major`: bumps
+   package.json, commits, tags `vX.Y.Z`) and `git push --follow-tags`.
+2. [.github/workflows/publish.yml](.github/workflows/publish.yml) checks the tag matches
+   package.json, runs the checks and publishes with npm trusted publishing (OIDC: no npm token
+   exists anywhere; provenance is added once the repository is public). It runs in the `npm`
+   environment, so with a required reviewer every publish waits for your approval.
+
+One-time setup:
+
+- npmjs.com → the package → Settings → **Trusted publishing**: GitHub Actions, `reelson` /
+  `reelson`, workflow `publish.yml`, environment `npm`. Under **Publishing access**, pick
+  "Require two-factor authentication and disallow tokens".
+- GitHub → Settings → **Environments** → `npm`: add yourself as a required reviewer and allow
+  only `v*` tags to deploy. Settings → Rules → **Rulesets**: restrict creating `v*` tags to
+  yourself. (Both need a public repository, or a paid plan for a private one.)
+
+The workflows pin every action to a commit SHA ([Dependabot](.github/dependabot.yml) proposes
+updates weekly, npm packages after a 7-day cooldown), install dependencies without install
+scripts when publishing, and never leave a token in the checkout.
 
 The very first release has to be published by hand (trusted publishing needs the package to
 exist): `npm login && npm publish`. Check the contents first with `npm pack --dry-run`.
@@ -181,7 +216,7 @@ skills/
   reelson-record/  SKILL.md, scripts/ (record, scenario, cursor-overlay, config, validate), schemas/
   reelson-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
                 schemas/, templates/<name>/ (stages), sections/<slot>/<name>/
-docs/           style-guide.md, prompting.md, demo.webp (the README clip)
+docs/           style-guide.md, prompting.md
 examples/       demo.config.json + todo-add-item/ (scenario, markers, video.json)
 test/           unit + golden tests, fixtures
 music/          local-only tracks (git-ignored; licences are per project)

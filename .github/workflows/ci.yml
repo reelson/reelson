@@ -6,6 +6,9 @@ on:
     pull_request:
     workflow_dispatch:
 
+permissions:
+    contents: read
+
 concurrency:
     group: ci-${{ github.ref }}
     cancel-in-progress: true
@@ -15,8 +18,10 @@ jobs:
         name: Typecheck + unit tests
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
               with:
                   node-version: 22
                   cache: npm
@@ -39,8 +44,10 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 25
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
               with:
                   node-version: 22
                   cache: npm
@@ -57,7 +64,7 @@ jobs:
             - name: Check (schemas, zoom timing, hyperframes lint)
               run: npm run example:check
             - name: Keep the built example for the render jobs
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
               with:
                   name: example-built
                   path: |
@@ -65,7 +72,7 @@ jobs:
                       !examples/todo-add-item/.raw*
             - name: Upload a failed take
               if: failure()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
               with:
                   name: example-failed-take
                   path: examples/todo-add-item/recording*.failed.*
@@ -84,8 +91,10 @@ jobs:
                     - { format: portrait, suffix: .portrait, size: '1080,1920' }
                     - { format: square, suffix: .square, size: '1080,1080' }
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
               with:
                   node-version: 22
                   cache: npm
@@ -93,7 +102,7 @@ jobs:
               run: sudo apt-get update && sudo apt-get install -y ffmpeg
             - run: npm ci
             - run: npx playwright install --with-deps chromium
-            - uses: actions/download-artifact@v4
+            - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
               with:
                   name: example-built
                   path: examples/todo-add-item/
@@ -111,10 +120,43 @@ jobs:
                   for t in 0 2 8 13; do ffmpeg -y -loglevel error -ss "$t" -i "$out" -frames:v 1 -vf scale=-2:540 "frames/t$t.jpg"; done
             - name: Upload the render and frames
               if: always()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
               with:
                   name: example-render-${{ matrix.format }}
                   path: |
                       examples/todo-add-item/video/renders/
                       frames/
                   if-no-files-found: ignore
+
+    demo:
+        # The README clip: cut from this push's landscape render and swapped into the rolling "demo"
+        # pre-release (github.com/reelson/reelson/releases/download/demo/demo.webp) — no commit, no
+        # package bloat. Only for pushes to main; the one job here that may write (release assets).
+        name: README clip (rolling "demo" release)
+        needs: render
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+              with:
+                  name: example-render-landscape
+            - name: Install ffmpeg
+              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+            - name: Cut the clip (960 px animated WebP)
+              run: |
+                  ffmpeg -y -loglevel error -i examples/todo-add-item/video/renders/todo-add-item.mp4 \
+                      -vf fps=15,scale=960:-2:flags=lanczos -c:v libwebp -quality 70 -compression_level 6 -loop 0 -an demo.webp
+                  ls -l demo.webp
+            - name: Replace the asset on the "demo" pre-release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GH_REPO: ${{ github.repository }}
+              run: |
+                  gh release view demo >/dev/null 2>&1 || gh release create demo --prerelease --latest=false \
+                      --target "$GITHUB_SHA" --title "README demo (rolling)" \
+                      --notes "The README clip, re-rendered by CI on every push to main. Not a version of reelson."
+                  gh release upload demo demo.webp --clobber
+                  gh release edit demo --notes "The README clip, re-rendered by CI from $GITHUB_SHA. Not a version of reelson."
