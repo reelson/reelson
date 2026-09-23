@@ -198,7 +198,10 @@ export interface Demo {
     goto: (path: string) => Promise<void>
     /** Glide the cursor to a random resting point in the middle third of the viewport. */
     rest: () => Promise<void>
-    /** Glide the cursor to the element on a curved, eased path (scrolls it into view first). */
+    /**
+     * Glide the cursor to the element on a curved, eased path. An element out of sight is
+     * scrolled into view first, smoothly (its container glides), so the viewer can follow.
+     */
     moveTo: (target: Locator) => Promise<void>
     /** moveTo + click + short settle. */
     click: (target: Locator, opts?: { settleMs?: number }) => Promise<void>
@@ -308,6 +311,10 @@ export function createDemo(
     }
 
     const moveTo: Demo['moveTo'] = async (target) => {
+        if (await revealSmoothly(target.first())) {
+            // Let the viewer see where the scroll landed before the cursor sets off.
+            await page.waitForTimeout(250)
+        }
         await target.first().scrollIntoViewIfNeeded()
         const box = await target.first().boundingBox()
         if (!box) {
@@ -323,6 +330,51 @@ export function createDemo(
         })
         await page.waitForTimeout(120 + rng() * 120)
     }
+
+    /**
+     * An element out of sight is scrolled into view the way a person would (its scrolling
+     * container glides, eased, over 0.5–1.4 s by distance), not in one jump — so the viewer
+     * can follow a menu or a list moving. Returns whether it scrolled.
+     */
+    const revealSmoothly = async (el: Locator): Promise<boolean> =>
+        el.evaluate(async (node) => {
+            const r = node.getBoundingClientRect()
+            const x = Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1)
+            const y = Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1)
+            const hit = document.elementFromPoint(x, y)
+            const inView = r.top >= 0 && r.bottom <= innerHeight && !!hit && (node.contains(hit) || hit.contains(node))
+            if (inView) {
+                return false
+            }
+            // The nearest ancestor that scrolls vertically, else the page.
+            let box: Element | null = node.parentElement
+            while (box && !(/(auto|scroll)/.test(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight)) {
+                box = box.parentElement
+            }
+            const scroller = (box ?? document.scrollingElement ?? document.documentElement) as HTMLElement
+            const isPage = !box
+            const view = isPage ? { top: 0, height: innerHeight } : { top: scroller.getBoundingClientRect().top, height: scroller.clientHeight }
+            const start = scroller.scrollTop
+            const max = scroller.scrollHeight - scroller.clientHeight
+            const target = Math.min(Math.max(start + (r.top + r.height / 2) - (view.top + view.height / 2), 0), max)
+            const distance = target - start
+            if (Math.abs(distance) < 2) {
+                return false
+            }
+            const duration = Math.min(1400, Math.max(500, 400 + Math.abs(distance) * 0.8))
+            const began = performance.now()
+            await new Promise<void>((done) => {
+                const step = (now: number) => {
+                    const t = Math.min(1, (now - began) / duration)
+                    const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
+                    scroller.scrollTop = start + distance * eased
+                    if (t < 1) requestAnimationFrame(step)
+                    else done()
+                }
+                requestAnimationFrame(step)
+            })
+            return true
+        })
 
     /**
      * Clicks where the cursor landed, not at the element's exact centre (Playwright's

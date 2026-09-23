@@ -14,7 +14,8 @@ import { build, plan, type BuildOptions } from '../skills/reelkit-compose/script
 import { captionCues, toSrt, toVtt } from '../skills/reelkit-compose/scripts/captions.ts'
 import { check } from '../skills/reelkit-compose/scripts/check.ts'
 import { studio } from '../skills/reelkit-compose/scripts/studio.ts'
-import { fetchLines, spokenTexts, voiceSettings } from '../skills/reelkit-compose/scripts/voice.ts'
+import { fetchLines, spokenTexts, voiceSettings, type VoiceSettings } from '../skills/reelkit-compose/scripts/voice.ts'
+import { listVoices, missingSetup, PROVIDERS, type Provider } from '../skills/reelkit-compose/scripts/tts.ts'
 import { TAKES, verify } from '../skills/reelkit-compose/scripts/verify.ts'
 import { DRAFT_FLAGS, FPS, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelkit-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, ReelkitError, resolveDemoDir } from '../skills/reelkit-compose/scripts/project.ts'
@@ -37,7 +38,12 @@ Usage: reelkit <command> [options]
       --intro <name>, --recap <name|none>, --outro <name>
       --trim-start <s|auto>, --trim-end <s>, --music <file> | --no-music
   voice <slug>                  speak the voice-over lines not spoken yet (video.json "voice": true;
-                                OpenAI text-to-speech, needs OPENAI_API_KEY; cached in <demo>/voice/)
+                                demo.config.json voice.provider: openai, elevenlabs, piper (local)
+                                or command (local); cached in <demo>/voice/)
+  voices [--provider <name>] [--all] [--library]
+                                the voices to pick for voice.voice (openai; elevenlabs: your
+                                account's, --library: the Voice Library's in the project's
+                                language, paid plans; piper: the project's language, --all: every one)
   check <slug> [--no-hyperframes]   schemas, zoom timing, hyperframes lint
   verify <slug...> | --all [--update]
                                 re-record every take (desktop, phone, square) headless into a
@@ -63,7 +69,7 @@ Usage: reelkit <command> [options]
 Docs: ${KIT_ROOT}/README.md`
 
 const [command, ...rest] = process.argv.slice(2)
-const SECRETS = ['OPENAI_API_KEY']
+const SECRETS = ['OPENAI_API_KEY', 'ELEVENLABS_API_KEY']
 
 try {
     loadSecrets()
@@ -78,7 +84,7 @@ try {
 }
 
 /**
- * Picks the secrets reelkit reads (OPENAI_API_KEY) up from a .env next to demo.config.json, else from one in the reelkit checkout;
+ * Picks the secrets reelkit reads (OPENAI_API_KEY, ELEVENLABS_API_KEY) up from a .env next to demo.config.json, else from one in the reelkit checkout;
  * a variable already in the environment wins. The rest of those files is left alone.
  */
 function loadSecrets(): void {
@@ -111,7 +117,9 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
         case 'init':
             return init()
         case 'doctor':
-            return (await doctor()) ? 1 : 0
+            const problems = await doctor()
+            voiceDoctor()
+            return problems ? 1 : 0
         case 'new':
             return create(argv)
         case 'record':
@@ -120,6 +128,8 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             return buildCommand(argv)
         case 'voice':
             return voiceCommand(argv)
+        case 'voices':
+            return voicesCommand(argv)
         case 'check':
             return checkCommand(argv)
         case 'verify':
@@ -138,6 +148,14 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             console.error(`reelkit: unknown command "${cmd}"\n\n${HELP}`)
             return 2
     }
+}
+
+/** `reelkit doctor`'s voice-over line: can the configured provider speak here? (A note: not every project uses it.) */
+function voiceDoctor(): void {
+    const settings = voiceSettings({ title: '', voice: true }, loadConfig(process.cwd())) as VoiceSettings
+    const problem = missingSetup(settings)
+    const what = `voice-over: ${settings.provider}${settings.voice ? ` (${settings.voice})` : ''}`
+    console.log(problem ? `· ${what} — for "voice": true videos: ${problem}` : `✓ ${what}`)
 }
 
 function config(): LoadedConfig {
@@ -346,6 +364,26 @@ async function voiceCommand(argv: string[]): Promise<number> {
     }
     const fetched = await speak(dir, cfg, true)
     console.log(fetched ? `spoke ${fetched} line(s) into ${resolve(dir, 'voice')}` : 'every line is already spoken')
+    return 0
+}
+
+async function voicesCommand(argv: string[]): Promise<number> {
+    const { values } = parseArgs({ args: argv, options: { provider: { type: 'string' }, all: { type: 'boolean' }, library: { type: 'boolean' } } })
+    const cfg = loadConfig(process.cwd())
+    const provider = (values.provider ?? cfg.voice.provider) as Provider
+    if (!PROVIDERS.includes(provider)) {
+        throw new ReelkitError(`--provider expects ${PROVIDERS.join(', ')}, got "${provider}"`)
+    }
+    const current = voiceSettings({ title: '', voice: { provider } }, cfg) as VoiceSettings
+    const voices = await listVoices(provider, cfg.language, values.all, values.library)
+    const width = Math.min(40, Math.max(...voices.map((v) => (v.name === v.id ? v.id : `${v.name} ${v.id}`).length)))
+    const scope = values.library ? ` in the Voice Library for "${cfg.language}" (paid plans)` : provider === 'piper' && !values.all ? ` for "${cfg.language}"` : ''
+    console.log(`${provider} voices${scope} (voice.voice; * = the one used now):`)
+    for (const v of voices) {
+        const label = v.name === v.id ? v.id : `${v.name} ${v.id}`
+        const used = v.id === current.voice || v.name.toLowerCase() === current.voice.toLowerCase()
+        console.log(`${used ? '*' : ' '} ${label.padEnd(width)}  ${v.about}`)
+    }
     return 0
 }
 

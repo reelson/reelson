@@ -80,15 +80,18 @@
             }
         },
         "voice": {
-            "description": "Voice-over: true speaks each callout (its `say`, else its text) with OpenAI text-to-speech — demo.config.json `voice` sets the model, voice and delivery; needs OPENAI_API_KEY, lines are cached in <demo>/voice/. An object turns it on with this video's own voice / instructions and may add an `intro` line spoken over the intro.",
+            "description": "Voice-over: true speaks each callout (its `say`, else its text) with the demo.config.json `voice` provider (OpenAI by default; ElevenLabs, a local Piper voice or a local command); lines are cached in <demo>/voice/. An object turns it on with this video's own provider / model / voice / instructions / speed and may add an `intro` line spoken over the intro.",
             "oneOf": [
                 { "type": "boolean" },
                 {
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
+                        "provider": { "enum": ["openai", "elevenlabs", "piper", "command"], "description": "This video's provider, from its defaults (baseURL, command and options stay with the project's provider)." },
+                        "model": { "type": "string" },
                         "voice": { "type": "string" },
                         "instructions": { "type": "string" },
+                        "speed": { "type": "number", "minimum": 0.5, "maximum": 2 },
                         "intro": { "type": "string", "description": "Spoken over the intro, e.g. the title as a sentence." }
                     }
                 }

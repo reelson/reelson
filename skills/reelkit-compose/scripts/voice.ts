@@ -1,27 +1,29 @@
 /**
  * Voice-over: each callout spoken as it appears (video.json "voice": true).
  *
- * Lines are spoken by OpenAI text-to-speech and cached in <demo>/voice/<hash>.mp3 — the hash
- * covers the words, model, voice and instructions, so a line is only paid for once and a
- * re-render never calls the API. `reelkit voice <slug>` (and `render`) fetch the missing
- * lines; the build (sync) mixes whatever is cached into one track per version (landscape,
- * portrait, square: each has its own timing), and says what is missing.
+ * Lines are spoken by a text-to-speech provider (demo.config.json `voice.provider`: OpenAI,
+ * ElevenLabs, a local Piper voice or any local command — see tts.ts), trimmed of the silence
+ * around them and cached in <demo>/voice/<hash>.mp3 — the hash covers the words and every
+ * setting that changes the sound, so a line is only made once and a re-render never calls the
+ * provider. `reelkit voice <slug>` (and `render`) make the missing lines; the build (sync)
+ * mixes whatever is cached into one track per version (landscape, portrait, square: each has
+ * its own timing), and says what is missing.
  *
  * What is spoken: a callout's `say` (false: nothing), else its text; plus video.json
  * `voice.intro` over the intro, when given.
  */
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import type { LoadedConfig } from '../../reelkit-record/scripts/config.ts'
 import { ReelkitError } from './project.ts'
 import { round, type Timeline, type VideoSpec } from './timeline.ts'
+import { missingSetup, providerDefaults, speak, type SpeechSettings } from './tts.ts'
 
-export interface VoiceSettings {
-    model: string
-    voice: string
-    instructions: string
+export interface VoiceSettings extends SpeechSettings {
+    /** Loudness of the voice track. */
     lufs: number
 }
 
@@ -46,11 +48,22 @@ export function voiceSettings(spec: VideoSpec, config: LoadedConfig): VoiceSetti
         return null
     }
     const own = typeof spec.voice === 'object' ? spec.voice : {}
+    const project = config.voice
+    const provider = own.provider ?? project.provider
+    // A video switching provider starts from that provider's defaults, not the project's voice.
+    const same = provider === project.provider
+    const defaults = providerDefaults(provider, config.language)
     return {
-        model: config.voice.model,
-        voice: own.voice ?? config.voice.voice,
-        instructions: own.instructions ?? config.voice.instructions,
-        lufs: config.voice.lufs,
+        provider,
+        model: own.model ?? (same ? project.model : undefined) ?? defaults.model,
+        voice: own.voice ?? (same ? project.voice : undefined) ?? defaults.voice,
+        instructions: own.instructions ?? project.instructions,
+        ...((own.speed ?? project.speed) !== undefined ? { speed: own.speed ?? project.speed } : {}),
+        language: config.language,
+        ...(same && project.baseURL ? { baseURL: project.baseURL } : {}),
+        ...(same && project.command ? { command: project.command } : {}),
+        ...(same && project.options ? { options: project.options } : {}),
+        lufs: project.lufs,
     }
 }
 
@@ -69,8 +82,16 @@ export function voiceLines(t: Timeline, spec: VideoSpec, settings: VoiceSettings
     }))
 }
 
+/** Bumped when the post-processing (the trim) changes, so cached lines are made again. */
+const CACHE_VERSION = 2
+
+/** The cache name of a line: everything that changes how it sounds (not the loudness: the mix sets it). */
 export function lineHash(text: string, s: VoiceSettings): string {
-    return createHash('sha1').update(JSON.stringify([s.model, s.voice, s.instructions, text])).digest('hex').slice(0, 16)
+    const { lufs: _, ...sound } = s
+    return createHash('sha1')
+        .update(JSON.stringify([CACHE_VERSION, sound, text]))
+        .digest('hex')
+        .slice(0, 16)
 }
 
 /** What a callout says (its `say`, else its text); '' when it is silent. */
@@ -104,38 +125,46 @@ export function spokenTexts(spec: VideoSpec, callouts: { text: string; say?: str
 }
 
 /**
- * Fetches the lines missing from `cacheDir` from OpenAI. Returns how many it fetched.
- * Throws a ReelkitError without OPENAI_API_KEY (only when something is missing).
+ * Speaks the lines missing from `cacheDir` (see tts.ts). Returns how many it made.
+ * Throws a ReelkitError when the provider cannot speak here (only when something is missing).
  */
 export async function fetchLines(texts: string[], settings: VoiceSettings, cacheDir: string, log: (l: string) => void): Promise<number> {
     const missing = [...new Set(texts)].filter((text) => !existsSync(resolve(cacheDir, `${lineHash(text, settings)}.mp3`)))
     if (!missing.length) {
         return 0
     }
-    const key = process.env.OPENAI_API_KEY
-    if (!key) {
-        throw new ReelkitError(`voice-over: ${missing.length} line(s) to speak and no OPENAI_API_KEY — set it (export OPENAI_API_KEY=…, or put it in a .env next to demo.config.json) or turn "voice" off in video.json`)
+    const problem = missingSetup(settings)
+    if (problem) {
+        throw new ReelkitError(`voice-over: ${missing.length} line(s) to speak with ${settings.provider} and ${problem} (or turn "voice" off in video.json)`)
     }
     mkdirSync(cacheDir, { recursive: true })
-    for (const text of missing) {
-        const response = await fetch('https://api.openai.com/v1/audio/speech', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: settings.model,
-                voice: settings.voice,
-                input: text,
-                response_format: 'mp3',
-                ...(settings.instructions ? { instructions: settings.instructions } : {}),
-            }),
-        })
-        if (!response.ok) {
-            throw new ReelkitError(`voice-over: OpenAI answered ${response.status} for "${text}": ${(await response.text()).slice(0, 300)}`)
+    const scratch = mkdtempSync(join(tmpdir(), 'reelkit-voice-'))
+    try {
+        for (const text of missing) {
+            const raw = resolve(scratch, settings.provider === 'openai' || settings.provider === 'elevenlabs' ? 'line.mp3' : 'line.wav')
+            rmSync(raw, { force: true })
+            await speak(text, settings, raw)
+            trimInto(raw, resolve(cacheDir, `${lineHash(text, settings)}.mp3`))
+            log(`  voice: spoke "${text}" (${settings.provider})`)
         }
-        writeFileSync(resolve(cacheDir, `${lineHash(text, settings)}.mp3`), Buffer.from(await response.arrayBuffer()))
-        log(`  voice: spoke "${text}"`)
+    } finally {
+        rmSync(scratch, { recursive: true, force: true })
     }
     return missing.length
+}
+
+/** The silence around a line, cut (a breath of it kept) and saved as mp3. */
+const TRIM = 'silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.05'
+
+function trimInto(raw: string, target: string): void {
+    const run = spawnSync(
+        'ffmpeg',
+        ['-y', '-loglevel', 'error', '-i', raw, '-af', `${TRIM},areverse,${TRIM},areverse`, '-ar', '48000', '-c:a', 'libmp3lame', '-q:a', '2', target],
+        { stdio: 'inherit' },
+    )
+    if (run.status !== 0 || !existsSync(target)) {
+        throw new ReelkitError(`ffmpeg could not read the spoken line ${raw}`)
+    }
 }
 
 /** Seconds of audio in `file` (ffprobe). */

@@ -178,9 +178,19 @@ export interface VideoSpec {
     portrait?: 'auto' | 'mobile' | 'desktop'
     /**
      * Voice-over: true speaks each callout (demo.config.json `voice` settings); an object
-     * overrides the voice / instructions for this video and may add a line over the intro.
+     * overrides the provider / model / voice / instructions / speed for this video and may add
+     * a line over the intro.
      */
-    voice?: boolean | { voice?: string; instructions?: string; intro?: string }
+    voice?:
+        | boolean
+        | {
+              provider?: 'openai' | 'elevenlabs' | 'piper' | 'command'
+              model?: string
+              voice?: string
+              instructions?: string
+              speed?: number
+              intro?: string
+          }
     /** Versions every `reelkit render` adds besides the 16:9 one (as --portrait / --square). */
     formats?: ('portrait' | 'square')[]
 }

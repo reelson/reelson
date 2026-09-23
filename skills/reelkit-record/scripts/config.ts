@@ -61,14 +61,24 @@ export interface DemoConfig {
         lufs: number
         lufsUnderNarration: number
     }
-    /** Voice-over (video.json "voice": true): each callout spoken by OpenAI text-to-speech. */
+    /** Voice-over (video.json "voice": true): each callout spoken by a text-to-speech provider. */
     voice: {
-        /** OpenAI speech model. */
-        model: string
-        /** OpenAI voice, e.g. "alloy", "ash", "coral", "nova", "sage". */
-        voice: string
-        /** How to speak (tone, pace, accent) — for models that take instructions. */
+        /** openai (or a local OpenAI-compatible server), elevenlabs, piper (local), command (local). */
+        provider: 'openai' | 'elevenlabs' | 'piper' | 'command'
+        /** The provider's model (default: its own, e.g. gpt-4o-mini-tts, eleven_multilingual_v2). */
+        model?: string
+        /** The provider's voice (default: its own; Piper: one for the project's language). */
+        voice?: string
+        /** How to speak (tone, pace, accent) — for models that take instructions (gpt-4o-mini-tts). */
         instructions: string
+        /** Speaking rate, 1 = normal (OpenAI tts-1, ElevenLabs 0.7–1.2, Piper). */
+        speed?: number
+        /** openai: API root of a local OpenAI-compatible server. */
+        baseURL?: string
+        /** command: argv with {text} {out} {voice} {model} {speed} {language}. */
+        command?: string[]
+        /** Extra request fields (openai, elevenlabs) or --flags (piper). */
+        options?: Record<string, unknown>
         /** Integrated loudness of the voice track. */
         lufs: number
     }
@@ -120,9 +130,9 @@ export const DEFAULTS: DemoConfig = {
     },
     music: { file: null, lufs: -28, lufsUnderNarration: -34 },
     voice: {
-        model: 'gpt-4o-mini-tts',
-        voice: 'alloy',
-        instructions: 'A calm, friendly product walkthrough narrator: clear, unhurried, warm; no exaggerated enthusiasm.',
+        provider: 'openai',
+        instructions:
+            'Like a colleague showing a feature on a screen share: natural and conversational, a brisk, easy pace with no gaps between words; light and confident. Native pronunciation of the language. Not an announcer, no exaggerated enthusiasm.',
         lufs: -16,
     },
     record: {

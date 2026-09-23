@@ -61,17 +61,33 @@ changing the trim or the template never re-times anything. Validated against
   before the next callout) unless given. `"anchor": "marker"` starts it on the marker instead
   (for a callout about the result). `offset` (seconds, may be negative) nudges it from there and
   keeps it tied to the marker, so it still follows a re-recording.
-- **Voice-over**: `"voice": true` speaks each callout as it appears (OpenAI text-to-speech;
-  needs `OPENAI_API_KEY`, from the environment or a `.env` next to demo.config.json or in the
-  reelkit checkout). A callout's `say` replaces what is spoken (e.g. a full sentence for a
-  terse pill; `false`: silent); `"voice": { "intro": "…" }` adds a line over the intro, and
-  `voice` / `instructions` there override demo.config.json `voice` (model `gpt-4o-mini-tts`,
-  voice `alloy`, a calm narrator by default). `reelkit voice <slug>` fetches the missing lines
-  (render and build do it for you) into `<demo>/voice/<hash>.mp3` — cached by words + voice, so
-  each line is paid for once; commit the folder to render without a key. A spoken callout stays
-  up until its line is said, and the next step's callout waits for it; when the line cannot fit
-  (the video ends, or an `at` callout comes first), the build and check warn — shorten its `say`
-  or pause longer in the scenario. The music ducks under it.
+- **Voice-over**: `"voice": true` speaks each callout as it appears, with demo.config.json
+  `voice.provider`:
+  - `openai` (default): `gpt-4o-mini-tts`, voice `alloy`, pace and tone from `instructions`;
+    needs `OPENAI_API_KEY`. With `baseURL` it talks to a local OpenAI-compatible server instead
+    (Kokoro-FastAPI `http://localhost:8880/v1`, Speaches, LocalAI) — no key needed.
+  - `elevenlabs`: `eleven_multilingual_v2` (or `eleven_flash_v2_5`, faster; `eleven_v3`, most
+    expressive), voice George by default — `voice` takes a voice id, or a name when the key may
+    read voices; needs `ELEVENLABS_API_KEY`.
+  - `piper`: a local neural voice (`pipx install piper-tts`), one per language by default
+    (`ro_RO-mihai-medium`, `en_US-lessac-medium`, …), downloaded once into ~/.cache/reelkit/piper.
+  - `command`: any local program — `"command": ["my-tts", "--out", "{out}", "{text}"]`
+    ({voice} {model} {speed} {language} too; the text also comes on stdin).
+
+  `speed` uses the provider's own rate (ElevenLabs 0.7–1.2, Piper, OpenAI tts-1; for
+  gpt-4o-mini-tts ask for the pace in `instructions`); `options` passes extra request fields
+  (e.g. ElevenLabs `{"voice_settings": {"stability": 0.4}}`) or Piper flags. Keys come from the
+  environment or a `.env` next to demo.config.json or in the reelkit checkout. A callout's `say`
+  replaces what is spoken (a full sentence for a terse pill — "→" reads as a pause; `false`:
+  silent); `"voice": { "intro": "…" }` adds a line over the intro, and `provider` / `model` /
+  `voice` / `instructions` / `speed` there override the project for one video. `reelkit voice
+  <slug>` makes the missing lines (render and build do it for you), trimmed of the silence around
+  them, into `<demo>/voice/<hash>.mp3` — cached by words + every sound setting, so each line is
+  made once; commit the folder to render without a key. `reelkit doctor` says whether the
+  provider can speak here. A spoken callout stays up until its line is said, and the next step's
+  callout waits for it; when the line cannot fit (the video ends, or an `at` callout comes
+  first), the build and check warn — shorten its `say` or pause longer in the scenario. The
+  music ducks under it.
 - **Zooms**: use `clicks: [first, last]` (1-based positions in markers.json `clicks`, which
   `demo.click`/`demo.type` log). reelkit computes the focus point and the timing from the
   cursor — in with the glide to the first click, out with the glide to the next target,
