@@ -115,7 +115,8 @@ describe('voice-over providers', () => {
         assert.deepEqual(commandArgs(s, 'Hello {out}', '/tmp/x.wav'), ['tts', '--voice=v1', '-o', '/tmp/x.wav', 'Hello {out}', '1.2', 'en'])
     })
 
-    it('speaks with a local command and trims the silence around the line', async () => {
+    const noFfmpeg = spawnSync('ffmpeg', ['-version']).status !== 0 && 'needs ffmpeg'
+    it('speaks with a local command and trims the silence around the line', { skip: noFfmpeg }, async () => {
         const dir = mkdtempSync(join(tmpdir(), 'reelkit-voice-test-'))
         try {
             // Half a second of silence, one second of tone, half a second of silence: the cached line keeps the tone.
