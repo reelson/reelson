@@ -1,0 +1,62 @@
+---
+title: CLI
+description: Every reelson command and flag.
+---
+
+`<slug>` is a folder under `videosDir`, or a path to a demo folder or its `scenario.ts`.
+`reelson help` prints this list.
+
+## Set up
+
+| Command | Does |
+|---------|------|
+| `reelson install [<project-dir> \| --global] [-y] [--no-browser]` | Links the `reelson-record` and `reelson-compose` skills into `.agents/skills/` and `.claude/skills/`, either globally for every project or into one project (which also gets a `reelson.config.json`). Asks which when neither is given. Downloads Playwright's Chromium unless `--no-browser`. |
+| `reelson init` | Creates `reelson.config.json` in this directory. |
+| `reelson doctor` | Checks the tools, the voice provider and that the cursor layer lines up with the footage on this machine. |
+| `reelson templates` | Lists templates and intro/recap/outro sections. |
+
+## Make a video
+
+| Command | Does |
+|---------|------|
+| `reelson new <slug> [--url <origin>]` | Starts `<videosDir>/<slug>/scenario.ts`. |
+| `reelson record <slug> [--headed] [--mobile \| --square \| --all-takes]` | Runs the scenario → `recording.mp4` + `markers.json`. `--mobile`: the phone take, for `--portrait`. `--square`: the square take, for `--square`. `--all-takes`: all three. |
+| `reelson build <slug> [options]` | `video.json` → `video/` (a HyperFrames project). Creates `video.json` on the first run. Options: `--title`, `--subtitle`, `--template <name>`, `--intro <name>`, `--recap <name\|none>`, `--outro <name>`, `--trim-start <s\|auto>`, `--trim-end <s>`, `--music <file>` / `--no-music` (written into `video.json`). |
+| `reelson voice <slug>` | Speaks the voice-over lines not spoken yet (cached in `<demo>/voice/`). |
+| `reelson voices [--provider <name>] [--all] [--library]` | Lists voices to pick for `voice.voice`. |
+| `reelson check <slug> [--no-hyperframes]` | Schemas, zoom timing and the HyperFrames lint. Must say "ready to render". |
+| `reelson snapshot <slug> --at 1,3.5,8 [--portrait \| --square]` | PNG frames into `video/snapshots/`. |
+| `reelson studio <slug> [--port 4800] [--no-open]` | Preview and edit on a timeline of every layer. Saves `video.json`. |
+| `reelson preview <slug>` | Opens the HyperFrames studio on the raw composition. |
+| `reelson render <slug...> \| --all [flags]` | Builds and renders `video/renders/<slug>.mp4` + `.srt`/`.vtt` captions. Skips a video unchanged since its last render. |
+
+### `render` flags
+
+| Flag | Does |
+|------|------|
+| `--gif` | Adds a 720 px, 12 fps GIF. |
+| `--portrait` | Adds the 1080x1920 phone version. |
+| `--square` | Adds the 1080x1080 version (needs the square take). |
+| `--all-formats` | Adds both. |
+| `--only <landscape\|portrait\|square>` | Renders just that version. |
+| `--draft` | 15 fps at draft quality, about 2x faster → `renders/<slug>.draft.mp4`. |
+| `--force` | Renders even when nothing changed. |
+| `--no-build` | Renders the existing `video/` without rebuilding. |
+
+## Maintain
+
+| Command | Does |
+|---------|------|
+| `reelson verify <slug...> \| --all [--update]` | Re-records every take headless into a scratch folder and checks `video.json` still fits (markers, click numbers, zooms). `--update` keeps the new takes. |
+
+## Publish
+
+| Command | Does |
+|---------|------|
+| `reelson publish <slug...> [--to <channel,...> \| --all-channels] [--dry-run]` | Uploads the render to the config's channels (asks which without `--to`). A channel that already has it is skipped. |
+| `… --again` | Uploads a second copy. |
+| `… --replace` | Uploads the new render and makes the old video private. The URL changes. |
+| `… --update` | Rewrites the title, description, tags, captions and playlist, keeping the URL. |
+| `reelson channels` | Lists the channels and who each is logged in as. |
+| `reelson channels init` | Adds starter channels to the config. |
+| `reelson channels login <name>` / `logout <name>` | Signs a channel in (browser) or out. |

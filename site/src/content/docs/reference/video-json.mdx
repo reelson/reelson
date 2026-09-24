@@ -1,0 +1,70 @@
+---
+title: video.json
+description: The per-video source of truth — title, trim, callouts, zooms, cursor, sections, voice and formats.
+---
+
+One per demo, committed. `reelson build` creates it on the first run, and you (or your agent, or
+`reelson studio`) edit it from then on. Every time in it is a **recording time**: seconds in
+`recording.mp4`, as in `markers.json`.
+
+```json title="video.json"
+{
+    "$schema": "../../.agents/skills/reelson-compose/schemas/video.schema.json",
+    "title": "Ship it faster",
+    "subtitle": "Add a task, assign it, finish it",
+    "sections": { "intro": "poster", "recap": "none", "outro": "compact" },
+    "trim": { "start": "auto" },
+    "callouts": [
+        { "marker": "Add a task", "text": "Add a task" },
+        { "marker": "Assign it to yourself", "text": "Assign it to yourself" },
+        { "marker": "Drag it to Done", "text": "Move it to Done" }
+    ],
+    "zooms": [{ "clicks": [2, 4], "scale": 1.55 }],
+    "cursor": { "lag": 0.08 }
+}
+```
+
+## Top level
+
+| Field | Is |
+|-------|----|
+| `title` | Cover title: the task, e.g. "Find a customer". |
+| `subtitle` | Cover subtitle: the benefit or context. |
+| `template`, `sections` | Override the project's template and sections for this video. |
+| `recapTitle` | Overrides `strings.recapTitle`. |
+| `brand` | Per-video `name`, `tagline`, `eyebrow`, `logo`. |
+| `trim` | `start`: `"auto"`, `{ "marker", "offset"? }`, `{ "click", "offset"? }` or seconds. `end`: the same, minus `auto`. |
+| `music` | A file for this video only, `false` for none, or omit it for the project's. |
+| `callouts` | Numbered step pills, which are also the recap. See below. |
+| `calloutPosition` | `auto` (default), `top` or `bottom`. |
+| `zooms` | Zoom-ins on the framed recording. See below. |
+| `cursor` | `false`, or `{ size, ripple, idle, lag }`. |
+| `voice` | `true`, or `{ provider, model, voice, instructions, speed, intro }`. |
+| `formats` | `["portrait", "square"]`: versions every render adds. |
+| `portrait` | Source of the portrait version: `auto` (default), `mobile` or `desktop`. |
+| `publish` | `{ title, description, tags }` for `reelson publish`. |
+
+## Callouts
+
+| Field | Is |
+|-------|----|
+| `text` | **Required.** An imperative step in the UI's language, ≤ 6 words. |
+| `marker` | The `markers.json` label it is timed from. |
+| `at` | A recording time instead of a marker (manual recordings). |
+| `anchor` | `step` (default): starts as its step begins. `marker`: starts on the marker. |
+| `offset` | Seconds after that start (negative: before). |
+| `duration` | Seconds on screen. Default: through its step and 1.2 s past its marker (at least 3 s). |
+| `position` | `top` or `bottom` for this callout only. |
+| `group` | Role tag in two-actor videos. Taken from the hand-off cards by default. |
+| `say` | What the voice-over says instead of `text`. `false`: nothing. |
+
+## Zooms
+
+| Field | Is |
+|-------|----|
+| `clicks` | `[first, last]`: 1-based click numbers from `markers.json`. Timing and focus are computed. |
+| `scale` | **Required.** 1.1–4. 1.5–2.0 reads well. |
+| `follow` | Pan with the cursor while zoomed. Default `false`. |
+| `x`, `y` | Focus point as a fraction of the frame. Default: centred on the clicks. |
+| `in`, `out` | Ease durations in seconds. Default 0.8. |
+| `at`, `duration` | A manual zoom instead of `clicks` (rarely needed). |

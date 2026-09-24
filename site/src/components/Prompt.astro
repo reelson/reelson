@@ -1,0 +1,155 @@
+---
+/**
+ * A ready-to-copy prompt: a card with a title, an optional note, the prompt itself and a Copy
+ * button. <PLACEHOLDERS> in angle brackets are highlighted so readers know what to fill in.
+ */
+interface Props {
+    title: string
+    text: string
+    note?: string
+    /** Keep the text exactly as written, in a monospace font (for column-aligned templates). */
+    verbatim?: boolean
+}
+const { title, text, note, verbatim = false } = Astro.props
+const trimmed = text.replace(/^\n+|\s+$/g, '')
+// Source prompts are hard-wrapped for readability; join wrapped lines back into paragraphs so the
+// card wraps them itself and the copied prompt has no stray line breaks. List items and blank
+// lines keep their breaks.
+const prompt = verbatim
+    ? trimmed
+    : trimmed
+          .split('\n')
+          .reduce<string[]>((lines, line) => {
+              const item = /^\s*([-*]|\d+\.)\s/.test(line)
+              const prev = lines.at(-1)
+              if (prev !== undefined && prev.trim() !== '' && line.trim() !== '' && !item) {
+                  lines[lines.length - 1] = `${prev} ${line.trim()}`
+              } else {
+                  lines.push(item ? line.replace(/^\s+/, (m) => (m.length ? '   ' : '')) : line.trim())
+              }
+              return lines
+          }, [])
+          .join('\n')
+const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const html = escape(prompt)
+    .replace(/`([^`\n]+)`/g, '<span class="code">`$1`</span>')
+    .replace(/&lt;([^&\n]{1,60})&gt;/g, '<span class="ph">&lt;$1&gt;</span>')
+---
+
+<figure class:list={['r-prompt not-content', { verbatim }]}>
+    <figcaption>
+        <span class="title">{title}</span>
+        <button type="button" class="copy" data-prompt={prompt} aria-label={`Copy the prompt: ${title}`}>
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"
+                ><rect x="9" y="9" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"></rect
+                ><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" fill="none" stroke="currentColor" stroke-width="2"></path></svg
+            >
+            <span class="label">Copy</span>
+        </button>
+    </figcaption>
+    {note && <p class="note">{note}</p>}
+    <pre><Fragment set:html={html} /></pre>
+</figure>
+
+<script>
+    for (const button of document.querySelectorAll<HTMLButtonElement>('.r-prompt .copy')) {
+        button.addEventListener('click', async () => {
+            const label = button.querySelector('.label')!
+            try {
+                await navigator.clipboard.writeText(button.dataset.prompt ?? '')
+                label.textContent = 'Copied'
+                button.classList.add('done')
+            } catch {
+                label.textContent = 'Press ⌘C'
+                const pre = button.closest('.r-prompt')!.querySelector('pre')!
+                getSelection()?.selectAllChildren(pre)
+            }
+            setTimeout(() => {
+                label.textContent = 'Copy'
+                button.classList.remove('done')
+            }, 1800)
+        })
+    }
+</script>
+
+<style>
+    .r-prompt {
+        margin: 1.25rem 0 0;
+        border: 1px solid var(--sl-color-gray-5);
+        border-radius: var(--r-radius);
+        background: var(--r-card);
+        overflow: hidden;
+        transition: border-color 0.2s;
+    }
+    .r-prompt:hover {
+        border-color: color-mix(in srgb, var(--sl-color-accent) 55%, var(--sl-color-gray-5));
+    }
+    figcaption {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.6rem 0.6rem 0.6rem 1rem;
+        border-bottom: 1px solid var(--sl-color-gray-5);
+    }
+    .title {
+        font-weight: 600;
+        color: var(--sl-color-white);
+        font-size: 0.95rem;
+    }
+    .copy {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-shrink: 0;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid var(--sl-color-gray-5);
+        background: var(--sl-color-black);
+        color: var(--sl-color-gray-2);
+        font: 500 0.8rem var(--sl-font);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .copy:hover {
+        color: var(--sl-color-white);
+        border-color: var(--sl-color-accent);
+    }
+    .copy.done {
+        color: #fff;
+        background: var(--r-grad);
+        border-color: transparent;
+    }
+    .note {
+        margin: 0;
+        padding: 0.7rem 1rem 0;
+        font-size: 0.85rem;
+        color: var(--sl-color-gray-3);
+    }
+    pre {
+        margin: 0;
+        padding: 0.85rem 1rem 1rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font: 0.95rem/1.65 var(--sl-font);
+        color: var(--sl-color-gray-1);
+        background: transparent;
+        border: 0;
+    }
+    .verbatim pre {
+        font: 0.84rem/1.7 var(--sl-font-mono);
+        white-space: pre;
+        overflow-x: auto;
+    }
+    pre :global(.code) {
+        font-family: var(--sl-font-mono);
+        font-size: 0.9em;
+        color: var(--sl-color-white);
+    }
+    pre :global(.ph) {
+        color: var(--r-placeholder);
+        background: var(--r-placeholder-bg);
+        border-radius: 0.3rem;
+        padding: 0 0.2em;
+    }
+</style>

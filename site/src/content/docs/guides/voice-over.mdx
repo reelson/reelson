@@ -1,0 +1,80 @@
+---
+title: Voice-over
+description: Speak each callout with OpenAI, ElevenLabs, a local Piper voice or any command.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components'
+
+Set `"voice": true` in `video.json` and each callout is spoken as it appears. The music ducks
+under it. The provider is set once per project in `reelson.config.json` `voice`.
+
+<Tabs>
+<TabItem label="OpenAI">
+The default: `gpt-4o-mini-tts`, voice `alloy`. Set the pace and tone in `instructions`. Needs
+`OPENAI_API_KEY`.
+
+```json
+"voice": { "provider": "openai", "voice": "marin", "instructions": "Warm, calm, unhurried product narrator." }
+```
+
+With `baseURL`, it talks to a local OpenAI-compatible server instead (Kokoro-FastAPI at
+`http://localhost:8880/v1`, Speaches, LocalAI), with no key needed.
+</TabItem>
+<TabItem label="ElevenLabs">
+`eleven_multilingual_v2` by default (`eleven_flash_v2_5` is faster, `eleven_v3` the most
+expressive). `voice` takes a voice id, or a name when the key may read voices. Needs
+`ELEVENLABS_API_KEY`.
+
+```json
+"voice": { "provider": "elevenlabs", "voice": "George", "options": { "voice_settings": { "stability": 0.4 } } }
+```
+</TabItem>
+<TabItem label="Piper (local)">
+A free, offline neural voice: `pipx install piper-tts`. There is one default per language
+(`en_US-lessac-medium`, `ro_RO-mihai-medium`, …), downloaded once into `~/.cache/reelson/piper`.
+
+```json
+"voice": { "provider": "piper" }
+```
+</TabItem>
+<TabItem label="Any command">
+Any local program that writes the line to `{out}`:
+
+```json
+"voice": { "provider": "command", "command": ["my-tts", "--out", "{out}", "{text}"] }
+```
+
+`{voice}`, `{model}`, `{speed}` and `{language}` are filled in too, and the text also comes on stdin.
+</TabItem>
+</Tabs>
+
+`reelson voices` lists the voices you can pick (`--provider`, `--all`, `--library`).
+
+## Per video
+
+```json title="video.json"
+{
+    "voice": { "intro": "Here's how to find any customer in seconds." },
+    "callouts": [
+        { "marker": "customers-list", "text": "Open Customers" },
+        { "marker": "search-results", "text": "Type → match", "say": "Type a name, and the match appears." }
+    ]
+}
+```
+
+- `say` replaces what is spoken (a full sentence for a terse pill). `"say": false` keeps a callout silent.
+- `"voice": { "intro": "…" }` adds a line over the intro. `provider`, `model`, `voice`,
+  `instructions` and `speed` there override the project for one video.
+- A spoken callout stays up until its line is said, and the next callout waits for it. When a
+  line can't fit, `build` and `check` warn you: shorten its `say`, or pause longer in the scenario.
+
+## Caching
+
+`reelson voice <slug>` makes the missing lines (`build` and `render` do it for you) into
+`<demo>/voice/<hash>.mp3`. Lines are cached by their words and every sound setting, so each one
+is made once. Commit the folder to render without a key.
+
+<Aside type="tip">
+`reelson doctor` tells you whether the provider can speak on this machine. Keys come from the
+environment or a `.env` next to `reelson.config.json`.
+</Aside>

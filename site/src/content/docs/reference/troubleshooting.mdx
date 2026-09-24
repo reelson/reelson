@@ -1,0 +1,49 @@
+---
+title: Troubleshooting
+description: Fixes for the problems people hit most.
+---
+
+### `reelson: command not found` or `Cannot find module '@playwright/test'`
+Run `npm install -g reelson && reelson install` (or `install.sh` in a checkout).
+
+### `… is invalid: … unknown key — did you mean …`
+A typo in `reelson.config.json` or `video.json`. The message names the path. Add the `$schema`
+line and your editor autocompletes both.
+
+### The scenario timed out on a locator
+Open `recording.failed.mp4` to see where it stopped, and re-run with `--headed` to watch.
+
+### Dev toolbars or an env badge show up on camera
+Add their selectors to `record.hideSelectors`. For dev prefills and auto-logins, skip them in the
+app when the `X-Demo-Recording: 1` header is present.
+
+### Blurry UI text, worst in zooms
+The capture must be 2x: `ffprobe recording.mp4` should say 2880x1800 for a 1440x900 viewport.
+Check `record.deviceScaleFactor` is 2.
+
+### A dragged element trails the cursor
+The page paints late. Set `"cursor": { "lag": 0.08 }` in `video.json` (measure the gap on the drag).
+
+### The cursor doesn't line up with clicks on a new machine
+Run `reelson doctor`. It films a test page and reports the cursor offset and error in px.
+
+### `reelson check` flags a zoom's timing
+Zooms must finish before their click. Anchor them with `clicks`, and shorten the ease (`in` /
+`out`, ≥ 0.4 s) rather than adding pauses to the scenario. Two zooms may not be on screen at
+once. Use one zoom over both click ranges.
+
+### A voice-over line runs past its step
+Shorten its `say`, or pause longer in the scenario after that step.
+
+### The portrait video looks like a tiny desktop page
+The page lacks `<meta name="viewport" content="width=device-width">`.
+
+### YouTube asks me to log in again every week
+The OAuth consent screen is still in *Testing*. Publish the app (*Audience → Publish app*).
+
+### YouTube uploads are private although `privacy` is public
+YouTube keeps uploads private until Google audits the Cloud project. Switch them in YouTube
+Studio, or apply for the audit.
+
+Still stuck? [Open an issue](https://github.com/reelson/reelson/issues) with the command, its
+output and your reelson version (`npm ls -g reelson`).

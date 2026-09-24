@@ -1,0 +1,131 @@
+---
+title: reelson.config.json
+description: The per-project settings — brand, language, sections, music, voice, recording defaults and publish channels.
+---
+
+import { Aside } from '@astrojs/starlight/components'
+
+Everything project-specific lives in one file at the project root. `reelson install <project>`
+or `reelson init` creates it. Every field is optional. The file is validated against
+[a JSON Schema](https://github.com/reelson/reelson/blob/main/skills/reelson-record/schemas/reelson.config.schema.json),
+so editors autocomplete it and a typo is an error with a "did you mean" hint.
+
+```jsonc title="reelson.config.json"
+{
+    "$schema": "./.agents/skills/reelson-record/schemas/reelson.config.schema.json",
+    "videosDir": "docs/videos",
+    "language": "en",
+    "locale": "en-US",
+    "brand": {
+        "name": "ACME", "tagline": "PLATFORM", "eyebrow": "Acme",
+        "color": "#dc2626", "colorSoft": "#f87171",
+        "logo": "docs/brand/logo.svg"
+    },
+    "template": "classic",
+    "sections": { "intro": "poster", "recap": "steps", "outro": "wordmark" },
+    "music": { "file": "docs/videos/_music/track.mp3", "lufs": -28, "lufsUnderNarration": -34 },
+    "voice": { "provider": "openai", "voice": "alloy" },
+    "record": {
+        "viewport": { "width": 1440, "height": 900 },
+        "hideSelectors": [".environment-indicator"],
+        "extraHTTPHeaders": { "X-Demo-Recording": "1" },
+        "personaDomain": "example.com"
+    },
+    "channels": {
+        "youtube": { "type": "youtube", "privacy": "unlisted" }
+    }
+}
+```
+
+## Project
+
+| Field | Default | Is |
+|-------|---------|----|
+| `videosDir` | `docs/videos` | Where `<slug>/` folders live, relative to the project root. |
+| `language` | `en` | BCP 47 language of the product UI. Drives `<html lang>`, plural rules, persona names and the built-in card strings. |
+| `locale` | `en-US` | Browser locale while recording (Accept-Language, Intl formatting). |
+| `template` | `classic` | The stage: a built-in template or `<videosDir>/_templates/<name>`. |
+| `sections` | `poster` / `steps` / `wordmark` | `intro`, `recap` (or `"none"`) and `outro`. See [Templates & sections](../../guides/templates/). |
+
+## Brand
+
+| Field | Is |
+|-------|----|
+| `brand.name` | Wordmark on the cover and the closing card. |
+| `brand.tagline` | Small spaced line under the wordmark. Empty hides it. |
+| `brand.eyebrow` | Label above the recap title. |
+| `brand.color` | Primary accent: numbers, lines, the click ring. Any CSS colour. |
+| `brand.colorSoft` | Lighter accent for gradients. |
+| `brand.logo` | `.svg`, `.png` (≥ 340 px tall) or `.webp` drawn instead of the text wordmark. `null` uses text. |
+
+## Strings
+
+Built in for en, ro, de, fr, es, it, pt, nl, pl, ru, uk, cs, sv, da, nb, fi, hu and tr. Override
+them with `strings`:
+
+```json
+"strings": {
+    "recapTitle": "In short",
+    "stepsLabel": { "one": "step", "other": "steps" },
+    "secondsLabel": { "one": "second", "other": "seconds" }
+}
+```
+
+Plural keys are `Intl.PluralRules` categories (Romanian, for example, uses `one` / `few` / `other`).
+
+## Music
+
+| Field | Default | Is |
+|-------|---------|----|
+| `music.file` | `null` | One music bed under every video, relative to the project root. |
+| `music.lufs` | `-28` | Bed loudness under silent footage. |
+| `music.lufsUnderNarration` | `-34` | Bed loudness under narration or a voice-over. |
+
+## Voice
+
+For videos with `"voice": true`. See [Voice-over](../../guides/voice-over/).
+
+| Field | Is |
+|-------|----|
+| `voice.provider` | `openai` (default), `elevenlabs`, `piper` or `command`. |
+| `voice.model`, `voice.voice` | The provider's model and voice. |
+| `voice.instructions` | How to speak: tone, pace, accent (`gpt-4o-mini-tts`). |
+| `voice.speed` | Speaking rate, 1 = normal. |
+| `voice.baseURL` | `openai`: a local OpenAI-compatible server. |
+| `voice.command` | `command`: the program and its arguments. |
+| `voice.options` | Extra request fields or `--flags`, passed through. |
+| `voice.lufs` | Voice loudness. Default `-16`. |
+
+## Record
+
+| Field | Default | Is |
+|-------|---------|----|
+| `record.viewport` | `1440x900` | Browser size in CSS px. Keep 16:10 or 16:9. |
+| `record.deviceScaleFactor` | `2` | Capture pixel ratio. 2x keeps text sharp in 1080p and under zooms. |
+| `record.extraHTTPHeaders` | `{ "X-Demo-Recording": "1" }` | Sent with every request while recording. |
+| `record.hideSelectors` | `[]` | Extra local-only UI to hide. Common dev toolbars are always hidden. |
+| `record.personaDomain` | `example.com` | Email domain for `demo.persona()`. |
+| `record.cursor` | `layer` | `layer`: logged and drawn by the video. `recorded`: filmed into the page. |
+| `record.capture` | `screencast` | `screencast`: every painted frame → smooth 30 fps. `playwright`: Playwright's 25 fps video. |
+| `record.mobile.device` | `Pixel 7` | Playwright device for the phone take. |
+| `record.square.viewport` | `1080x1080` | Browser size for the square take. |
+
+## Channels
+
+Where `reelson publish` uploads. Each key is a channel name used in `--to <name>`. See
+[Publish to YouTube](../../guides/publishing/).
+
+| Field | Is |
+|-------|----|
+| `type` | `youtube` |
+| `format` | `landscape` (default), `portrait` or `square` |
+| `privacy` | `private`, `unlisted` or `public` |
+| `playlist` | A playlist id to add the video to |
+| `tags`, `footer` | Tags, and a line at the end of every description |
+| `captions` | `false` to skip uploading the `.srt` |
+| `channelId` | `UC…`: refuses to upload when signed in to another channel |
+
+<Aside type="tip">
+The file is safe to commit. Sign-ins are kept in `~/.config/reelson/credentials/` and client
+secrets in `.env`.
+</Aside>

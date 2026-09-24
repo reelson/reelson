@@ -1,0 +1,71 @@
+---
+title: Templates & sections
+description: A video is a template (the stage) plus an intro, a recap and an outro, mixed and matched.
+---
+
+import { Aside } from '@astrojs/starlight/components'
+
+A video is a **template**, the stage that runs throughout (background, framed recording,
+callouts, hand-off cards), plus one **section** per slot:
+
+```
+ intro ──▶ recording (callouts, zooms, hand-off cards) ──▶ recap ──▶ outro
+```
+
+Run `reelson templates` to list everything your project can use.
+
+## Sections
+
+| Slot    | Section    | What it is |
+|---------|------------|------------|
+| `intro` | `poster` *(default)* | Wordmark, tagline, title, subtitle and an "N steps · S seconds" chip, centred. It breathes into place, holds, and lifts out as the recording rides in. |
+|         | `minimal`  | Left-aligned and quiet: a small brand row and a big title. Shorter. |
+|         | `split`    | A brand panel on the left, the title on the right. The doors open onto the recording. |
+| `recap` | `steps` *(default)* | Title on the left, one column of numbered steps on the right (split by role in two-actor videos). |
+|         | `compact`  | Centred numbered chips in a wrapping row. Shorter. |
+|         | `none`     | No recap. |
+| `outro` | `wordmark` *(default)* | A big wordmark that settles at 15 % opacity. |
+|         | `compact`  | One line: wordmark, divider, then the title over the tagline. |
+|         | `endcard`  | Brand, title, subtitle and chip, ending fully readable. |
+
+Pick them per project, per video or per build. Each level overrides the one before:
+
+```jsonc
+// template.json defaults < reelson.config.json < video.json < reelson build --intro/--recap/--outro
+"sections": { "intro": "minimal", "recap": "none", "outro": "endcard" }
+```
+
+**Rules of thumb:**
+- For short clips (under 15 s), use `minimal` + `compact` + `compact`.
+- With 2 steps or fewer, use `recap: none`.
+- Where the player pauses on the last frame (docs pages, GitHub), use `endcard`.
+
+<Aside type="note" title="House rules every section keeps">
+**Frame 0 is the poster**: the brand and the title are legible at t=0, because chat apps, GitHub
+and Finder use it as the thumbnail. **Every outro ends on the brand**, never on an empty frame.
+No URLs on any card.
+</Aside>
+
+## Your logo
+
+`brand.logo` in `reelson.config.json` (or per video in `video.json` `brand`) replaces the text
+wordmark in every intro and outro. It takes an `.svg` (sharpest), a `.png` at least 340 px tall,
+or a `.webp`, relative to the project root.
+
+## Make your own
+
+A project's own templates and sections win over the built-in ones:
+
+```
+<videosDir>/_templates/<name>/            stage.html, template.json, assets/
+<videosDir>/_sections/<slot>/<name>/      section.html, .css, .js, .json, assets/
+```
+
+Fork `classic` (or a section) there and change it. The Orbit example does exactly that with
+[its own template](https://github.com/reelson/reelson/tree/main/examples/_templates/orbit):
+deep-space violet, a neon aurora and orbital rings. Keep everything self-contained (scripts and
+fonts in `assets/`, never a CDN) so renders work offline and never change underneath you.
+
+The full contract (design tokens, placeholders, timing, HyperFrames rules) is in
+[templates/README.md](https://github.com/reelson/reelson/blob/main/skills/reelson-compose/templates/README.md).
+Design changes belong in a template or a section, never in one video's generated files.

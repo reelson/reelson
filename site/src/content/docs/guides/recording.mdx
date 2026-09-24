@@ -1,0 +1,138 @@
+---
+title: Writing a scenario
+description: A scenario is an e2e test with a cursor. How to write one that records well.
+---
+
+import { Aside } from '@astrojs/starlight/components'
+
+A scenario (`<videosDir>/<slug>/scenario.ts`) drives your app through Playwright. `reelson record`
+runs it and writes `recording.mp4` and `markers.json`. Start one with
+`reelson new <slug> --url <origin>`. Here is the Orbit example in full:
+
+```ts title="examples/orbit-ship-it/scenario.ts"
+import type { Scenario } from '../../skills/reelson-record/scripts/scenario.ts'
+
+export default {
+    name: 'orbit-ship-it',
+    baseURL: new URL('../orbit/', import.meta.url).href,
+    async run(demo) {
+        const page = demo.page
+        await demo.goto('index.html')
+        await demo.pause(400)
+
+        await demo.click(page.locator(demo.mobile ? '#new-task-m' : '#new-task'))
+        await demo.type(page.locator('#nt-title'), 'Ship the launch video')
+        demo.marker('Add a task')
+
+        await demo.click(page.locator('.who[data-av="MA"]'), { settleMs: 300 })
+        await demo.click(page.locator('#nt-create'), { settleMs: 900 })
+        demo.marker('Assign it to yourself')
+
+        const card = page.locator('.card', { hasText: 'Ship the launch video' })
+        if (demo.mobile) {
+            await demo.click(card)
+            await demo.click(page.locator('.mv[data-to="3"]'), { settleMs: 1600 })
+        } else {
+            await demo.moveTo(card)
+            await page.mouse.down()
+            await demo.pause(180)
+            await demo.moveTo(page.locator('.board .col').nth(3).locator('.colh'))
+            await demo.pause(150)
+            await page.mouse.up()
+            await demo.pause(1600)
+        }
+        demo.marker('Drag it to Done')
+        await demo.pause(2200) // time to read the last callout
+    },
+} satisfies Scenario
+```
+
+## Markers become callouts
+
+Call `demo.marker('label')` right **after** the UI reaches a state worth pointing out. The marker
+ends its step. The callout is shown from the step's first glide or click until just after the
+marker, so the viewer reads "Type the name" while the name is being typed.
+
+- Write labels as imperative steps in the UI's language. They become the callout text and the
+  recap rows.
+- Keep labels stable: `video.json` refers to callouts by label.
+- **Use at most 10 markers.** Fold small steps together.
+- Hold 2–3 s after the last marker so its callout can be read.
+
+## Move like a person
+
+Use `demo.click`, `demo.type`, `demo.moveTo` and `demo.scroll`, never raw `page.click` or
+`fill()`, which teleport the cursor and paste text. They glide on eased curves, type with uneven
+delays and log every click into `markers.json`. Zooms are anchored to that log. Use the raw
+`demo.page` only for waits, reads and `selectOption` (glide there with `demo.moveTo` first).
+
+- **Don't pause for zooms.** Zooms ride along with the cursor's glide.
+- Pause 1–1.5 s after anything the viewer must read (a modal, a notification, results).
+- Prefer small `demo.scroll()` steps over big jumps.
+
+## Clean data on camera
+
+- Type `demo.persona()` data: a believable name, email, phone and company in the UI's language.
+  Never `test@` or `e2e-123`.
+- Read values from the page instead of hard-coding seeded names.
+- Nothing pre-filled: the recorder sends `X-Demo-Recording: 1`, so gate dev prefills on it in the
+  app. Tick checkboxes on camera.
+- Cookie banners mount after load: `waitFor({ timeout: 3000 })`, then `demo.click` it.
+
+## Cut the waiting
+
+Wrap slow waits (3-D Secure, spinners, queued jobs) in `demo.cut()`. That stretch is dropped
+from the video, and a short glimpse is kept so the cut doesn't feel like a glitch:
+
+```ts
+await demo.cut(() => page.waitForURL('**/success'), { keepMs: 900 })
+```
+
+Log in at the start as usual. `video.json` trims it away (`"trim": { "start": "auto" }`).
+
+## Two actors
+
+Wrap an account switch in `demo.transition()`. Everything inside is cut, and the video shows a
+hand-off card. The recap splits per role.
+
+```ts
+await demo.transition(
+    async () => {
+        await page.context().clearCookies()
+        await loginAs(page, 'employee')
+        await demo.goto('/me/documents')
+    },
+    { title: 'The employee accepts the document', from: 'Manager', to: 'Employee' },
+)
+```
+
+## Pop-ups and new tabs
+
+```ts
+const tab = await demo.popup(() => demo.click(page.getByRole('link', { name: 'Preview' })))
+```
+
+From then on, `demo.page` and every demo action use the new page, and the video cuts to it. When
+it closes, both return to the page that opened it.
+
+## Record and check
+
+```bash
+reelson record <slug>            # ~20 s, headless
+reelson record <slug> --headed   # watch it
+```
+
+A failing scenario keeps its partial capture as `recording.failed.mp4`. Then check the frames,
+not the log:
+
+```bash
+ffmpeg -y -loglevel error -ss <marker time> -i <videosDir>/<slug>/recording.mp4 -frames:v 1 /tmp/m1.png
+```
+
+Look for the intended state, no dev toolbars or env badges, and nothing personal. If a new piece
+of dev UI shows up, add its selector to `record.hideSelectors`.
+
+<Aside type="note" title="Hidden automatically">
+Laravel Debugbar, Filament developer logins, the Symfony and Django toolbars, rack-mini-profiler,
+and the Vite, Next, Nuxt and Astro dev UIs are always hidden.
+</Aside>

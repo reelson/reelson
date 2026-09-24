@@ -1,0 +1,59 @@
+---
+title: What is reelson
+description: Two Agent Skills and a CLI that turn a scripted browser walkthrough into a branded demo video.
+---
+
+import { Card, CardGrid, FileTree, LinkCard } from '@astrojs/starlight/components'
+
+reelson turns a prompt into a finished, branded demo video of a web app. It is made of two
+[Agent Skills](https://agentskills.io) and a `reelson` CLI. It works with Claude Code, Codex
+and any agent that reads `SKILL.md` skills.
+
+<CardGrid>
+    <Card title="reelson-record" icon="desktop">
+        Runs a Playwright walkthrough of your app with a visible, human-paced cursor. It hides
+        dev chrome and logs step markers and clicks.
+        **Output:** `recording.mp4` + `markers.json`
+    </Card>
+    <Card title="reelson-compose" icon="puzzle">
+        Builds a [HyperFrames](https://hyperframes.heygen.com) composition around the footage:
+        poster intro, framed recording, callouts, cursor-timed zooms, recap, brand outro and music.
+        **Output:** `video/renders/<slug>.mp4`
+    </Card>
+</CardGrid>
+
+## What you get
+
+- **A real browser, a believable cursor.** The page is filmed with Chrome's screencast
+  (every painted frame at 2x pixels) and assembled into a smooth 30 fps clip. The cursor glides
+  on curved, eased paths and lands slightly off-centre. Typing has uneven delays. The pacing
+  is seeded, so every re-record is identical.
+- **Callouts and zooms that time themselves.** A `demo.marker()` in the scenario becomes a
+  numbered callout and a row in the recap. A zoom is anchored to click numbers, so it rides in
+  with the cursor and finishes before the click.
+- **Your brand everywhere.** Name, colours, logo, language (built-in strings for 18 languages)
+  and one music bed per project, all set in `reelson.config.json`.
+- **Nothing to redo after a UI change.** `reelson verify --all` re-records every demo and
+  reports anything that no longer fits.
+
+## What lives in your repo
+
+<FileTree>
+- reelson.config.json  brand, language, music, recording defaults
+- docs/videos/
+  - customers-search/
+    - scenario.ts  what happens (you or the agent write it)
+    - markers.json  when it happened (generated, committed)
+    - video.json  how it looks: callouts, zooms, trim
+    - published.json  where it was uploaded (after `reelson publish`)
+    - recording.mp4  generated, git-ignored
+    - video/  generated HyperFrames project and renders/, git-ignored
+</FileTree>
+
+## Requirements
+
+- **Node 22.18+** and **ffmpeg** (`brew install ffmpeg`)
+- The app you record, running locally
+- HyperFrames is fetched by `npx` on first use, at a pinned version
+
+<LinkCard title="Install reelson" href="../installation/" />

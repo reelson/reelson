@@ -1,0 +1,65 @@
+---
+title: Keep videos current
+description: Re-record every demo after a release, and catch drift in CI.
+---
+
+import { Aside } from '@astrojs/starlight/components'
+import Prompt from '../../../components/Prompt.astro'
+
+Demo videos usually rot with the first redesign. reelson videos are data (a scenario, markers and
+`video.json`), so they re-record in about 20 s each, headless, with identical pacing. Callouts
+follow their markers and zooms follow their click numbers.
+
+## After a release
+
+```bash
+reelson verify --all              # re-record every take into a scratch folder and check the fit
+reelson verify <slug> --update    # keep the new take once it's right
+reelson render --all              # re-render; unchanged videos are skipped
+```
+
+`verify` re-records each demo's takes (desktop, plus phone and square when it has them) and
+reports:
+
+- scenarios that no longer run (a renamed button, a moved page),
+- callouts and trims whose marker is gone,
+- zoom and trim click numbers that now point at a different click.
+
+Fix those in `scenario.ts` or `video.json`, then `--update`.
+
+## In CI
+
+reelson's own CI records, builds, checks and renders the Orbit example on every push, and cuts
+the README clip from it. Do the same for your app, so a UI change that breaks a demo fails the PR:
+
+```yaml title=".github/workflows/demos.yml"
+name: Demos
+on: [pull_request]
+jobs:
+    verify:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v5
+              with: { node-version: 22 }
+            - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+            - run: npm install -g reelson && npx playwright install --with-deps chromium
+            # start your app here, the way your e2e job does
+            - run: reelson verify --all
+            - if: failure()
+              uses: actions/upload-artifact@v4
+              with: { name: failed-takes, path: '**/recording*.failed.mp4', if-no-files-found: ignore }
+```
+
+<Aside type="tip">
+Pin actions to commit SHAs in real workflows. Or let your agent write it for you:
+</Aside>
+
+<Prompt
+    title="Check every demo in CI"
+    text={`Add a CI job (<GitHub Actions>) that keeps our reelson demos honest: install Node 22,
+ffmpeg and Chromium (\`npx playwright install --with-deps chromium\`), \`npm install -g reelson\`,
+start the app the way our e2e job does, then run \`reelson verify --all\`. It must fail when a
+scenario no longer runs or a callout, trim or zoom no longer fits. Upload any
+recording*.failed.mp4 as an artifact. Pin actions to commit SHAs, like our other workflows.`}
+/>

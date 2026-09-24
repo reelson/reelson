@@ -1,0 +1,90 @@
+---
+title: Install
+description: Install the reelson CLI and link its skills into your agent.
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
+
+<Steps>
+
+1. **Check the requirements**: Node 22.18+ and ffmpeg.
+
+   ```bash
+   node -v            # v22.18 or newer
+   brew install ffmpeg   # or apt-get install ffmpeg
+   ```
+
+2. **Install the CLI.**
+
+   ```bash
+   npm install -g reelson
+   ```
+
+3. **Link the skills.** `reelson install` downloads Playwright's Chromium and links both skills
+   into `.agents/skills/` (Codex and other agents) and `.claude/skills/` (Claude Code).
+
+   <Tabs>
+   <TabItem label="Every project">
+   ```bash
+   reelson install --global   # ~/.agents/skills and ~/.claude/skills
+   cd my-app && reelson init  # then, per project: reelson.config.json
+   ```
+   </TabItem>
+   <TabItem label="One project">
+   ```bash
+   reelson install ~/code/my-app
+   # also creates my-app/reelson.config.json and prints the .gitignore lines
+   ```
+   </TabItem>
+   </Tabs>
+
+   Run without arguments, it asks which one you want. `-y` takes the default, and without a
+   terminal (CI, scripts) it never asks.
+
+4. **Check this machine.**
+
+   ```bash
+   reelson doctor
+   ```
+
+   It checks the tools and films a local test page to confirm the cursor layer lines up with
+   the footage.
+
+</Steps>
+
+<Aside type="tip" title="Or let the agent do it">
+The skills link to the installed package, so `npm update -g reelson` updates every project.
+To have your agent install and configure everything, use the
+[set-up prompt](../../prompts/setup/).
+</Aside>
+
+## Ignore the generated files
+
+Per video you commit `scenario.ts`, `markers.json`, `video.json` and `published.json`.
+Add the rest to `.gitignore`:
+
+```txt title=".gitignore"
+# reelson: generated per demo
+**/recording*.mp4
+**/recording*.webm
+**/.raw/
+**/.raw.*/
+**/video/
+*.openscreen
+```
+
+## Work on reelson itself
+
+Install from a checkout instead. `reelson` then runs the TypeScript sources directly, and
+`git pull` updates every project.
+
+```bash
+git clone git@github.com:reelson/reelson.git ~/reelson
+~/reelson/install.sh   # npm link + reelson install
+```
+
+<Aside type="note" title="Coming from reelkit?">
+reelson was called reelkit before 0.7. Re-run `reelson install` for each project. It removes the
+old `reelkit` command and `reelkit-*` skill links. Then point scenario imports and `$schema`
+paths at `.agents/skills/reelson-*`.
+</Aside>

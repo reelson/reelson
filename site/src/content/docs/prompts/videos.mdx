@@ -1,0 +1,101 @@
+---
+title: Make a video
+description: How to ask for a demo video, and ready-to-copy prompts for the most common kinds.
+---
+
+import { Aside } from '@astrojs/starlight/components'
+import Prompt from '../../../components/Prompt.astro'
+
+The prompt is the spec. The more of it you give, the fewer guesses the agent makes and the fewer
+re-renders you need. The agent writes the scenario, records it, checks the frames, builds the
+composition, words the callouts, runs the checks, renders, and reports the file path with a few
+frames.
+
+## The template
+
+<Prompt
+    title="A complete video prompt"
+    verbatim
+    note="Only the feature and the steps are required; drop any line you don't care about. Where: the start URL and the account to log in as. Steps: what the viewer should see happen, in order. Callouts: in the UI's language."
+    text={`Make a demo video of <FEATURE>.
+
+Where:     <URL, area and account>
+Steps:     1. <…>  2. <…>  3. <…>
+Callouts:  <one short imperative per step>
+Cards:     title "<Title>", subtitle "<Subtitle>"
+Emphasis:  zoom on <what> during step <n>
+Output:    mp4 / also gif, portrait, square
+Slug:      <kebab-case>`}
+/>
+
+<Aside type="tip" title="What makes it good">
+One feature per video, 3–6 visible steps, 15–30 s. Write callouts as imperatives of at most 6
+words ("Click Save", not "Now the user clicks the save button"). If you can't write the
+callouts, the video isn't ready yet.
+</Aside>
+
+## Examples
+
+<Prompt
+    title="A first video for a feature"
+    text={`Make a demo video of searching a customer. Admin area on https://app.test as the admin.
+Steps: open Customers, type the first customer's first name in the table search, hover the
+matching row. Callouts: "Open Customers", "Type the name in Search". Title "Find a customer",
+subtitle "Search any customer from the list". Zoom on the search box while typing.
+Slug customers-search.`}
+/>
+
+<Prompt
+    title="A create flow with a modal"
+    text={`Demo video: creating a customer. Customers → New customer, fill name/email/phone with a
+persona, save, show the success notification and the new row. One callout per step, zoom on
+the form while filling. Title "Add a customer". Trim the login away.`}
+/>
+
+<Prompt
+    title="A long form, filled top to bottom"
+    text={`Demo video of <signing up for a workspace> on <http://localhost:3000/signup>: fill every field with a
+persona, tick the terms on camera, submit, land on the dashboard. Use one zoom over all the form's
+clicks at scale 2 with "follow": true so it pans down the form with the cursor. Title "<Create a
+workspace>". Slug <signup>.`}
+/>
+
+<Prompt
+    title="A two-actor flow"
+    text={`Demo of a document approval: a manager sends a document from the admin area, then the
+employee accepts it in their personal area. One scenario; switch accounts inside
+demo.transition() with a "Manager → Employee" card. ~40 s max.`}
+/>
+
+<Prompt
+    title="Through an external payment page"
+    text={`Demo of the shop checkout paid by card, no login: product → add to cart → checkout → card
+payment on the gateway's test page with its test card → cut the 3-D Secure wait → success
+page. Accept the cookie banner first. Zoom on the payment-method choice and the card form.`}
+/>
+
+<Prompt
+    title="Desktop, phone and square in one go"
+    text={`Make a demo video of <FEATURE> on <URL>, steps: <1. … 2. … 3. …>. Record all three takes
+(--all-takes): desktop, phone and square, with the same marker labels, branching on demo.mobile
+where the phone UI differs (for example a menu button). Render --all-formats and show me a frame
+from each version at the second callout. Slug <slug>.`}
+/>
+
+<Prompt
+    title="A narrated recording made by hand"
+    note="For flows that can't be scripted, or when a person narrates. Recorded with OpenScreen."
+    text={`I recorded <videosDir>/onboarding-tour/recording.mp4 myself with OpenScreen, with voiceover.
+Build the composition around it: title "Platform tour", callouts at 0:04 "Main menu",
+0:12 "Company settings", 0:21 "Invite colleagues". Keep the narration.`}
+/>
+
+<Prompt
+    title="A batch of videos"
+    text={`Make reelson demo videos for these features, one per slug, each 15–30 s with 3–6 steps:
+- <slug-1>: <feature, start URL, steps>
+- <slug-2>: <feature, start URL, steps>
+- <slug-3>: <feature, start URL, steps>
+Use the same account and sections for all of them. Record and check each one before moving on,
+then run \`reelson render --all\` and give me a table of slugs, durations and file paths.`}
+/>

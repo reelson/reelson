@@ -1,0 +1,76 @@
+---
+title: Portrait, square & GIF
+description: One demo, every aspect ratio — a phone take for 9:16, a square take for 1:1, a GIF for the README and captions for all.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components'
+
+Every render writes the 16:9 MP4 (1920x1080) and its captions. Other versions come from the
+same scenario and the same `video.json`.
+
+<Tabs>
+<TabItem label="Portrait 9:16">
+Record a **phone take**: the same scenario on a real phone profile (the Playwright device in
+`record.mobile.device`, "Pixel 7" by default: viewport, touch and mobile user agent).
+
+```bash
+reelson record <slug> --mobile      # → recording.mobile.mp4 + markers.mobile.json
+reelson render <slug> --portrait    # 1080x1920, the phone take in a phone frame, taps as ripples
+```
+
+Use the same marker labels so the callouts fit both takes. Branch on `demo.mobile` where the
+phone UI differs:
+
+```ts
+if (demo.mobile) await demo.click(page.getByRole('button', { name: 'Menu' }))
+```
+
+The page needs `<meta name="viewport" content="width=device-width">`. Without it, a phone lays
+the page out at desktop width and everything is tiny.
+
+Without a phone take, `"portrait": "desktop"` in `video.json` uses a camera over the desktop
+recording that frames each element the demo works on.
+</TabItem>
+<TabItem label="Square 1:1">
+Record a **square take**: the app in a square browser (`record.square.viewport`, 1080x1080 by
+default), shown 1:1 so it fills the whole frame with no bands.
+
+```bash
+reelson record <slug> --square      # → recording.square.mp4 + markers.square.json
+reelson render <slug> --square
+```
+
+Branch on `demo.square` where the narrower window changes the UI. Keep the same clicks where you
+can, so zooms (anchored by click number) carry over.
+</TabItem>
+<TabItem label="GIF">
+```bash
+reelson render <slug> --gif        # + a 720 px, 12 fps GIF cut from the MP4
+```
+
+It's good for READMEs and pull requests. Pair it with the `endcard` outro so the last frame stays
+readable.
+</TabItem>
+</Tabs>
+
+## All at once
+
+```bash
+reelson record <slug> --all-takes     # desktop, phone and square
+reelson render <slug> --all-formats   # 16:9 + portrait + square (a missing take is skipped)
+reelson render <slug> --only square   # just one version
+```
+
+Add `"formats": ["portrait", "square"]` to `video.json` to make every plain `reelson render` add
+them. Commit `markers.mobile.json` and `markers.square.json` like the desktop markers.
+
+## Captions
+
+Every render also writes `renders/<slug>.srt` and `.vtt` (and `.portrait.*` / `.square.*` for
+those versions), with the title and the callouts timed to the video. Use them as a `<track>` on
+the web. `reelson publish` uploads them to YouTube.
+
+<Aside type="tip">
+For a quick look, `--draft` renders at 15 fps and draft quality (about 2x faster) to
+`renders/<slug>.draft.mp4`. You can also skip rendering and scrub in `reelson studio`.
+</Aside>

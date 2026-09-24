@@ -1,0 +1,95 @@
+---
+title: Callouts, zooms & trims
+description: video.json is the source of truth for how a video looks. Every time in it is a recording time.
+---
+
+import { Aside } from '@astrojs/starlight/components'
+
+`reelson build <slug>` creates `video.json` on its first run: one callout per marker, an automatic
+trim and no zooms. After that you edit `video.json` (or drag things in `reelson studio`), and
+every build regenerates `video/` from it. Never edit `video/` by hand, because it is overwritten.
+
+```json title="video.json"
+{
+    "$schema": "../../.agents/skills/reelson-compose/schemas/video.schema.json",
+    "title": "Find a customer",
+    "subtitle": "Search any customer from the list",
+    "trim": { "start": "auto" },
+    "callouts": [
+        { "marker": "customers-list", "text": "Open Customers" },
+        { "marker": "search-results", "text": "Type the name in Search" }
+    ],
+    "zooms": [{ "clicks": [2, 3], "scale": 1.8 }]
+}
+```
+
+Every time in `video.json` is a **recording time** (seconds in `recording.mp4`), so changing the
+trim or the template never re-times anything. The `$schema` gives you autocomplete, and a typo is
+an error with a "did you mean" hint.
+
+## Callouts
+
+Each callout points at a `marker` label (or an `at` time, for recordings made by hand).
+
+- **Wording:** an imperative in the UI's language, at most 6 words. Callouts also become the recap.
+- **Timing:** automatic. A callout starts with its step and lasts through it plus 1.2 s past its
+  marker, for at least 3 s, and ends before the next one.
+- `"anchor": "marker"` starts it on the marker instead, for a callout about the result.
+- `"offset"` (seconds, may be negative) nudges it while keeping it tied to the marker.
+- **Position:** callouts sit at the bottom and move to the top by themselves when they would cover
+  what the cursor works on. `"calloutPosition": "top"` or `"bottom"` pins them all, and a
+  callout's `"position"` pins just that one.
+
+## Zooms
+
+Anchor zooms to click numbers: 1-based positions in `markers.json` `clicks`, which `demo.click`
+and `demo.type` log. reelson computes the focus and the timing. The zoom goes in with the glide to
+the first click, is fully in 0.1 s before that click, and goes out with the glide to the next
+target. It never eases during a click or while typing.
+
+```json
+{ "clicks": [2, 4], "scale": 1.6 }
+```
+
+- `scale` 1.5–2.0. Zoom only where the UI is small: a field, a toggle, a badge.
+- `x` / `y` (0..1) override the focus. `in` / `out` override the eases.
+- `"follow": true` pans with the cursor while zoomed, which suits a form filled top to bottom.
+- A zoom holds its own clicks (plus a click in view less than 1 s later). To hold longer, widen
+  `clicks`. Two zooms may not be on screen at once. Use one zoom over both ranges instead.
+
+<Aside type="tip">
+To find click numbers, read `clicks` in `markers.json` (each has `at`, `x`, `y` and `kind`), or
+scrub in `reelson studio`.
+</Aside>
+
+## Trim
+
+- `"start": "auto"` (the default) starts just before the first glide or marker, which cuts the login.
+- Anchor to the footage: `{ "marker": "customers-list", "offset": -0.8 }` or `{ "click": 3, "offset": -0.5 }`.
+- `end` takes the same anchors. Leave it out to keep the recording to its end.
+- Plain seconds work, but they go stale when the demo is re-recorded. `reelson check` warns about them.
+
+## Cursor
+
+Recordings made with the default `record.cursor: "layer"` have the cursor drawn by the video, so
+you can restyle it without re-recording:
+
+```json
+"cursor": { "size": 56, "ripple": false, "idle": 3, "lag": 0.08 }
+```
+
+`idle` fades it out after that many seconds without moving. `lag` draws it later, for a page that
+paints late (a dragged card trailing the cursor). `"cursor": false` hides it.
+
+## Check, look, render
+
+```bash
+reelson check <slug>                        # schemas, zoom timing, hyperframes lint → "ready to render"
+reelson snapshot <slug> --at 0,3.5,8,12     # PNGs in video/snapshots/
+reelson studio <slug>                       # preview + edit on a layer timeline (saves video.json)
+reelson render <slug>                       # MP4 + .srt/.vtt captions
+reelson render <slug> --draft               # 15 fps, about 2x faster, for a quick look
+```
+
+Rendering takes about 30–60 s per 12 s of video. `reelson render --all` renders every demo and
+skips the ones that haven't changed.

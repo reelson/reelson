@@ -20,7 +20,7 @@ headless, with identical pacing, and callouts/zooms follow their markers and cli
 <sub>The [Orbit example](examples/orbit-ship-it/scenario.ts) (a pretend project board in
 [one static page](examples/orbit/index.html)), recorded and rendered by CI on every push to main.</sub>
 
-**▶ [Watch the 1-minute launch video](https://youtu.be/tFDWFsBgs9w)**
+**📖 [Documentation](https://reelson.github.io/reelson/)** · **▶ [Watch the 1-minute launch video](https://youtu.be/tFDWFsBgs9w)**
 — recorded and edited with reelson itself, studio included.
 
 ![How reelson works: scenario.ts → reelson record → recording.mp4 + markers.json → reelson build (with video.json, reelson.config.json, template + sections) → video/, a HyperFrames project → reelson render → video/renders/<slug>.mp4, plus .gif, portrait, square and .srt/.vtt captions](https://raw.githubusercontent.com/reelson/reelson/main/.github/readme/pipeline.svg)
@@ -106,7 +106,7 @@ Ask your agent in the project, e.g.:
 > Steps: open Customers, type a name in the table search, hover the match. Title "Find a
 > customer". Zoom on the search box while typing. Slug customers-search.
 
-More prompts in [docs/prompting.md](docs/prompting.md); the rules every video follows in
+Ready-to-copy prompts on [the docs site](https://reelson.github.io/reelson/prompts/setup/) and in [docs/prompting.md](docs/prompting.md); the rules every video follows in
 [docs/style-guide.md](docs/style-guide.md). By hand:
 
 ```bash
@@ -272,6 +272,7 @@ skills/
                 publish + publish-<service>, oauth),
                 schemas/, templates/<name>/ (stages), sections/<slot>/<name>/
 docs/           style-guide.md, prompting.md
+site/           the docs website (Astro Starlight → GitHub Pages; cd site && npm install && npm run dev)
 examples/       reelson.config.json + orbit/ (the demo app) + orbit-ship-it/ and todo-add-item/ (scenario, markers, video.json)
 test/           unit + golden tests, fixtures
 music/          local-only tracks (git-ignored; licences are per project)

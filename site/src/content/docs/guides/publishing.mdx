@@ -1,0 +1,71 @@
+---
+title: Publish to YouTube
+description: Upload renders to one or more YouTube channels, replace them after a re-record, and fix their words in place.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components'
+
+`reelson publish <slug>` uploads the rendered video to channels listed under `"channels"` in
+`reelson.config.json`. `reelson channels init` adds starter ones.
+
+```jsonc title="reelson.config.json"
+"channels": {
+    "youtube": { "type": "youtube", "privacy": "unlisted", "playlist": "PL…", "footer": "https://acme.test" },
+    "shorts":  { "type": "youtube", "format": "portrait", "privacy": "public", "tags": ["acme"] }
+}
+```
+
+- `format` picks the render: `landscape` (the default), `portrait` or `square`. Render it first.
+- The title comes from `video.json`. The description is the subtitle plus the numbered steps,
+  then the channel's `footer`. To word them yourself, use `video.json`
+  `"publish": { "title", "description", "tags" }`.
+- The `.srt` captions go up too (`"captions": false` skips them), and the video is added to `playlist`.
+- `channelId` (UC…) guards against signing in to the wrong channel.
+
+## Set up YouTube once
+
+<Steps>
+
+1. In a Google Cloud project, enable the **YouTube Data API v3**.
+2. Set up the **OAuth consent screen** and add yourself as a test user.
+3. Create an **OAuth client** of type *Desktop app*. Put its id and secret in the `.env` next to
+   `reelson.config.json`:
+
+   ```bash title=".env"
+   YOUTUBE_CLIENT_ID=….apps.googleusercontent.com
+   YOUTUBE_CLIENT_SECRET=…
+   ```
+
+4. Sign in through the browser (pick the brand channel if the account has several):
+
+   ```bash
+   reelson channels login youtube
+   reelson channels                 # who each channel is logged in as
+   ```
+
+</Steps>
+
+Sign-ins are kept in `~/.config/reelson/credentials/`, never in the project.
+
+<Aside type="caution" title="Two Google quirks">
+While the consent screen is in *Testing*, Google ends the sign-in after 7 days. Publish the app
+(*Audience → Publish app*) to stay signed in. For your own channels, this needs no verification,
+only an "unverified app" warning at sign-in. Until Google audits the Cloud project, YouTube keeps
+uploads **private** whatever `privacy` says.
+</Aside>
+
+## Publish, replace, update
+
+```bash
+reelson publish <slug> --dry-run            # what would go up
+reelson publish <slug> --to youtube,shorts  # or --all-channels; asks without either
+```
+
+What went where is kept in the demo's `published.json` (commit it). Publishing again skips those
+channels unless you pass one of these:
+
+| Flag        | Does |
+|-------------|------|
+| `--replace` | After a re-record: uploads the new render and makes the old video **private** (never deletes it). YouTube can't swap the file behind a URL, so the id changes. Link through a URL of your own and point it at the new id. |
+| `--update`  | Fixes the words: rewrites the title, description, tags, captions and playlist. The URL, views and comments stay, and the video file and privacy are untouched. |
+| `--again`   | Uploads a second copy. |

@@ -1,0 +1,108 @@
+---
+title: Your first video
+description: Ask your agent for a demo video, or drive the CLI by hand.
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
+import Prompt from '../../../components/Prompt.astro'
+
+<Tabs>
+<TabItem label="With your agent">
+
+Start your agent in the project, with the app running, and describe the video.
+
+<Prompt
+    title="Make a demo video"
+    text={`Make a demo video of searching a customer. Admin area on https://app.test as the admin.
+Steps: open Customers, type a name in the table search, hover the match.
+Title "Find a customer". Zoom on the search box while typing. Slug customers-search.`}
+/>
+
+Behind the scenes, the agent:
+
+1. reads `reelson.config.json` and the style guide,
+2. writes `docs/videos/customers-search/scenario.ts`, reusing your e2e login helpers if you have any,
+3. records it and checks frames at each marker,
+4. builds the composition, words the callouts in `video.json` and adds the zoom,
+5. runs `reelson check`, renders, and reports the MP4 path with a few extracted frames.
+
+For better results, give it [the six parts of a good prompt](../../prompts/videos/).
+
+</TabItem>
+<TabItem label="By hand">
+
+<Steps>
+
+1. **Start a scenario.**
+
+   ```bash
+   reelson new customers-search --url https://app.test
+   ```
+
+   This creates `docs/videos/customers-search/scenario.ts`. Fill in `run()`:
+
+   ```ts title="scenario.ts"
+   import type { Scenario } from '../../../.agents/skills/reelson-record/scripts/scenario.ts'
+
+   export default {
+       name: 'customers-search',
+       baseURL: 'https://app.test',
+       async run(demo) {
+           const page = demo.page
+           await demo.goto('/admin/customers')
+           demo.marker('Open Customers')
+
+           await demo.type(page.getByPlaceholder('Search'), 'Maria')
+           demo.marker('Type the name in Search')
+
+           await demo.moveTo(page.getByRole('row', { name: /Maria/ }))
+           await demo.pause(2500)
+       },
+   } satisfies Scenario
+   ```
+
+2. **Record.** It takes about 20 s, headless (`--headed` to watch).
+
+   ```bash
+   reelson record customers-search
+   ```
+
+3. **Build.** The first build creates `video.json`, with one callout per marker.
+
+   ```bash
+   reelson build customers-search --title "Find a customer"
+   ```
+
+4. **Tune `video.json`.** Word the callouts and add a zoom by click number:
+
+   ```json title="video.json" ins={3}
+   {
+       "title": "Find a customer",
+       "zooms": [{ "clicks": [1, 1], "scale": 1.8 }]
+   }
+   ```
+
+   Or run `reelson studio customers-search` to drag callouts, trims and zooms on a timeline.
+
+5. **Check, then render.**
+
+   ```bash
+   reelson check customers-search    # must say "ready to render"
+   reelson render customers-search   # → video/renders/customers-search.mp4 + .srt/.vtt
+   ```
+
+</Steps>
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Record against a local environment">
+Scenarios click real buttons, so a flow that creates records creates them for real. Point
+`baseURL` at a local app, never at staging or production.
+</Aside>
+
+## Next
+
+- [Writing a scenario](../../guides/recording/): markers, pacing, personas and cuts
+- [Callouts, zooms & trims](../../guides/composing/): everything in `video.json`
+- [Portrait, square & GIF](../../guides/formats/): one demo, every aspect ratio

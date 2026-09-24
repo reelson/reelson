@@ -1,0 +1,100 @@
+---
+title: reelson
+description: Turn a prompt into a finished, branded demo video of your web app. Agent Skills + a CLI for Claude Code, Codex and any agent that reads SKILL.md.
+template: splash
+hero:
+  title: Demo videos, from a prompt.
+  tagline: Describe a feature to your coding agent. reelson records it in a real browser with a human-paced cursor, then cuts a branded video with callouts, zooms, captions and music. Re-record the whole library in seconds after every UI change.
+  actions:
+    - text: Get started
+      link: /reelson/start/installation/
+      icon: right-arrow
+      variant: primary
+    - text: Copy a prompt
+      link: /reelson/prompts/setup/
+      icon: document
+      variant: minimal
+    - text: GitHub
+      link: https://github.com/reelson/reelson
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard, Steps } from '@astrojs/starlight/components'
+import pipeline from '../../../../.github/readme/pipeline.svg'
+
+<div class="r-demo">
+    <img
+        src="https://github.com/reelson/reelson/releases/download/demo/demo.webp"
+        alt="The Orbit example: a branded intro, a task added and assigned inside a zoom, dragged to Done, then the outro"
+        width="960"
+        height="540"
+        loading="eager"
+    />
+</div>
+<p class="r-caption">
+    The Orbit example, recorded and rendered by CI on every push. ▶ [Watch the 1-minute launch video](https://youtu.be/tFDWFsBgs9w), made with reelson itself.
+</p>
+
+<p class="r-kicker">Why reelson</p>
+
+## Videos that don't go stale
+
+<CardGrid>
+    <Card title="The prompt is the spec" icon="pencil">
+        Say what to show, in plain words. The agent writes a Playwright scenario, records it,
+        words the callouts, checks the frames and renders the MP4.
+    </Card>
+    <Card title="Looks hand-made" icon="rocket">
+        An eased, slightly imperfect cursor, uneven typing and zooms that follow the cursor. A
+        branded intro, a recap and an outro, with your logo, colours and music.
+    </Card>
+    <Card title="Re-records in ~20 s" icon="random">
+        After a redesign, `reelson verify --all` re-runs every demo headless. Callouts follow
+        their markers and zooms follow their clicks, so nothing needs re-timing.
+    </Card>
+    <Card title="Every format" icon="laptop">
+        16:9, a phone take for 9:16, a square take for 1:1, a GIF for the README, `.srt`/`.vtt`
+        captions, an optional voice-over and one-command uploads to YouTube.
+    </Card>
+</CardGrid>
+
+<p class="r-kicker">How it works</p>
+
+## One scenario, one JSON file, one video
+
+<div class="r-figure">
+    <img src={pipeline.src} alt="scenario.ts → reelson record → recording.mp4 + markers.json → reelson build (with video.json, reelson.config.json, a template and sections) → video/, a HyperFrames project → reelson render → video/renders/<slug>.mp4, plus a GIF, portrait and square versions and captions" width="1060" height="430" />
+</div>
+
+You commit three small files per video: `scenario.ts` (what happens), `markers.json` (when it
+happened) and `video.json` (how it looks). Everything else is generated.
+
+<p class="r-kicker">Start in two minutes</p>
+
+## Install, then ask
+
+<Steps>
+
+1. Install the CLI and link the skills into your agent:
+
+   ```bash
+   npm install -g reelson
+   reelson install
+   ```
+
+2. Paste this into Claude Code, Codex or your agent, inside your project:
+
+   ```text
+   Make a demo video of <the feature>. The app runs on <http://localhost:3000>.
+   Steps: 1. … 2. … 3. …  Title "<Title>". Slug <kebab-case-slug>.
+   ```
+
+3. Open `<videosDir>/<slug>/video/renders/<slug>.mp4`.
+
+</Steps>
+
+<CardGrid>
+    <LinkCard title="Set up a project" description="Ready-to-copy prompts that install and configure reelson for you." href="/reelson/prompts/setup/" />
+    <LinkCard title="Prompt library" description="Prompts for first videos, forms, two-actor flows, checkouts and more." href="/reelson/prompts/videos/" />
+</CardGrid>

@@ -1,0 +1,57 @@
+---
+title: Scenario API
+description: The Scenario object and the demo helpers a scenario drives the app with.
+---
+
+```ts
+import type { Scenario } from '<skills>/reelson-record/scripts/scenario.ts'
+
+export default {
+    name: 'slug',                              // used in logs and markers.json
+    baseURL: 'https://app.test',               // a local app with seeded data
+    viewport: { width: 1440, height: 900 },    // default: record.viewport; keep 16:10 or 16:9
+    deviceScaleFactor: 2,                      // capture at 2x (default) for sharp text under zooms
+    leadInMs: 800, leadOutMs: 1200,            // stillness before the first / after the last action
+    async run(demo) { /* … */ },
+} satisfies Scenario
+```
+
+`reelson new` writes the right import path for your project.
+
+## Moving and typing
+
+| Helper | Does |
+|--------|------|
+| `demo.goto(path)` | Parks the cursor mid-screen, navigates, waits for network idle and settles. |
+| `demo.moveTo(locator)` | Glides the cursor to the element on a curved, eased path, scrolling it into view first. |
+| `demo.click(locator, { settleMs })` | `moveTo` + click + a short settle (0.7 s by default). Logged as a click. |
+| `demo.type(locator, text)` | `moveTo` + click + human-paced typing. Logged as a click. |
+| `demo.scroll(deltaY, { stepPx })` | Slow wheel scroll the viewer can follow. |
+| `demo.pause(ms)` | Waits. |
+| `demo.rest()` | Glides to a random resting point in the middle third. |
+
+## Structure
+
+| Helper | Does |
+|--------|------|
+| `demo.marker(label)` | Stamps the current video time. It becomes a callout and a recap row. At most 10. |
+| `demo.cut(fn, { keepMs })` | Runs `fn` and drops that stretch from the video, keeping a `keepMs` glimpse. |
+| `demo.transition(fn, { title, subtitle?, from?, to? })` | Switches actors off camera. `fn` is cut entirely and a hand-off card is shown. |
+| `demo.popup(action)` | Runs `action`, continues in the tab or pop-up it opens (returned), and returns when it closes. |
+| `demo.switchTo(page)` | Continues on another page of the context. |
+
+## Data and state
+
+| Property | Is |
+|----------|----|
+| `demo.page` | The Playwright `Page` in use, for waits, reads and anything else. |
+| `demo.persona(seed?, domain?)` | `{ firstName, lastName, fullName, email, phone, company }` in the UI's language, with a unique email. |
+| `demo.mobile` | `true` while recording the phone take (`--mobile`). |
+| `demo.square` | `true` while recording the square take (`--square`). |
+| `demo.elapsedSeconds()` | Seconds since the recording started. |
+
+## markers.json
+
+Written by `reelson record` and committed. It holds the `duration`, the `viewport`, the `markers`
+(`label`, `at`), the `clicks` (`at`, `x`, `y`, `kind`, numbered from 1 for zooms), the `cuts`,
+the `transitions` and the `cursor` log.

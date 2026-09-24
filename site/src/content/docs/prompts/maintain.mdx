@@ -1,0 +1,93 @@
+---
+title: Change & maintain
+description: Ready-to-copy prompts for tweaking, re-recording, re-formatting and publishing existing videos.
+---
+
+import Prompt from '../../../components/Prompt.astro'
+
+Every change goes through `video.json` or `scenario.ts`, never through the generated `video/`
+folder. So these prompts are safe to run again and again.
+
+## After the app changes
+
+<Prompt
+    title="Re-record after a UI change"
+    text={`The customers table got new columns. Re-record <videosDir>/customers-search with the
+existing scenario, re-render with the current video.json, and show me frames at each callout.`}
+/>
+
+<Prompt
+    title="Check every video after a release"
+    text={`We just shipped <release / redesign>. Run \`reelson verify --all\`. For every demo that no longer runs
+or no longer fits (a missing marker, a zoom or trim pointing at a different click), fix scenario.ts
+or video.json, keep the new take with \`reelson verify <slug> --update\`, then \`reelson render --all\`.
+Summarise what changed per video.`}
+/>
+
+## Wording, timing and look
+
+<Prompt
+    title="Tweak a video without re-recording"
+    text={`In <videosDir>/customers-search, change callout 2 to "Search by name or email", make the zoom
+tighter (scale 2.0) and 1 s shorter, then re-render.`}
+/>
+
+<Prompt
+    title="Compare another intro or outro"
+    text={`Render <videosDir>/customers-search with the minimal intro, no recap and the endcard
+outro, next to the current one so I can compare.`}
+/>
+
+<Prompt
+    title="Let me edit it myself"
+    text={`Start \`reelson studio <slug> --no-open\` in the background and give me the URL. While it runs, re-read
+video.json before any change you make, because my edits in the studio are saved there.`}
+/>
+
+<Prompt
+    title="Make the cursor fit a slow page"
+    text={`In <slug>, the dragged card trails the cursor. Measure the gap on the drag from the recording and
+set "cursor": { "lag": <seconds> } in video.json, then show me snapshots during the drag.`}
+/>
+
+## Formats and sound
+
+<Prompt
+    title="A GIF for the README"
+    text={`Render <videosDir>/customers-search also as a GIF for the README, and add it to the README
+under <section> with a link to the MP4.`}
+/>
+
+<Prompt
+    title="Phone and square versions"
+    text={`Record the phone and square takes for <slug> (reelson record <slug> --mobile, then --square),
+keeping the marker labels, then render --all-formats. Add "formats": ["portrait", "square"] to its
+video.json so every future render makes them too.`}
+/>
+
+<Prompt
+    title="Add a voice-over"
+    text={`Turn on the voice-over for <slug> with <openai / elevenlabs / piper>. Give terse callouts a
+full-sentence "say", add a short intro line, render, and tell me if any line runs past its step.`}
+/>
+
+## Publish
+
+<Prompt
+    title="Publish a video"
+    note="Uploads are public actions: the agent does a dry run and waits for your go-ahead."
+    text={`Publish <slug> to the <youtube> channel. Run \`reelson publish <slug> --to <youtube> --dry-run\` first
+and show me the title and description; only upload after I say so.`}
+/>
+
+<Prompt
+    title="Replace a published video after a re-record"
+    text={`<slug> was re-recorded. Run \`reelson publish <slug> --to <youtube> --replace --dry-run\`, show me the
+plan, and after I confirm, replace it. Then tell me the new video id so I can update our link.`}
+/>
+
+<Prompt
+    title="Fix the words of a published video"
+    text={`Change the YouTube title of <slug> to "<New title>" and its description to mention <…>. Put the words
+in video.json "publish", then \`reelson publish <slug> --to <youtube> --update\` (same URL, video untouched).`}
+/>

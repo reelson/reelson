@@ -1,0 +1,213 @@
+/* reelson docs theme: near-black with an indigo → violet accent (the brand of the examples). */
+
+:root {
+    --sl-font: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --sl-font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sl-content-width: 46rem;
+    --sl-text-h1: 2.4rem;
+
+    --r-grad: linear-gradient(120deg, #818cf8 0%, #a78bfa 45%, #e879f9 100%);
+    --r-glow: rgba(129, 140, 248, 0.16);
+    --r-radius: 0.8rem;
+}
+
+/* dark (default) */
+:root,
+::backdrop {
+    --sl-color-accent-low: #1e1b4b;
+    --sl-color-accent: #818cf8;
+    --sl-color-accent-high: #c7d2fe;
+    --sl-color-white: #f5f5fa;
+    --sl-color-gray-1: #e4e4ee;
+    --sl-color-gray-2: #b9b9cc;
+    --sl-color-gray-3: #8a8aa3;
+    --sl-color-gray-4: #55556b;
+    --sl-color-gray-5: #2f2f40;
+    --sl-color-gray-6: #1b1b27;
+    --sl-color-black: #0c0c13;
+    --r-card: #13131d;
+    --r-placeholder-bg: rgba(129, 140, 248, 0.14);
+    --r-placeholder: #c7d2fe;
+}
+
+:root[data-theme='light'],
+[data-theme='light'] ::backdrop {
+    --sl-color-accent-low: #e0e7ff;
+    --sl-color-accent: #4f46e5;
+    --sl-color-accent-high: #312e81;
+    --sl-color-white: #111120;
+    --sl-color-gray-1: #24243a;
+    --sl-color-gray-2: #3b3b55;
+    --sl-color-gray-3: #62627d;
+    --sl-color-gray-4: #9a9ab0;
+    --sl-color-gray-5: #d6d6e2;
+    --sl-color-gray-6: #eeeef5;
+    --sl-color-gray-7: #f7f7fb;
+    --sl-color-black: #ffffff;
+    --r-card: #f8f8fc;
+    --r-glow: rgba(99, 102, 241, 0.1);
+    --r-placeholder-bg: rgba(79, 70, 229, 0.1);
+    --r-placeholder: #4338ca;
+}
+
+/* ─ chrome ─ */
+header.header {
+    backdrop-filter: saturate(160%) blur(12px);
+    background-color: color-mix(in srgb, var(--sl-color-black) 78%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--sl-color-gray-5) 70%, transparent);
+}
+.site-title {
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    font-size: 1.15rem;
+}
+.sidebar-pane {
+    background-color: var(--sl-color-black);
+}
+nav.sidebar .top-level > li > details > summary .large,
+nav.sidebar .group-label .large {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sl-color-gray-3);
+    font-weight: 600;
+}
+nav.sidebar a[aria-current='page'] {
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-accent-high);
+    font-weight: 600;
+}
+
+/* ─ content ─ */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+h1#_top {
+    letter-spacing: -0.025em;
+}
+h1#_top {
+    font-weight: 700;
+}
+.sl-markdown-content h2 {
+    font-weight: 650;
+}
+.sl-markdown-content :not(pre) > code {
+    border-radius: 0.35rem;
+    padding: 0.1em 0.35em;
+    background: var(--sl-color-gray-6);
+    border: 1px solid var(--sl-color-gray-5);
+    font-size: 0.86em;
+}
+.sl-markdown-content table {
+    font-size: 0.92em;
+}
+.sl-markdown-content img {
+    border-radius: var(--r-radius);
+}
+.card,
+.sl-link-card {
+    border-radius: var(--r-radius) !important;
+    background: var(--r-card);
+}
+
+/* ─ splash page ─ */
+[data-has-hero] .page {
+    background:
+        radial-gradient(60rem 28rem at 50% -8rem, var(--r-glow), transparent 70%),
+        var(--sl-color-black);
+}
+[data-has-hero] header.header {
+    background-color: transparent;
+    border-bottom-color: transparent;
+}
+.hero {
+    padding-block: clamp(2.5rem, 7vw, 5rem) 1.5rem;
+    grid-template-columns: 1fr;
+    text-align: center;
+}
+.hero > .stack {
+    align-items: center;
+    margin-inline: auto;
+}
+.hero .copy {
+    align-items: center;
+}
+.hero .actions {
+    justify-content: center;
+}
+.hero h1 {
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    font-weight: 750;
+    background: var(--r-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.hero .tagline {
+    font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+    color: var(--sl-color-gray-2);
+    max-width: 36rem;
+}
+.hero .sl-link-button.primary {
+    background: var(--r-grad);
+    border: 0;
+    color: #fff;
+    box-shadow: 0 8px 30px -10px rgba(139, 92, 246, 0.7);
+}
+.sl-link-button {
+    border-radius: 999px !important;
+}
+
+.r-demo {
+    margin: 0 auto 1rem;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--sl-color-gray-5);
+    box-shadow:
+        0 30px 80px -30px rgba(99, 102, 241, 0.45),
+        0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+.r-demo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 0 !important;
+}
+.r-caption {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--sl-color-gray-3);
+}
+
+.r-kicker {
+    display: inline-block;
+    font-size: 0.72rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 650;
+    color: var(--sl-color-accent) !important;
+    margin-top: 3.5rem !important;
+}
+.sl-markdown-content .r-kicker + h2,
+.sl-markdown-content .r-kicker + .sl-heading-wrapper {
+    margin-top: 0.35rem !important;
+}
+
+/* The pipeline diagram is transparent; give it a quiet stage. */
+.r-figure {
+    padding: 1.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: var(--r-radius);
+    background: var(--r-card);
+}
+.r-figure img {
+    width: 100%;
+    height: auto;
+}
+
+/* Pages that import a repo Markdown file (docs/*.md) already have the page title. */
+.r-imported > h1:first-child {
+    display: none;
+}

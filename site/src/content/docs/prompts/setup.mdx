@@ -1,0 +1,111 @@
+---
+title: Set up a project
+description: Ready-to-copy prompts that install reelson, configure it from your codebase and wire it into your workflow.
+---
+
+import { Aside } from '@astrojs/starlight/components'
+import Prompt from '../../../components/Prompt.astro'
+
+Paste these into Claude Code, Codex or any agent that reads Agent Skills. Run them from your
+project root. Replace the <span style="color:var(--r-placeholder);background:var(--r-placeholder-bg);border-radius:.3rem;padding:0 .2em">&lt;highlighted&gt;</span> parts, or delete them and let the agent find out.
+
+<Aside type="tip">
+Skills are loaded when a session starts. After the first prompt links them, start a new agent
+session before you ask for videos.
+</Aside>
+
+## Install and configure
+
+<Prompt
+    title="Set up reelson in this project"
+    note="The one to start with. The agent reads your codebase for the brand, language and dev overlays, and asks only for what it can't find."
+    text={`Set up reelson (https://github.com/reelson/reelson) for demo videos in this project.
+
+1. If \`reelson\` is not on PATH, run \`npm install -g reelson\`. Then run \`reelson install . -y\`
+   (links the skills, downloads Chromium, creates reelson.config.json).
+2. Fill in reelson.config.json from the codebase:
+   - brand.name, tagline and eyebrow from the product name and its one-line pitch;
+   - brand.color and colorSoft from the primary colour in the theme (CSS variables, Tailwind config);
+   - brand.logo if there is an SVG logo (or a PNG at least 340 px tall);
+   - language and locale from the app's default UI language;
+   - record.hideSelectors for any local-only UI (env badges, debug bars, dev toolbars);
+   - videosDir: docs/videos unless the repo already has a better place.
+3. Add the reelson lines to .gitignore that \`reelson install\` printed.
+4. Run \`reelson doctor\` and fix anything it reports.
+5. Tell me what you set, and ask me only for what you could not find (for example a brand colour).`}
+/>
+
+<Prompt
+    title="Hide dev prefills while recording"
+    note="The recorder sends an X-Demo-Recording: 1 header. The app should fill nothing in by itself on camera."
+    text={`reelson sends the header "X-Demo-Recording: 1" on every request while it records a demo.
+Find everything this app pre-fills or auto-ticks in local development (seeded form values,
+dev login buttons, auto-accepted consents, debug toolbars) and skip it when that header is present.
+Keep normal local development unchanged. Show me the diff.`}
+/>
+
+<Prompt
+    title="Use my brand's music bed"
+    text={`Use <path/to/track.mp3> as the music bed for every reelson video in this project:
+set music.file in reelson.config.json (keep the default loudness) and make sure the file is not
+committed if its licence does not allow it. Re-render <slug> so I can hear it.`}
+/>
+
+## Plan the first videos
+
+<Prompt
+    title="Find the flows worth a video"
+    note="Planning only: nothing is recorded yet."
+    text={`Using the reelson skills, look through this app (routes, navigation, e2e tests, README) and propose
+the <5> features that most deserve a short demo video. For each one give: a slug, a title (the task,
+e.g. "Find a customer"), a subtitle (the benefit), the account and start URL, 3–6 steps with an
+imperative callout of at most 6 words each, and where a zoom would help. Don't record anything yet.`}
+/>
+
+<Prompt
+    title="Turn an e2e test into a video"
+    note="A scenario is mostly an e2e test with a cursor, so existing tests are the fastest start."
+    text={`Make a reelson demo video from the e2e test <tests/e2e/checkout.spec.ts>. Reuse its login and
+locator helpers, but drive the page with demo.click / demo.type / demo.moveTo instead of raw
+page.click or fill, type demo.persona() data instead of test fixtures, and add a demo.marker()
+after each state a viewer should notice (at most 10). Title "<Title>", slug <slug>.
+Record it, render it and show me frames at each callout.`}
+/>
+
+## Wire it into your workflow
+
+<Prompt
+    title="Check every demo in CI"
+    note="Catches a renamed button or a moved step before the videos on your site go stale."
+    text={`Add a CI job (<GitHub Actions>) that keeps our reelson demos honest: install Node 22,
+ffmpeg and Chromium (\`npx playwright install --with-deps chromium\`), \`npm install -g reelson\`,
+start the app the way our e2e job does, then run \`reelson verify --all\`. It must fail when a
+scenario no longer runs or a callout, trim or zoom no longer fits. Upload any
+recording*.failed.mp4 as an artifact. Pin actions to commit SHAs, like our other workflows.`}
+/>
+
+<Prompt
+    title="Put the videos in our docs"
+    text={`Embed the rendered reelson videos in our docs (<docs site / README>). For each demo in
+<videosDir>: use the endcard outro so the paused last frame stays readable, render it with --gif for
+the README, and embed the MP4 with its .vtt captions as a <track> on docs pages. Tell me where the
+rendered files need to be hosted, since video/ is git-ignored.`}
+/>
+
+<Prompt
+    title="Set up YouTube publishing"
+    note="The agent prepares the config; you sign in yourself, because sign-in opens a browser."
+    text={`Set up \`reelson publish\` for this project: run \`reelson channels init\`, then keep one channel
+"youtube" (landscape, privacy unlisted, footer <https://our-site.example>) and one "shorts"
+(portrait, public). Walk me through the one-time Google Cloud setup (YouTube Data API v3, OAuth
+consent screen, a Desktop app client, then YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in .env)
+and let me run \`reelson channels login youtube\` myself. Don't upload anything.`}
+/>
+
+<Prompt
+    title="Add a local voice-over (free, offline)"
+    text={`Add a voice-over to <slug> with a local Piper voice: install piper (\`pipx install piper-tts\`) if
+it is missing, set voice.provider to "piper" in reelson.config.json, set "voice": true in the
+video's video.json, and give any terse callout a full-sentence "say". Render it and tell me
+whether any line did not fit its step.`}
+/>
