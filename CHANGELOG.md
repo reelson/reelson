@@ -4,7 +4,7 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
-## Unreleased
+## 0.8.0 — 2026-09-24
 
 ### Changed
 - **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
