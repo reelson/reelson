@@ -8,27 +8,27 @@
     "properties": {
         "title": { "type": "string", "description": "Cover title: the task, e.g. \"Find a customer\"." },
         "subtitle": { "type": "string", "description": "Cover subtitle: the benefit or context." },
-        "template": { "type": "string", "description": "Overrides demo.config.json `template` for this video." },
+        "template": { "type": "string", "description": "Overrides reelson.config.json `template` for this video." },
         "sections": {
             "type": "object",
             "additionalProperties": false,
-            "description": "Overrides demo.config.json `sections` per slot, e.g. { \"intro\": \"minimal\", \"recap\": \"none\" }. Run `reelson templates` for the list.",
+            "description": "Overrides reelson.config.json `sections` per slot, e.g. { \"intro\": \"minimal\", \"recap\": \"none\" }. Run `reelson templates` for the list.",
             "properties": {
                 "intro": { "type": "string", "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split." },
                 "recap": { "type": "string", "description": "Steps card after the recording, or \"none\". Kit: steps, compact, none." },
                 "outro": { "type": "string", "description": "Closing brand card. Kit: wordmark, compact, endcard." }
             }
         },
-        "recapTitle": { "type": "string", "description": "Overrides demo.config.json `strings.recapTitle`." },
+        "recapTitle": { "type": "string", "description": "Overrides reelson.config.json `strings.recapTitle`." },
         "brand": {
             "type": "object",
             "additionalProperties": false,
-            "description": "Per-video overrides of demo.config.json `brand` text.",
+            "description": "Per-video overrides of reelson.config.json `brand` text.",
             "properties": {
                 "name": { "type": "string" },
                 "tagline": { "type": "string" },
                 "eyebrow": { "type": "string" },
-                "logo": { "type": ["string", "null"], "description": "Overrides demo.config.json `brand.logo`: an .svg/.png/.webp relative to the project root, or null for the text wordmark." }
+                "logo": { "type": ["string", "null"], "description": "Overrides reelson.config.json `brand.logo`: an .svg/.png/.webp relative to the project root, or null for the text wordmark." }
             }
         },
         "trim": {
@@ -57,7 +57,7 @@
         },
         "music": {
             "type": ["string", "boolean", "null"],
-            "description": "Music bed: a file (relative to the project root) for this video only, false for none, null/omitted for demo.config.json `music.file`."
+            "description": "Music bed: a file (relative to the project root) for this video only, false for none, null/omitted for reelson.config.json `music.file`."
         },
         "callouts": {
             "type": "array",
@@ -80,7 +80,7 @@
             }
         },
         "voice": {
-            "description": "Voice-over: true speaks each callout (its `say`, else its text) with the demo.config.json `voice` provider (OpenAI by default; ElevenLabs, a local Piper voice or a local command); lines are cached in <demo>/voice/. An object turns it on with this video's own provider / model / voice / instructions / speed and may add an `intro` line spoken over the intro.",
+            "description": "Voice-over: true speaks each callout (its `say`, else its text) with the reelson.config.json `voice` provider (OpenAI by default; ElevenLabs, a local Piper voice or a local command); lines are cached in <demo>/voice/. An object turns it on with this video's own provider / model / voice / instructions / speed and may add an `intro` line spoken over the intro.",
             "oneOf": [
                 { "type": "boolean" },
                 {

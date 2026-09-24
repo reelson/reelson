@@ -1,22 +1,26 @@
 /**
  * Per-project settings shared by reelson-record and reelson-compose.
  *
- * Each project that uses the kit keeps a `demo.config.json` at its root (copy
- * demo.config.example.json from the kit). The scripts find it by walking up
- * from the scenario / demo directory, then from the working directory. Every
- * field is optional; DEFAULTS below apply to whatever is missing, so a project
- * without a config still works (neutral brand, English strings, no music).
+ * Each project that uses the kit keeps a `reelson.config.json` at its root (copy
+ * reelson.config.example.json from the kit; `demo.config.json`, its name before 0.8, still
+ * works). The scripts find it by walking up from the scenario / demo directory, then from the
+ * working directory. Every field is optional; DEFAULTS below apply to whatever is missing, so
+ * a project without a config still works (neutral brand, English strings, no music).
  */
 import { existsSync, readFileSync } from 'node:fs'
-import { dirname, isAbsolute, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { stringsFor } from './languages.ts'
 import { loadSchema, validate } from './validate.ts'
 
-/** JSON Schema for demo.config.json (editors pick it up through `$schema`). */
+export const CONFIG_FILE = 'reelson.config.json'
+/** The config's name before 0.8: still read when a folder has no CONFIG_FILE. */
+export const LEGACY_CONFIG_FILE = 'demo.config.json'
+
+/** JSON Schema for reelson.config.json (editors pick it up through `$schema`). */
 export const CONFIG_SCHEMA_PATH = resolve(
     dirname(fileURLToPath(import.meta.url)),
-    '../schemas/demo.config.schema.json',
+    '../schemas/reelson.config.schema.json',
 )
 
 /** A noun that follows a number: one string, or forms per Intl.PluralRules category. */
@@ -171,7 +175,7 @@ export const COMMON_DEV_CHROME = [
 ]
 
 export interface LoadedConfig extends DemoConfig {
-    /** Directory holding demo.config.json (or the working directory without one). */
+    /** Directory holding reelson.config.json (or the working directory without one). */
     root: string
     /** Path of the config file, when one was found. */
     path: string | null
@@ -179,10 +183,14 @@ export interface LoadedConfig extends DemoConfig {
 
 export function loadConfig(...startDirs: string[]): LoadedConfig {
     const path = [...startDirs, process.cwd()]
-        .map((dir) => findUp(resolve(dir), 'demo.config.json'))
+        .map((dir) => findUp(resolve(dir), [CONFIG_FILE, LEGACY_CONFIG_FILE]))
         .find((p): p is string => p !== null)
     if (!path) {
         return { ...DEFAULTS, root: process.cwd(), path: null }
+    }
+    if (basename(path) === LEGACY_CONFIG_FILE && !warnedLegacy.has(path)) {
+        warnedLegacy.add(path)
+        console.warn(`reelson: ${path} still has its old name — rename it to ${CONFIG_FILE}`)
     }
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Partial<DemoConfig>
     const problems = validate(raw, loadSchema(CONFIG_SCHEMA_PATH))
@@ -190,7 +198,7 @@ export function loadConfig(...startDirs: string[]): LoadedConfig {
         throw new ConfigError(path, problems)
     }
 
-    // The language's built-in strings (plurals, recap title) first; demo.config.json `strings` on top.
+    // The language's built-in strings (plurals, recap title) first; the config's `strings` on top.
     const merged = deepMerge({ ...DEFAULTS, strings: stringsFor(raw.language ?? DEFAULTS.language) }, raw)
     // Plural forms replace the defaults as a whole: merging would leak "step" into { other: "pași" }.
     for (const key of ['stepsLabel', 'secondsLabel'] as const) {
@@ -202,6 +210,8 @@ export function loadConfig(...startDirs: string[]): LoadedConfig {
 
     return { ...merged, root: dirname(path), path }
 }
+
+const warnedLegacy = new Set<string>()
 
 export class ConfigError extends Error {
     file: string
@@ -246,11 +256,12 @@ export function fromRoot(config: LoadedConfig, path: string): string {
     return isAbsolute(path) ? path : resolve(config.root, path)
 }
 
-function findUp(dir: string, name: string): string | null {
+/** The nearest of `names` walking up from `dir`; in one folder, the first name wins. */
+function findUp(dir: string, names: string[]): string | null {
     let current = dir
     while (true) {
-        const candidate = resolve(current, name)
-        if (existsSync(candidate)) {
+        const candidate = names.map((name) => resolve(current, name)).find((path) => existsSync(path))
+        if (candidate) {
             return candidate
         }
         const parent = dirname(current)

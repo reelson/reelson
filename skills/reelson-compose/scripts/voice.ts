@@ -1,7 +1,7 @@
 /**
  * Voice-over: each callout spoken as it appears (video.json "voice": true).
  *
- * Lines are spoken by a text-to-speech provider (demo.config.json `voice.provider`: OpenAI,
+ * Lines are spoken by a text-to-speech provider (reelson.config.json `voice.provider`: OpenAI,
  * ElevenLabs, a local Piper voice or any local command — see tts.ts), trimmed of the silence
  * around them and cached in <demo>/voice/<hash>.mp3 — the hash covers the words and every
  * setting that changes the sound, so a line is only made once and a re-render never calls the

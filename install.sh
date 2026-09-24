@@ -6,7 +6,7 @@
 #   ./install.sh                 ask where (default: every project)
 #   ./install.sh --global        link the skills into ~/.agents + ~/.claude (every project)
 #   ./install.sh <project-dir>   link the skills into <project>/.agents/skills/ + .claude/skills/, create
-#                                <project>/demo.config.json if it is missing
+#                                <project>/reelson.config.json if it is missing
 #
 # Skills are symlinks to this checkout, so `git pull` here updates every project.
 set -euo pipefail

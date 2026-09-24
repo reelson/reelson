@@ -1,5 +1,5 @@
 /**
- * Text-to-speech providers for the voice-over (demo.config.json `voice.provider`):
+ * Text-to-speech providers for the voice-over (reelson.config.json `voice.provider`):
  *
  *   openai      OpenAI's speech API (OPENAI_API_KEY) — or, with `baseURL`, any local server
  *               speaking the same API (Kokoro-FastAPI, Speaches, LocalAI, …)
@@ -40,7 +40,7 @@ export interface SpeechSettings {
 
 const OPENAI_URL = 'https://api.openai.com/v1'
 
-/** The model and voice each provider uses unless demo.config.json / video.json name one. */
+/** The model and voice each provider uses unless reelson.config.json / video.json name one. */
 export function providerDefaults(provider: Provider, language: string): { model: string; voice: string } {
     switch (provider) {
         case 'openai':
@@ -88,13 +88,13 @@ export function missingSetup(s: SpeechSettings): string | null {
     switch (s.provider) {
         case 'openai':
             return !process.env.OPENAI_API_KEY && isOpenAI(s)
-                ? 'no OPENAI_API_KEY — export it or put it in a .env next to demo.config.json'
+                ? 'no OPENAI_API_KEY — export it or put it in a .env next to reelson.config.json'
                 : null
         case 'elevenlabs':
-            return process.env.ELEVENLABS_API_KEY ? null : 'no ELEVENLABS_API_KEY — export it or put it in a .env next to demo.config.json'
+            return process.env.ELEVENLABS_API_KEY ? null : 'no ELEVENLABS_API_KEY — export it or put it in a .env next to reelson.config.json'
         case 'piper':
             if (!s.voice) {
-                return `no Piper voice for language "${s.language}" — set voice.voice in demo.config.json (e.g. "en_US-lessac-medium")`
+                return `no Piper voice for language "${s.language}" — set voice.voice in reelson.config.json (e.g. "en_US-lessac-medium")`
             }
             return found('piper') ? null : 'piper not found — pipx install piper-tts'
         case 'command':
@@ -290,7 +290,7 @@ export async function listVoices(provider: Provider, language: string, all = fal
         case 'elevenlabs': {
             const key = process.env.ELEVENLABS_API_KEY
             if (!key) {
-                throw new ReelsonError('no ELEVENLABS_API_KEY — export it or put it in a .env next to demo.config.json')
+                throw new ReelsonError('no ELEVENLABS_API_KEY — export it or put it in a .env next to reelson.config.json')
             }
             if (library) {
                 return elevenLibrary(key, language)

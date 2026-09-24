@@ -23,7 +23,7 @@ scenario.ts
     v
 recording.mp4 + markers.json
     |  reelson build  <--  video.json        (title, trim, callouts, zooms)
-    |                 <--  demo.config.json  (brand, logo, language, music)
+    |                 <--  reelson.config.json  (brand, logo, language, music)
     |                 <--  template + sections
     v
 video/                     a HyperFrames project
@@ -51,9 +51,9 @@ reelson install        # asks: every project (default), this project, or another
 the first — or nothing to do when the whole folder already links to `.agents/skills`):
 
 - **every project**: in `~/.agents/skills` and `~/.claude/skills` (`reelson install --global`);
-  run `reelson init` in a project for its `demo.config.json`;
+  run `reelson init` in a project for its `reelson.config.json`;
 - **one project**: in `my-app/.agents/skills` and `my-app/.claude/skills`
-  (`reelson install ~/code/my-app`); also creates `my-app/demo.config.json` and prints the
+  (`reelson install ~/code/my-app`); also creates `my-app/reelson.config.json` and prints the
   `.gitignore` lines.
 
 `-y` takes the default without asking; without a terminal (CI, scripts) it never asks. The links
@@ -71,10 +71,10 @@ reelson was called reelkit before 0.7. Re-run `reelson install` (or `install.sh`
 `reelkit` command and `reelkit-*` skill links. Then point scenario imports and `$schema` paths
 at `.agents/skills/reelson-*` (`.claude/skills/reelson-*` works too).
 
-## Configure per project — `demo.config.json`
+## Configure per project — `reelson.config.json`
 
 Everything project-specific lives in one file at the project root. It is validated against
-[a JSON Schema](skills/reelson-record/schemas/demo.config.schema.json) (editors autocomplete it; a
+[a JSON Schema](skills/reelson-record/schemas/reelson.config.schema.json) (editors autocomplete it; a
 typo is an error with a "did you mean" hint).
 
 ```jsonc
@@ -146,7 +146,7 @@ Per video, commit `scenario.ts`, `markers.json` and `video.json`; everything els
 ## Templates and sections
 
 A video is a **template** (the stage: background, framed recording, callouts) plus one
-**section** per slot, chosen separately in demo.config.json or per video in video.json:
+**section** per slot, chosen separately in reelson.config.json or per video in video.json:
 
 | Slot    | Sections (first = default)                   |
 |---------|----------------------------------------------|
@@ -220,7 +220,7 @@ skills/
   reelson-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
                 schemas/, templates/<name>/ (stages), sections/<slot>/<name>/
 docs/           style-guide.md, prompting.md
-examples/       demo.config.json + todo-add-item/ (scenario, markers, video.json)
+examples/       reelson.config.json + todo-add-item/ (scenario, markers, video.json)
 test/           unit + golden tests, fixtures
 music/          local-only tracks (git-ignored; licences are per project)
 ```

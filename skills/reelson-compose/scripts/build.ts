@@ -407,7 +407,7 @@ function withoutSchema(spec: VideoSpec): VideoSpec {
 const LOGO_TYPES = ['.svg', '.png', '.webp']
 
 /**
- * brand.logo (video.json over demo.config.json) → assets/brand-logo.<ext>. Returns its
+ * brand.logo (video.json over reelson.config.json) → assets/brand-logo.<ext>. Returns its
  * path for the composition, or '' when the brand is drawn as a text wordmark.
  */
 function copyLogo(spec: VideoSpec, config: LoadedConfig, assets: string, log: (l: string) => void): string {
@@ -498,7 +498,7 @@ function renderMusicBed(
     }
     const file = typeof choice === 'string' ? choice : config.music.file
     if (!file) {
-        log('  no music: set music.file in demo.config.json (or "music" in video.json)')
+        log('  no music: set music.file in reelson.config.json (or "music" in video.json)')
         return false
     }
     const source = fromRoot(config, file)

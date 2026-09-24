@@ -1,5 +1,5 @@
 /**
- * A small JSON Schema walker for demo.config.json and video.json — enough of
+ * A small JSON Schema walker for reelson.config.json and video.json — enough of
  * the spec for our two schemas (type, properties, additionalProperties,
  * required, enum, items, minimum/maximum, minItems/maxItems, anyOf), with
  * "did you mean" hints for mistyped keys. Keys starting with `$` ($schema,

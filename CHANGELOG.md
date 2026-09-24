@@ -4,6 +4,14 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
+## Unreleased
+
+### Changed
+- **`demo.config.json` is now `reelson.config.json`** (and its schema
+  `reelson.config.schema.json`; the example `reelson.config.example.json`). A project that still
+  has `demo.config.json` keeps working, with a notice to rename it. To update: rename the file,
+  and in its `$schema` change `demo.config.schema.json` to `reelson.config.schema.json`.
+
 ## 0.7.2 — 2026-09-23
 
 The first release published by CI (staged, then approved on npm).

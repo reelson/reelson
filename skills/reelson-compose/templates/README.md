@@ -16,7 +16,7 @@ A video is a **template** (the stage) plus one **section** per slot:
 Pick them per project or per video; each level overrides the one before:
 
 ```jsonc
-// template.json defaults  <  demo.config.json  <  video.json  <  reelson build --intro/--recap/--outro
+// template.json defaults  <  reelson.config.json  <  video.json  <  reelson build --intro/--recap/--outro
 "template": "classic",
 "sections": { "intro": "minimal", "recap": "none", "outro": "endcard" }
 ```

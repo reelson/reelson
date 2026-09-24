@@ -1,6 +1,6 @@
 ---
 name: reelson-compose
-description: Use when the user wants the finished demo video — intro/outro title cards, numbered callouts, zoom-ins, branded framing — rendered to MP4/GIF from a screen recording, or mentions HyperFrames or reelson. Takes <videosDir>/<slug>/recording.mp4 (+ markers.json) from the reelson-record skill; video.json is the per-video source of truth, and `reelson build` turns it into a HyperFrames composition from a template plus mix-and-match intro/recap/outro sections (brand, logo, language and music from demo.config.json); `reelson render` produces video/renders/<slug>.mp4.
+description: Use when the user wants the finished demo video — intro/outro title cards, numbered callouts, zoom-ins, branded framing — rendered to MP4/GIF from a screen recording, or mentions HyperFrames or reelson. Takes <videosDir>/<slug>/recording.mp4 (+ markers.json) from the reelson-record skill; video.json is the per-video source of truth, and `reelson build` turns it into a HyperFrames composition from a template plus mix-and-match intro/recap/outro sections (brand, logo, language and music from reelson.config.json); `reelson render` produces video/renders/<slug>.mp4.
 ---
 
 # reelson-compose
@@ -61,7 +61,7 @@ changing the trim or the template never re-times anything. Validated against
   before the next callout) unless given. `"anchor": "marker"` starts it on the marker instead
   (for a callout about the result). `offset` (seconds, may be negative) nudges it from there and
   keeps it tied to the marker, so it still follows a re-recording.
-- **Voice-over**: `"voice": true` speaks each callout as it appears, with demo.config.json
+- **Voice-over**: `"voice": true` speaks each callout as it appears, with reelson.config.json
   `voice.provider`:
   - `openai` (default): `gpt-4o-mini-tts`, voice `alloy`, pace and tone from `instructions`;
     needs `OPENAI_API_KEY`. With `baseURL` it talks to a local OpenAI-compatible server instead
@@ -77,7 +77,7 @@ changing the trim or the template never re-times anything. Validated against
   `speed` uses the provider's own rate (ElevenLabs 0.7–1.2, Piper, OpenAI tts-1; for
   gpt-4o-mini-tts ask for the pace in `instructions`); `options` passes extra request fields
   (e.g. ElevenLabs `{"voice_settings": {"stability": 0.4}}`) or Piper flags. Keys come from the
-  environment or a `.env` next to demo.config.json or in the reelson install (a checkout or the npm package). A callout's `say`
+  environment or a `.env` next to reelson.config.json or in the reelson install (a checkout or the npm package). A callout's `say`
   replaces what is spoken (a full sentence for a terse pill — "→" reads as a pause; `false`:
   silent); `"voice": { "intro": "…" }` adds a line over the intro, and `provider` / `model` /
   `voice` / `instructions` / `speed` there override the project for one video. `reelson voice
@@ -108,7 +108,7 @@ changing the trim or the template never re-times anything. Validated against
 ## Templates and sections
 
 A video = a **template** (the stage: background, framed recording, callouts, hand-off cards)
-+ one **section** per slot: `intro`, `recap`, `outro`. Pick sections in demo.config.json
++ one **section** per slot: `intro`, `recap`, `outro`. Pick sections in reelson.config.json
 (project default) or video.json (this video), or with `reelson build --intro/--recap/--outro`
 (written into video.json). `reelson templates` lists them all. Shipped with `classic`:
 
@@ -127,7 +127,7 @@ for short clips (< 15 s); `recap: none` when there are ≤ 2 steps; `endcard` wh
 embedded where it pauses on the last frame (docs pages, GitHub). Every intro keeps frame 0 as
 the poster (thumbnail in chat apps, GitHub, Finder); every outro ends on the brand.
 
-**Logo**: `brand.logo` (demo.config.json, or per video in video.json `brand`) — an .svg (best),
+**Logo**: `brand.logo` (reelson.config.json, or per video in video.json `brand`) — an .svg (best),
 .png (≥ 340 px tall) or .webp relative to the project root — replaces the text wordmark in
 every intro and outro.
 
@@ -197,7 +197,7 @@ Sharp UI text comes from the 2x capture; the build keeps it (`media.autoProxy: f
 
 The build handles audio; never add `<audio>` by hand.
 
-- **Music bed** from demo.config.json `music.file` (or video.json `music`: a file for this video,
+- **Music bed** from reelson.config.json `music.file` (or video.json `music`: a file for this video,
   or `false`): trimmed to the length, normalised to `music.lufs` (−28 LUFS), faded in 0.8 s /
   out 3 s → `assets/music.m4a`. Cached; re-rendered when the source, length or loudness changes.
   One track per project is part of the brand.

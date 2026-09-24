@@ -177,7 +177,7 @@ export interface VideoSpec {
      */
     portrait?: 'auto' | 'mobile' | 'desktop'
     /**
-     * Voice-over: true speaks each callout (demo.config.json `voice` settings); an object
+     * Voice-over: true speaks each callout (reelson.config.json `voice` settings); an object
      * overrides the provider / model / voice / instructions / speed for this video and may add
      * a line over the intro.
      */

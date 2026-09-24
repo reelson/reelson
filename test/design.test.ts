@@ -11,7 +11,7 @@ import { kitConfig } from './helpers.ts'
 function project(): LoadedConfig {
     const root = mkdtempSync(join(tmpdir(), 'reelson-design-'))
     mkdirSync(join(root, 'videos'))
-    return { ...DEFAULTS, root, path: join(root, 'demo.config.json'), videosDir: 'videos' }
+    return { ...DEFAULTS, root, path: join(root, 'reelson.config.json'), videosDir: 'videos' }
 }
 
 describe('resolveDesign', () => {
@@ -25,7 +25,7 @@ describe('resolveDesign', () => {
         assert.equal(d.timing.stage.overlap, 0.4)
     })
 
-    it('lets demo.config.json, then video.json, pick each slot', () => {
+    it('lets reelson.config.json, then video.json, pick each slot', () => {
         const d = resolveDesign('classic', [{ intro: 'minimal', outro: 'compact' }, { outro: 'endcard' }], kitConfig())
         assert.deepEqual(
             [d.sections.intro.name, d.sections.recap?.name, d.sections.outro.name],

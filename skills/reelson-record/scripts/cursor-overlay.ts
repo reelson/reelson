@@ -102,7 +102,7 @@ export function cursorOverlayScript(accent: string = '#dc2626', options: { draw?
 /**
  * Hides local-only UI (debug toolbars, environment badges, dev-login buttons)
  * in every recorded page. Selectors come from COMMON_DEV_CHROME plus the
- * project's `record.hideSelectors` in demo.config.json.
+ * project's `record.hideSelectors` in reelson.config.json.
  */
 export function hideDevChromeScript(selectors: string[]): string {
     if (selectors.length === 0) {

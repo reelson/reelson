@@ -2,7 +2,7 @@
 /**
  * reelson — scripted Playwright walkthroughs → branded HyperFrames demo videos.
  * Run `reelson help` for the commands. Project settings come from the nearest
- * demo.config.json (walking up from the working directory).
+ * reelson.config.json (walking up from the working directory).
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
@@ -11,7 +11,7 @@ import { homedir } from 'node:os'
 import { createInterface } from 'node:readline/promises'
 import { basename, relative, resolve } from 'node:path'
 import { parseArgs, parseEnv } from 'node:util'
-import { CONFIG_SCHEMA_PATH, ConfigError, fromRoot, loadConfig, viaProjectSkills, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
+import { CONFIG_FILE, CONFIG_SCHEMA_PATH, ConfigError, LEGACY_CONFIG_FILE, fromRoot, loadConfig, viaProjectSkills, type LoadedConfig } from '../skills/reelson-record/scripts/config.ts'
 import { doctor } from '../skills/reelson-record/scripts/doctor.ts'
 import { build, plan, type BuildOptions } from '../skills/reelson-compose/scripts/build.ts'
 import { captionCues, toSrt, toVtt } from '../skills/reelson-compose/scripts/captions.ts'
@@ -32,10 +32,10 @@ Usage: reelson <command> [options]
                                 link the reelson-record + reelson-compose skills into
                                 .agents/skills/ (Codex and other agents) and .claude/skills/
                                 (Claude Code): --global in ~/ for every project, or in a
-                                project (which also gets a demo.config.json); asks which when
+                                project (which also gets a reelson.config.json); asks which when
                                 neither is given (-y, or no terminal: --global). Downloads
                                 Playwright's Chromium (--no-browser: skip it)
-  init                          create demo.config.json in this directory
+  init                          create reelson.config.json in this directory
   doctor                        check the tools and that the cursor layer lines up here
   new <slug> [--url <origin>]   start <videosDir>/<slug>/scenario.ts
   record <slug> [--headed] [--mobile | --square | --all-takes]
@@ -48,7 +48,7 @@ Usage: reelson <command> [options]
       --intro <name>, --recap <name|none>, --outro <name>
       --trim-start <s|auto>, --trim-end <s>, --music <file> | --no-music
   voice <slug>                  speak the voice-over lines not spoken yet (video.json "voice": true;
-                                demo.config.json voice.provider: openai, elevenlabs, piper (local)
+                                reelson.config.json voice.provider: openai, elevenlabs, piper (local)
                                 or command (local); cached in <demo>/voice/)
   voices [--provider <name>] [--all] [--library]
                                 the voices to pick for voice.voice (openai; elevenlabs: your
@@ -173,7 +173,7 @@ function voiceDoctor(): void {
 function config(): LoadedConfig {
     const loaded = loadConfig(process.cwd())
     if (!loaded.path) {
-        console.warn('reelson: no demo.config.json found — using defaults (run `reelson init`)')
+        console.warn('reelson: no reelson.config.json found — using defaults (run `reelson init`)')
     }
     return loaded
 }
@@ -255,7 +255,7 @@ async function install(argv: string[]): Promise<number> {
     }
 
     if (!global) {
-        if (!existsSync(resolve(target, 'demo.config.json'))) {
+        if (![CONFIG_FILE, LEGACY_CONFIG_FILE].some((name) => existsSync(resolve(target, name)))) {
             init(target)
         }
         const videos = loadConfig(target).videosDir.replace(/^\.?\/+|\/+$/g, '')
@@ -307,14 +307,17 @@ async function askWhere(): Promise<string | null> {
 }
 
 function init(dir = process.cwd()): number {
-    const target = resolve(dir, 'demo.config.json')
+    const target = resolve(dir, CONFIG_FILE)
     if (existsSync(target)) {
         throw new ReelsonError(`${target} already exists`)
     }
-    const example = JSON.parse(readFileSync(resolve(KIT_ROOT, 'demo.config.example.json'), 'utf8'))
+    if (existsSync(resolve(dir, LEGACY_CONFIG_FILE))) {
+        throw new ReelsonError(`${resolve(dir, LEGACY_CONFIG_FILE)} already exists — rename it to ${CONFIG_FILE}`)
+    }
+    const example = JSON.parse(readFileSync(resolve(KIT_ROOT, 'reelson.config.example.json'), 'utf8'))
     delete example.$comment
     delete example.$schema
-    const schema = viaProjectSkills(dir, 'reelson-record/schemas/demo.config.schema.json') ?? CONFIG_SCHEMA_PATH
+    const schema = viaProjectSkills(dir, 'reelson-record/schemas/reelson.config.schema.json') ?? CONFIG_SCHEMA_PATH
     let schemaRef = relative(dir, schema)
     if (!/^\.{1,2}\//.test(schemaRef) && !schemaRef.startsWith('/')) {
         schemaRef = `./${schemaRef}`

@@ -1,7 +1,7 @@
 /**
  * On-card text per UI language: the recap title and the plural forms of the cover chip
- * ("4 steps · 27 seconds"), keyed by Intl.PluralRules category. demo.config.json `language`
- * picks one; `strings` in demo.config.json still overrides any of it. Forms are the ones
+ * ("4 steps · 27 seconds"), keyed by Intl.PluralRules category. reelson.config.json `language`
+ * picks one; `strings` in reelson.config.json still overrides any of it. Forms are the ones
  * used right after a number (Hungarian and Turkish keep the singular, Finnish the partitive).
  */
 import type { DemoConfig } from './config.ts'

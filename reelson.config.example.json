@@ -1,6 +1,6 @@
 {
-    "$schema": "./skills/reelson-record/schemas/demo.config.schema.json",
-    "$comment": "Copy to <project>/demo.config.json (or run `reelson init`). Every field is optional; defaults in skills/reelson-record/scripts/config.ts.",
+    "$schema": "./skills/reelson-record/schemas/reelson.config.schema.json",
+    "$comment": "Copy to <project>/reelson.config.json (or run `reelson init`). Every field is optional; defaults in skills/reelson-record/scripts/config.ts.",
     "videosDir": "docs/videos",
     "language": "en",
     "locale": "en-US",

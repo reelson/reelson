@@ -25,11 +25,11 @@ runs through the `reelson` CLI (`reelson help`); if it is missing, install it: `
 
 ## Project config
 
-Everything project-specific lives in `demo.config.json` at the project root (found by
+Everything project-specific lives in `reelson.config.json` at the project root (found by
 walking up from the scenario). Read it before writing a scenario — it tells you the videos
 directory, the UI language (callouts and personas follow it), the brand, and what to hide.
 If it is missing, run `reelson init` and ask the user for the brand name/colour and UI
-language. It is validated against `schemas/demo.config.schema.json` — a mistyped key is an
+language. It is validated against `schemas/reelson.config.schema.json` — a mistyped key is an
 error with a "did you mean" hint. Fields (all optional, see `scripts/config.ts`):
 
 | Field                          | Used for                                                          |

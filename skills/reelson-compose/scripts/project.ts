@@ -119,7 +119,7 @@ export interface Template {
     name: string
     dir: string
     description: string
-    /** Sections used when neither demo.config.json nor video.json picks one. */
+    /** Sections used when neither reelson.config.json nor video.json picks one. */
     sections: Record<Slot, string>
     stage: StageTiming
 }
@@ -196,7 +196,7 @@ export function findSection(slot: Slot, name: string, config: LoadedConfig): Sec
 
 /**
  * The template plus one section per slot. Later choices win: the template's
- * defaults, then each entry of `choices` in order (demo.config.json, video.json).
+ * defaults, then each entry of `choices` in order (reelson.config.json, video.json).
  */
 export function resolveDesign(templateName: string, choices: (SectionChoice | undefined)[], config: LoadedConfig): Design {
     const template = findTemplate(templateName, config)

@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "reelson project config (demo.config.json)",
+    "title": "reelson project config (reelson.config.json)",
     "type": "object",
     "additionalProperties": false,
     "properties": {
@@ -95,7 +95,7 @@
             "additionalProperties": false,
             "description": "Voice-over, for videos with \"voice\": true in video.json: each callout (its `say`, else its text) spoken by a text-to-speech provider. Lines are trimmed and cached in <demo>/voice/, so each is made once.",
             "properties": {
-                "provider": { "enum": ["openai", "elevenlabs", "piper", "command"], "description": "openai (default; OPENAI_API_KEY — or a local OpenAI-compatible server via baseURL), elevenlabs (ELEVENLABS_API_KEY), piper (a local neural voice: pipx install piper-tts; the voice downloads on first use), command (any local program). Keys can live in a .env next to demo.config.json." },
+                "provider": { "enum": ["openai", "elevenlabs", "piper", "command"], "description": "openai (default; OPENAI_API_KEY — or a local OpenAI-compatible server via baseURL), elevenlabs (ELEVENLABS_API_KEY), piper (a local neural voice: pipx install piper-tts; the voice downloads on first use), command (any local program). Keys can live in a .env next to reelson.config.json." },
                 "model": { "type": "string", "description": "The provider's model. Defaults: openai gpt-4o-mini-tts, elevenlabs eleven_multilingual_v2 (eleven_flash_v2_5 is faster and cheaper, eleven_v3 the most expressive)." },
                 "voice": { "type": "string", "description": "The provider's voice. openai: alloy (default), ash, ballad, cedar, coral, echo, fable, marin, nova, onyx, sage, shimmer, verse. elevenlabs: a voice id or the name of a voice in your account (default George). piper: a voice name like ro_RO-mihai-medium (default: one for `language`)." },
                 "instructions": { "type": "string", "description": "How to speak: tone, pace, accent (gpt-4o-mini-tts; other providers ignore it)." },

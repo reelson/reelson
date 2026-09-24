@@ -32,10 +32,10 @@
         "bin/",
         "skills/",
         "docs/",
-        "examples/demo.config.json",
+        "examples/reelson.config.json",
         "examples/todo-add-item/scenario.ts",
         "examples/todo-add-item/video.json",
-        "demo.config.example.json",
+        "reelson.config.example.json",
         "CHANGELOG.md",
         "NOTICE.md",
         "music/README.md"

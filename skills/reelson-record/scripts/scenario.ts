@@ -14,7 +14,7 @@ export interface Scenario {
     name: string
     /** Origin the scenario runs against, e.g. https://app.test (a local app with seeded data). */
     baseURL: string
-    /** Defaults to demo.config.json `record.viewport` (1440x900). Keep 16:10 or 16:9. */
+    /** Defaults to reelson.config.json `record.viewport` (1440x900). Keep 16:10 or 16:9. */
     viewport?: { width: number; height: number }
     /**
      * Capture pixel ratio (default 2): the page is laid out at `viewport` CSS
@@ -97,7 +97,7 @@ export interface Persona {
 type PersonaSeed = { firstName: string; lastName: string; company: string }
 
 /**
- * Name pools per UI language (demo.config.json `language`). Add a language by
+ * Name pools per UI language (reelson.config.json `language`). Add a language by
  * adding a key; unknown languages fall back to English.
  */
 const PERSONAS: Record<string, { phonePrefix: string; people: PersonaSeed[] }> = {
@@ -164,7 +164,7 @@ export interface Demo {
     focus: Focus[]
     /**
      * Realistic customer data for forms (see Persona), in the project's UI
-     * language. Domain defaults to demo.config.json `record.personaDomain`.
+     * language. Domain defaults to reelson.config.json `record.personaDomain`.
      */
     persona: (seed?: number, domain?: string) => Persona
     cuts: Cut[]

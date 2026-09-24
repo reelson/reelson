@@ -14,13 +14,13 @@ const videoSchema = loadSchema(VIDEO_SCHEMA_PATH)
 
 function projectWith(config: unknown): string {
     const dir = mkdtempSync(join(tmpdir(), 'reelson-'))
-    writeFileSync(join(dir, 'demo.config.json'), JSON.stringify(config))
+    writeFileSync(join(dir, 'reelson.config.json'), JSON.stringify(config))
     return dir
 }
 
 describe('schemas', () => {
     it('accept the shipped example config and the example video', () => {
-        for (const file of ['demo.config.example.json', 'examples/demo.config.json']) {
+        for (const file of ['reelson.config.example.json', 'examples/reelson.config.json']) {
             assert.deepEqual(validate(JSON.parse(readFileSync(resolve(KIT, file), 'utf8')), configSchema), [], file)
         }
         const video = JSON.parse(readFileSync(resolve(KIT, 'examples/todo-add-item/video.json'), 'utf8'))
@@ -71,6 +71,16 @@ describe('loadConfig', () => {
         assert.equal(config.brand.name, 'ACME')
         assert.equal(config.brand.color, DEFAULTS.brand.color)
         assert.equal(config.language, 'ro')
+    })
+
+    it('still reads demo.config.json, its name before 0.8, but prefers reelson.config.json', () => {
+        const dir = mkdtempSync(join(tmpdir(), 'reelson-'))
+        writeFileSync(join(dir, 'demo.config.json'), JSON.stringify({ brand: { name: 'OLD' } }))
+        assert.equal(loadConfig(dir).brand.name, 'OLD')
+        writeFileSync(join(dir, 'reelson.config.json'), JSON.stringify({ brand: { name: 'NEW' } }))
+        const config = loadConfig(dir)
+        assert.equal(config.brand.name, 'NEW')
+        assert.equal(config.path, join(dir, 'reelson.config.json'))
     })
 
     it('replaces plural forms instead of merging them into the English defaults', () => {

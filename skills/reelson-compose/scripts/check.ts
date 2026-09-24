@@ -1,6 +1,6 @@
 /**
  * Checks a demo before rendering:
- *   1. demo.config.json and video.json match their schemas (typos are errors);
+ *   1. reelson.config.json and video.json match their schemas (typos are errors);
  *   2. the timeline resolves (callouts point at real markers, trims make sense);
  *   3. every zoom rides along with the cursor (style guide #13) — see zooms.ts;
  *   4. `hyperframes check` on each built composition — landscape, portrait, square (lint,

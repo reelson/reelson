@@ -818,7 +818,7 @@ function inspect(kind, k) {
     if (s.slot === 'recap') {
       return { label: 'recap', color: 'var(--recap)', rows: [
         ['section', pickSection('recap', s.name)],
-        ['title', textInput(spec.recapTitle, (v) => commit('Recap title', (sp) => { if (v) sp.recapTitle = v; else delete sp.recapTitle }), 'from demo.config.json')],
+        ['title', textInput(spec.recapTitle, (v) => commit('Recap title', (sp) => { if (v) sp.recapTitle = v; else delete sp.recapTitle }), 'from reelson.config.json')],
         ...base, ['', s.detail],
       ] }
     }
@@ -950,7 +950,7 @@ function inspect(kind, k) {
 
   if (kind === 'audio') {
     const a = data.audio[k]
-    return a && { label: k, color: 'var(--audio)', note: k === 'music' ? 'Music: demo.config.json music.file, or "music" in video.json.' : 'Narration: the recording’s own audio track.', rows: [['from', `${fmt(a.start)}s`], ['to', `${fmt(a.end)}s`]] }
+    return a && { label: k, color: 'var(--audio)', note: k === 'music' ? 'Music: reelson.config.json music.file, or "music" in video.json.' : 'Narration: the recording’s own audio track.', rows: [['from', `${fmt(a.start)}s`], ['to', `${fmt(a.end)}s`]] }
   }
   return null
 }

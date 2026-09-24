@@ -113,5 +113,5 @@ reader could follow without the video. If you can't write the callouts, the vide
 - **Callout clipped during a zoom**: it ended up inside `#frame`; callouts live in `#callouts`.
 - **`Cannot find module '@playwright/test'`** or **`reelson: command not found`**: run
   `npm install -g reelson && reelson install` (or the kit checkout's `install.sh`).
-- **`… is invalid: … unknown key — did you mean …`**: a typo in demo.config.json or video.json;
+- **`… is invalid: … unknown key — did you mean …`**: a typo in reelson.config.json or video.json;
   the message names the path. Editors autocomplete both through their `$schema`.

@@ -9,7 +9,7 @@
  * "recorded"), hides local dev chrome, films the page with Chrome's screencast
  * (see ./capture.ts; record.capture "playwright" uses Playwright's video) and writes
  * into --out (default: the scenario's directory). Project settings (viewport, locale,
- * brand colour, hidden selectors, persona domain) come from demo.config.json
+ * brand colour, hidden selectors, persona domain) come from reelson.config.json
  * (see ./config.ts):
  *
  *   recording.mp4    H.264, 30 fps (what HyperFrames consumes); recording.failed.mp4 on failure

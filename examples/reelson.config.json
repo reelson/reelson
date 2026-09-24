@@ -1,6 +1,6 @@
 {
-    "$schema": "../skills/reelson-record/schemas/demo.config.schema.json",
-    "$comment": "Config for the bundled examples. A real project keeps its own demo.config.json at its root (copy demo.config.example.json).",
+    "$schema": "../skills/reelson-record/schemas/reelson.config.schema.json",
+    "$comment": "Config for the bundled examples. A real project keeps its own reelson.config.json at its root (copy reelson.config.example.json).",
     "videosDir": ".",
     "language": "en",
     "locale": "en-US",
