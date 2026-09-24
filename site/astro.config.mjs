@@ -12,7 +12,8 @@ export default defineConfig({
             title: 'reelson',
             description:
                 'Turn a prompt into a finished, branded demo video of your web app. Agent Skills + a CLI for Claude Code, Codex and any agent that reads SKILL.md.',
-            logo: { src: './src/assets/logo.svg' },
+            // "reels" + a switched-on toggle: reels·on. Outlined Inter (wght 760), so it needs no font.
+            logo: { dark: './src/assets/logo-dark.svg', light: './src/assets/logo-light.svg', replacesTitle: true },
             favicon: '/favicon.svg',
             social: [
                 { icon: 'github', label: 'GitHub', href: 'https://github.com/reelson/reelson' },

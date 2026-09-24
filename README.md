@@ -1,4 +1,9 @@
-# reelson
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/readme/logo-dark.svg">
+    <img alt="reelson" src=".github/readme/logo-light.svg" height="56">
+  </picture>
+</h1>
 
 [![GitHub stars](https://img.shields.io/github/stars/reelson/reelson?style=flat&logo=github)](https://github.com/reelson/reelson/stargazers)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/icaliman)

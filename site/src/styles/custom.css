@@ -56,10 +56,9 @@ header.header {
     background-color: color-mix(in srgb, var(--sl-color-black) 78%, transparent);
     border-bottom-color: color-mix(in srgb, var(--sl-color-gray-5) 70%, transparent);
 }
-.site-title {
-    font-weight: 650;
-    letter-spacing: -0.02em;
-    font-size: 1.15rem;
+.site-title img {
+    height: 1.55rem;
+    width: auto;
 }
 .sidebar-pane {
     background-color: var(--sl-color-black);
