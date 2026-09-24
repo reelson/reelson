@@ -21,7 +21,7 @@ import {
     type ChannelContext,
     type PublishJob,
 } from '../skills/reelson-compose/scripts/publish.ts'
-import { renderIfChanged, renderKey } from '../skills/reelson-compose/scripts/hyperframes.ts'
+import { LOW_MEMORY_FLAGS, renderIfChanged, renderKey } from '../skills/reelson-compose/scripts/hyperframes.ts'
 import { backoff, videoResource, youtube, type YouTubeChannel, type YouTubeLogin } from '../skills/reelson-compose/scripts/publish-youtube.ts'
 import { CONFIG_SCHEMA_PATH, loadConfig } from '../skills/reelson-record/scripts/config.ts'
 import { loadSchema, validate } from '../skills/reelson-record/scripts/validate.ts'
@@ -89,6 +89,12 @@ describe('publish metadata', () => {
         assert.deepEqual(m, { title: 'Upload title', description: 'Own words', tags: [] })
     })
 
+    it('titles the upload with the title as text: a rotating phrase as its first option, or captionTitle', () => {
+        const title = 'Automate {anything|workflows} in Filament'
+        assert.equal(metadata({ title }, [], { type: 'youtube' }).title, 'Automate anything in Filament')
+        assert.equal(metadata({ title, captionTitle: 'Automate it all' }, [], { type: 'youtube' }).title, 'Automate it all')
+    })
+
     it('keeps YouTube limits: 100-character title, no angle brackets', () => {
         const job = { slug: 's', metadata: { title: `<b>${'x'.repeat(200)}`, description: 'a < b', tags: ['<t>'] } } as PublishJob
         const { snippet, status } = videoResource(job, { type: 'youtube', privacy: 'unlisted' }, 'ro')
@@ -122,6 +128,8 @@ describe('publish bookkeeping', () => {
         assert.match(renderProblem(demo, 'd', 'landscape')!, /video\.json changed after/)
         assert.equal(renderIfChanged(join(demo, 'video'), output, []), 'unchanged')
         assert.equal(renderProblem(demo, 'd', 'landscape'), null)
+        // A render made in low-memory mode is the same video: the next render, with or without it, is up to date.
+        assert.equal(renderIfChanged(join(demo, 'video'), output, [], false, 'index.html', LOW_MEMORY_FLAGS), 'unchanged')
     })
 
     it('remembers what went where', () => {

@@ -6,7 +6,8 @@
     "additionalProperties": false,
     "required": ["title"],
     "properties": {
-        "title": { "type": "string", "description": "Cover title: the task, e.g. \"Find a customer\"." },
+        "title": { "type": "string", "description": "Cover title: the task, e.g. \"Find a customer\". May hold a rotating phrase, \"Automate {anything|workflows|approvals}\", for a template that animates it (DEMO.title.parts); as text (captions, the upload's title) it reads with the first option." },
+        "captionTitle": { "type": "string", "description": "The title as text — captions, the upload's title — when the first option of a rotating phrase does not read well (default: the title, each {a|b} as a)." },
         "subtitle": { "type": "string", "description": "Cover subtitle: the benefit or context." },
         "template": { "type": "string", "description": "Overrides reelson.config.json `template` for this video." },
         "sections": {
@@ -107,7 +108,7 @@
             "additionalProperties": false,
             "description": "How `reelson publish` words this video. Without it: the title, and a description made of the subtitle and the numbered steps (callouts); each channel's footer and tags are added.",
             "properties": {
-                "title": { "type": "string", "description": "The upload's title (default: title)." },
+                "title": { "type": "string", "description": "The upload's title (default: captionTitle, else the title as text)." },
                 "description": { "type": "string", "description": "The upload's description (default: subtitle + the steps)." },
                 "tags": { "type": "array", "items": { "type": "string" }, "description": "Added to the channel's tags." }
             }

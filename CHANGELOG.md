@@ -4,6 +4,37 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
+## 0.9.0 — 2026-09-24
+
+Nothing to update. Re-render a video with a rotating title to fix its captions.
+
+### Added
+- **`reelson render --low-memory`**: HyperFrames' low-memory mode (one browser, frames streamed to
+  the encoder instead of kept on disk) for a machine short on RAM or temporary disk space; slower,
+  the same video. It is not part of the render key, so the next render without it still says up
+  to date. A failed render suggests it.
+- **`reelson render --4k`**: 3840x2160 (portrait 2160x3840, square 2160x2160), Chrome rendering the
+  same composition at twice the scale from the 2x capture.
+- **`reelson render <slug> -- <flags>`** passes the flags after `--` to `hyperframes render`
+  (`-- --crf 18`, `-- --workers 2`); a different set renders again.
+- **`video.json` `captionTitle`**: the title as text, for a rotating title whose first option reads
+  badly. Templates get the title parsed as `DEMO.title` (`{ plain, parts }`) and `{{TITLE_PLAIN}}`.
+- `reelson <command> --help` (and `reelson help <command>`) prints that command's usage.
+- Troubleshooting: what to do when a render runs out of disk space or memory.
+
+### Fixed
+- **A rotating title in the captions**: a title like `"Automate {anything|workflows} in Filament"`
+  (animated by a project template) went into the .srt/.vtt captions, and so to YouTube and screen
+  readers, as raw markup. Captions and the upload's default title now read each phrase as its
+  first option, or as `captionTitle`. The built-in intro and outro sections show that text too.
+- `reelson render --help` (any `<command> --help`) crashed with ERR_PARSE_ARGS_UNKNOWN_OPTION; a
+  mistyped option now prints one line (`reelson render: unknown option --foo, see reelson render
+  --help`) instead of a stack trace.
+
+### Changed
+- A docs website, [reelson.github.io/reelson](https://reelson.github.io/reelson), and a logo
+  (reels·on) for it and the README.
+
 ## 0.8.0 — 2026-09-24
 
 ### Changed

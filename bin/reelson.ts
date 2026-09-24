@@ -20,7 +20,7 @@ import { studio } from '../skills/reelson-compose/scripts/studio.ts'
 import { fetchLines, spokenTexts, voiceSettings, type VoiceSettings } from '../skills/reelson-compose/scripts/voice.ts'
 import { listVoices, missingSetup, PROVIDERS, type Provider } from '../skills/reelson-compose/scripts/tts.ts'
 import { TAKES, verify } from '../skills/reelson-compose/scripts/verify.ts'
-import { DRAFT_FLAGS, FPS, gifIfChanged, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelson-compose/scripts/hyperframes.ts'
+import { DRAFT_FLAGS, FPS, gifIfChanged, hyperframes, hyperframesOn, LOW_MEMORY_FLAGS, RENDER_FLAGS, renderIfChanged } from '../skills/reelson-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, RECORD_SCRIPT, ReelsonError, resolveDemoDir } from '../skills/reelson-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice, type Timeline } from '../skills/reelson-compose/scripts/timeline.ts'
 import {
@@ -84,14 +84,18 @@ Usage: reelson <command> [options]
   preview <slug>                open the HyperFrames studio (raw composition)
   templates                     list templates and intro/recap/outro sections
   render <slug...> | --all [--gif] [--square] [--portrait] [--all-formats] [--only <format>]
-         [--draft] [--force] [--no-build]
+         [--draft] [--4k] [--force] [--low-memory] [--no-build] [-- <hyperframes flags>]
                                 build + render video/renders/<slug>.mp4 + .srt/.vtt captions;
                                 skips a video unchanged since its last render (--force);
                                 --gif, --square (1080², the square take filling the frame),
                                 --portrait (1080x1920 phone layout) add versions, --all-formats
                                 both (also video.json "formats": ["portrait", "square"]);
                                 --only landscape|portrait|square renders just that version;
-                                --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
+                                --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4;
+                                --4k: 3840x2160 (2160x3840, 2160x2160), from the 2x capture;
+                                --low-memory: one browser, slower, for a machine short on
+                                RAM or disk (the same video: it stays up to date);
+                                after --: flags for \`hyperframes render\` (e.g. -- --crf 18)
   publish <slug...> [--to <channel,...> | --all-channels] [--dry-run]
           [--again | --replace | --update]
                                 upload the rendered video to the config's channels
@@ -119,6 +123,12 @@ try {
     if (error instanceof ReelsonError || error instanceof ConfigError) {
         console.error(`reelson: ${error.message}`)
         process.exitCode = 1
+    } else if (String((error as { code?: string }).code).startsWith('ERR_PARSE_ARGS_')) {
+        // A mistyped option: one line, not a stack trace.
+        const message = (error as Error).message
+        const option = /^Unknown option '([^']+)'/.exec(message)?.[1]
+        console.error(`reelson ${command}: ${option ? `unknown option ${option}` : message.split('. ')[0].replace(/\.$/, '')}, see reelson ${command} --help`)
+        process.exitCode = 2
     } else {
         throw error
     }
@@ -143,7 +153,29 @@ function loadSecrets(): void {
     }
 }
 
+/** A command's lines of HELP, as "usage: reelson <command> …"; null for a command HELP does not list. */
+function usage(cmd: string): string | null {
+    const lines = HELP.split('\n')
+    const start = lines.findIndex((line) => line.startsWith(`  ${cmd} `) || line === `  ${cmd}`)
+    if (start < 0) {
+        return null
+    }
+    // It runs up to the next command (a line indented two spaces) or the blank line after the list.
+    const end = lines.findIndex((line, i) => i > start && (!line.trim() || /^ {2}\S/.test(line)))
+    return `usage: reelson ${lines.slice(start, end).join('\n').trimStart()}`
+}
+
 async function run(cmd: string | undefined, argv: string[]): Promise<number> {
+    // `reelson <command> --help` (anywhere before a `--`), and `reelson help <command>`.
+    const own = argv.includes('--') ? argv.slice(0, argv.indexOf('--')) : argv
+    const asked = cmd === 'help' || cmd === '--help' || cmd === '-h' ? argv[0] : own.some((a) => a === '--help' || a === '-h') ? cmd : undefined
+    if (asked) {
+        const text = usage(asked)
+        if (text) {
+            console.log(text)
+            return 0
+        }
+    }
     switch (cmd) {
         case undefined:
         case 'help':
@@ -678,8 +710,11 @@ function preview(argv: string[]): number {
 }
 
 async function render(argv: string[]): Promise<number> {
+    // Everything after `--` goes to `hyperframes render` as it is (and into the render key).
+    const cut = argv.indexOf('--')
+    const passthrough = cut < 0 ? [] : argv.slice(cut + 1)
     const { values, positionals } = parseArgs({
-        args: argv,
+        args: cut < 0 ? argv : argv.slice(0, cut),
         allowPositionals: true,
         options: {
             all: { type: 'boolean' },
@@ -690,9 +725,12 @@ async function render(argv: string[]): Promise<number> {
             only: { type: 'string' },
             draft: { type: 'boolean' },
             force: { type: 'boolean' },
+            '4k': { type: 'boolean' },
+            'low-memory': { type: 'boolean' },
             'no-build': { type: 'boolean' },
         },
     })
+    const extra = values['low-memory'] ? LOW_MEMORY_FLAGS : []
     if (values.only && !['landscape', 'portrait', 'square'].includes(values.only)) {
         throw new ReelsonError(`--only expects landscape, portrait or square, got "${values.only}"`)
     }
@@ -714,22 +752,27 @@ async function render(argv: string[]): Promise<number> {
         // Captions: the same words as the cards, timed to each video (the phone and square
         // takes have their own timing).
         const captions = (timeline: Timeline, name: string) => {
-            const cues = captionCues(timeline, result.spec.title, result.spec.subtitle)
+            const cues = captionCues(timeline, result.spec)
             writeFileSync(resolve(videoDir, `renders/${name}.srt`), toSrt(cues))
             writeFileSync(resolve(videoDir, `renders/${name}.vtt`), toVtt(cues))
         }
         captions(result.timeline, slug)
-        const [video, flags] = values.draft ? [`renders/${slug}.draft.mp4`, DRAFT_FLAGS] : [`renders/${slug}.mp4`, RENDER_FLAGS]
+        const [video, base] = values.draft ? [`renders/${slug}.draft.mp4`, DRAFT_FLAGS] : [`renders/${slug}.mp4`, RENDER_FLAGS]
+        // --4k: Chrome renders the same composition at twice the scale, from the 2x capture.
+        const flags = (format: Format) => [...base, ...(values['4k'] ? ['--resolution', `${format}-4k`] : []), ...passthrough]
         const report = (outcome: 'rendered' | 'unchanged' | 'failed', output: string): void => {
             if (outcome === 'failed') {
                 failures++
-                console.error(`reelson: render failed for ${slug} (${output})`)
+                console.error(
+                    `reelson: render failed for ${slug} (${output})` +
+                        (values['low-memory'] ? '' : ' — if the machine ran out of memory or disk space, try again with --low-memory'),
+                )
                 return
             }
             console.log(`${outcome === 'unchanged' ? 'up to date' : 'rendered'} ${resolve(videoDir, output)}`)
         }
         if (!values.only || values.only === 'landscape') {
-            const outcome = renderIfChanged(videoDir, video, flags, values.force)
+            const outcome = renderIfChanged(videoDir, video, flags('landscape'), values.force, 'index.html', extra)
             report(outcome, video)
             // The GIF is cut from the MP4 just rendered (ffmpeg), not rendered a second time.
             if (values.gif && outcome !== 'failed') {
@@ -745,7 +788,7 @@ async function render(argv: string[]): Promise<number> {
         if (asked('portrait')) {
             if (result.versions) captions(result.versions.portrait, `${slug}.portrait`)
             const output = video.replace(/\.mp4$/, '.portrait.mp4')
-            report(renderIfChanged(videoDir, output, flags, values.force, 'portrait.html'), output)
+            report(renderIfChanged(videoDir, output, flags('portrait'), values.force, 'portrait.html', extra), output)
         }
         // Square: its own composition, from the square take (`reelson record --square`).
         if (asked('square')) {
@@ -753,7 +796,7 @@ async function render(argv: string[]): Promise<number> {
             const hint = `run \`reelson record ${slug} --square\` (a square browser), then render again`
             if (existsSync(resolve(videoDir, 'square.html'))) {
                 if (result.versions?.square) captions(result.versions.square, `${slug}.square`)
-                report(renderIfChanged(videoDir, output, flags, values.force, 'square.html'), output)
+                report(renderIfChanged(videoDir, output, flags('square'), values.force, 'square.html', extra), output)
             } else if (values.square || values.only === 'square') {
                 failures++
                 console.error(`reelson: no square take for ${slug} — ${hint}`)

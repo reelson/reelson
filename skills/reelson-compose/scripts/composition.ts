@@ -7,6 +7,7 @@ import type { Slot, Timeline } from './timeline.ts'
 import { round } from './timeline.ts'
 import { calloutsAtTop, landscapeLayout, type Layout } from './portrait.ts'
 import type { Zoom } from './zooms.ts'
+import { plainTitle, titleParts } from './title.ts'
 
 export interface CompositionText {
     language: string
@@ -80,6 +81,8 @@ export function renderComposition(input: CompositionInput): string {
         layout: { format: layout.format, stage: layout.stage, bandZoom: layout.bandZoom, camera: layout.camera },
         transitions: t.transitions.map(({ at, gap }) => ({ at, gap })),
         chip: { steps: text.stepsChip, seconds: text.secondsChip },
+        // A rotating title ("Automate {anything|workflows}") parsed once, for a template that animates it.
+        title: { plain: plainTitle(text.title), parts: titleParts(text.title) },
     }
 
     const shared: Record<string, string> = {
@@ -91,6 +94,7 @@ export function renderComposition(input: CompositionInput): string {
         BRAND_LOGO: escapeHtml(text.logo),
         EYEBROW: escapeHtml(text.brand.eyebrow),
         TITLE: escapeHtml(text.title),
+        TITLE_PLAIN: escapeHtml(plainTitle(text.title)),
         SUBTITLE: escapeHtml(text.subtitle),
         OUTRO_TITLE: escapeHtml(text.recapTitle),
         TOTAL: String(t.total),

@@ -32,6 +32,20 @@ Zooms must finish before their click. Anchor them with `clicks`, and shorten the
 `out`, ≥ 0.4 s) rather than adding pauses to the scenario. Two zooms may not be on screen at
 once. Use one zoom over both click ranges.
 
+### A render fails for lack of disk space or memory
+HyperFrames keeps every frame on disk before encoding (about 8 MB a frame at 1080p, four times
+that with `--4k`), so a minute of video can need 15 GB or more. `reelson render --low-memory`
+streams the frames instead, with one browser: slower, the same video, and it doesn't make the
+next render redo it. To keep the full speed, point HyperFrames' caches at a bigger disk instead:
+`HYPERFRAMES_EXTRACT_CACHE_DIR=/Volumes/big/hf reelson render my-demo`. The variables HyperFrames
+reads (`PRODUCER_LOW_MEMORY_MODE`, `PRODUCER_PUPPETEER_PROTOCOL_TIMEOUT_MS`,
+`PRODUCER_PLAYER_READY_TIMEOUT_MS` for slow machines) pass through reelson, and they are the place
+for settings that belong to one machine, not the project.
+
+### The captions show `{anything|workflows}`
+Update reelson (0.9.0 or later) and render again: captions and the upload's title read a rotating
+phrase as its first option. Set `captionTitle` in `video.json` to word it yourself.
+
 ### A voice-over line runs past its step
 Shorten its `say`, or pause longer in the scenario after that step.
 

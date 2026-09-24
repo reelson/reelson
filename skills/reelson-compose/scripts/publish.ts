@@ -27,6 +27,7 @@ import type { LoadedConfig } from '../../reelson-record/scripts/config.ts'
 import { ReelsonError } from './project.ts'
 import { youtube } from './publish-youtube.ts'
 import type { VideoSpec } from './timeline.ts'
+import { textTitle } from './title.ts'
 
 export const PUBLISHED_FILE = 'published.json'
 
@@ -183,7 +184,7 @@ export function metadata(spec: VideoSpec, steps: string[], channel: ChannelConfi
     const list = steps.length > 1 ? steps.map((step, i) => `${i + 1}. ${step}`).join('\n') : ''
     const description = own.description ?? [spec.subtitle, list].filter(Boolean).join('\n\n')
     return {
-        title: own.title ?? spec.title,
+        title: own.title ?? textTitle(spec),
         description: [description, channel.footer].filter(Boolean).join('\n\n'),
         tags: [...new Set([...(channel.tags ?? []), ...(own.tags ?? [])])],
     }

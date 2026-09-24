@@ -135,7 +135,8 @@ reelson verify --all
 reelson studio customers-search
 # templates and intro/recap/outro sections
 reelson templates
-# the MP4 + .srt/.vtt captions; --gif, --square, --portrait, --all-formats, --draft
+# the MP4 + .srt/.vtt captions; --gif, --square, --portrait, --all-formats, --draft, --4k,
+# --low-memory (a machine short on RAM or disk); flags after -- go to hyperframes render
 reelson render customers-search
 # every demo; skips the unchanged ones
 reelson render --all

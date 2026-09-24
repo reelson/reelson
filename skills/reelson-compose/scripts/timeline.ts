@@ -171,7 +171,10 @@ export type SectionChoice = Partial<Record<Slot, string>>
 
 /** video.json */
 export interface VideoSpec {
+    /** May hold a rotating phrase, "Automate {anything|workflows}" (see title.ts). */
     title: string
+    /** The title as text (captions, the upload); default: the title, each rotating phrase read as its first option. */
+    captionTitle?: string
     subtitle?: string
     template?: string
     sections?: SectionChoice

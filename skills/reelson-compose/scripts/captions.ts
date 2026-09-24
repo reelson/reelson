@@ -3,7 +3,8 @@
  * callout, in composition time — the same words the viewer reads on the cards, as a
  * subtitle track for players, social uploads and screen readers. Pure.
  */
-import type { Timeline } from './timeline.ts'
+import type { Timeline, VideoSpec } from './timeline.ts'
+import { textTitle } from './title.ts'
 
 export interface Cue {
     start: number
@@ -11,8 +12,10 @@ export interface Cue {
     text: string
 }
 
-export function captionCues(timeline: Timeline, title: string, subtitle?: string): Cue[] {
-    const intro = subtitle ? `${title}\n${subtitle}` : title
+/** The title reads as text: `captionTitle`, else each rotating phrase as its first option. */
+export function captionCues(timeline: Timeline, spec: Pick<VideoSpec, 'title' | 'captionTitle' | 'subtitle'>): Cue[] {
+    const title = textTitle(spec)
+    const intro = spec.subtitle ? `${title}\n${spec.subtitle}` : title
     return [
         { start: 0, end: timeline.intro.exit, text: intro },
         ...timeline.callouts.map((c) => ({ start: c.at, end: c.at + c.duration, text: c.text })),

@@ -123,6 +123,7 @@ In `stage.html` and every section file:
 | `{{BRAND_LOGO}}`                              | `assets/brand-logo.<ext>` when `brand.logo` is set, else empty — put it in `data-logo` on a `.wordmark` |
 | `{{BRAND_COLOR}}`, `{{BRAND_COLOR_SOFT}}`     | `brand.color`, `brand.colorSoft` (sections use `var(--brand)` instead) |
 | `{{TITLE}}`, `{{SUBTITLE}}`, `{{OUTRO_TITLE}}`| video.json title/subtitle, recap title                  |
+| `{{TITLE_PLAIN}}`                             | the title with each rotating phrase as its first option (the built-in sections use it) |
 | `{{TOTAL}}`, `{{FRAME_W}}`, `{{FRAME_H}}`     | composition length, framed recording size in px         |
 | `{{STAGE_W}}`, `{{STAGE_H}}`, `{{FORMAT}}`, `{{FOOTAGE_W}}`, `{{FOOTAGE_H}}`, `{{BAND_ZOOM}}` | the layout (see **Layouts**): stage size, `landscape` / `portrait` / `square`, footage size, card zoom |
 
@@ -135,7 +136,14 @@ Only in sections: `{{START}}`, `{{DURATION}}`, `{{TRACK}}` (put all three on the
 `DEMO` holds `total`, `clipStart`, `clipDuration`, `mediaStart`, `sections` (`intro`, `recap` or
 `null`, `outro`, as above), `callouts` (`{ at, duration, text, group? }`), `zooms`
 (`{ at, duration, x, y, scale, in, out }`), `transitions` (`{ at, gap }`), `chip`
-(`{ steps, seconds }`, already pluralised) and `cursor` — all times in composition seconds.
+(`{ steps, seconds }`, already pluralised), `title` and `cursor` — all times in composition seconds.
+
+`DEMO.title` is the video.json title parsed for a rotating phrase — `"Automate
+{anything|workflows|approvals} in Filament"` gives `{ plain: "Automate anything in Filament", parts:
+["Automate ", ["anything", "workflows", "approvals"], " in Filament"] }` (a string is text, an array a
+phrase to rotate through). A template that animates the phrase reads `parts` rather than parsing
+`{{TITLE}}` itself, so it splits the title exactly as the captions and the upload do (they read it
+as `plain`, or video.json `captionTitle`).
 
 A zoom may carry `path: [[t, x, y]]` (video.json `"follow": true`): its transform-origin over
 time; tween the origin along it instead of fixing it at `x`/`y`.

@@ -53,9 +53,17 @@ export const RENDER_FLAGS = ['--video-frame-format', 'jpg', '-q', 'delivery']
 export const DRAFT_FLAGS = ['--video-frame-format', 'jpg', '-q', 'draft', '--fps', '15']
 
 /**
+ * HyperFrames' low-memory profile: one Chrome worker, screenshot capture, no worker calibration.
+ * Slower, but it fits a machine short on RAM or temporary disk space. It does not change the
+ * video, so it is not part of the render key (`extra` in renderIfChanged).
+ */
+export const LOW_MEMORY_FLAGS = ['--low-memory-mode']
+
+/**
  * Renders `videoDir` to `output` (relative to it) with `flags`, unless nothing it depends on
  * changed since the last render there: index.html, every asset (by size and mtime), the
- * flags and the pinned HyperFrames version. Returns 'rendered' | 'unchanged' | 'failed'.
+ * flags and the pinned HyperFrames version. `extra` flags go to HyperFrames but not into the
+ * key: they change how it renders, not the video. Returns 'rendered' | 'unchanged' | 'failed'.
  */
 export function renderIfChanged(
     videoDir: string,
@@ -63,6 +71,7 @@ export function renderIfChanged(
     flags: string[],
     force = false,
     composition = 'index.html',
+    extra: string[] = [],
 ): 'rendered' | 'unchanged' | 'failed' {
     const target = resolve(videoDir, output)
     const stamp = `${target}.key`
@@ -75,7 +84,7 @@ export function renderIfChanged(
         return 'unchanged'
     }
     const which = composition === 'index.html' ? [] : ['-c', composition]
-    if (hyperframes(['render', '.', ...which, ...flags, '-o', output], videoDir) !== 0) {
+    if (hyperframes(['render', '.', ...which, ...flags, ...extra, '-o', output], videoDir) !== 0) {
         return 'failed'
     }
     writeFileSync(stamp, key)

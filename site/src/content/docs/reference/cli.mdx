@@ -40,9 +40,13 @@ description: Every reelson command and flag.
 | `--all-formats` | Adds both. |
 | `--only <landscape\|portrait\|square>` | Renders just that version. |
 | `--draft` | 15 fps at draft quality, about 2x faster → `renders/<slug>.draft.mp4`. |
+| `--4k` | 3840x2160 (portrait 2160x3840, square 2160x2160): Chrome renders the composition at twice the scale, from the 2x capture. It takes four times the temporary disk space, so pair it with `--low-memory` on a small disk. |
 | `--force` | Renders even when nothing changed. |
 | `--low-memory` | HyperFrames' low-memory mode: one browser, slower, for a machine short on RAM or temporary disk space. The video is the same, so a later render without it still says up to date. |
 | `--no-build` | Renders the existing `video/` without rebuilding. |
+| `-- <flags>` | Everything after `--` goes to `hyperframes render` as it is, e.g. `reelson render my-demo -- --crf 18`. These flags count as a change: a different set renders again. |
+
+Every command prints its own usage with `--help` (`reelson render --help`, or `reelson help render`).
 
 ## Maintain
 

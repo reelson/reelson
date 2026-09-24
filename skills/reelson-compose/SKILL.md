@@ -35,6 +35,8 @@ changing the trim or the template never re-times anything. Validated against
 ```jsonc
 {
     "title": "Find a customer",                 // cover title = the task
+    // a template may rotate a phrase: "Automate {anything|workflows}"; captions and the upload
+    // read it as the first option, or as "captionTitle" when that one reads badly
     "subtitle": "Search any customer from the list",
     "trim": { "start": "auto" },                // skip the login; optional "end"
     "callouts": [                               // numbered steps; also the recap
@@ -164,7 +166,9 @@ reelson render <slug> [--gif] [--draft] [--portrait] [--square] [--all-formats] 
    video.json — so re-read video.json before each of your own edits while it runs.
 4. **Render.** `reelson render` rebuilds first. ~30–60 s per 12 s of video. `--all` renders
    every demo in the project, skipping the ones unchanged since their last render (`--force`
-   renders anyway); `--gif` adds a 720 px, 12 fps GIF for READMEs (cut from the MP4 with ffmpeg), `--portrait` adds a phone-first
+   renders anyway; `--low-memory` renders with one browser, slower, when a render fails for lack of
+   RAM or temporary disk space — the same video, so it does not make the next render redo it; `--4k`
+   renders 3840x2160 from the 2x capture; flags after `--` go to `hyperframes render` as they are); `--gif` adds a 720 px, 12 fps GIF for READMEs (cut from the MP4 with ffmpeg), `--portrait` adds a phone-first
    1080x1920 version (its own composition, video/portrait.html). Its source is video.json
    `"portrait"`: `"mobile"` — the phone take (`reelson record <slug> --mobile`) whole in a phone
    frame, taps as ripples; best for any responsive app; `"desktop"` — a camera over the desktop
