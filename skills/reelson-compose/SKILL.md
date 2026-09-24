@@ -194,6 +194,21 @@ scenario.ts / video.json, then `reelson verify <slug> --update` keeps the new ta
 Sharp UI text comes from the 2x capture; the build keeps it (`media.autoProxy: false`, no
 `will-change` on `#frame`, jpg frames — png at 2x can stall the renderer).
 
+## Publishing
+
+`reelson publish <slug> --to <channel>` uploads a render to a channel listed under
+`"channels"` in reelson.config.json (`reelson channels` lists them and their sign-in). Only publish
+when the user asks, and name the channels they asked for — never pick channels yourself, never `--again` unasked
+(it uploads a second copy). Run `--dry-run` first and show the user the title and description.
+Word them in video.json `"publish": { "title", "description", "tags" }` when the default (title;
+subtitle + numbered steps) does not fit. A channel's `format` needs that render
+(`reelson render <slug> --only portrait`). Signing in (`reelson channels login <name>`) opens a
+browser: leave it to the user.
+
+A new service is `scripts/publish-<type>.ts` implementing `Publisher` (publish.ts), an entry in
+`PUBLISHERS` and a `channels` branch in reelson-record's `schemas/reelson.config.schema.json`;
+`oauth.ts` does the browser sign-in.
+
 ## Audio
 
 The build handles audio; never add `<audio>` by hand.

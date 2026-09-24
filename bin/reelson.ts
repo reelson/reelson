@@ -23,6 +23,21 @@ import { TAKES, verify } from '../skills/reelson-compose/scripts/verify.ts'
 import { DRAFT_FLAGS, FPS, gifIfChanged, hyperframes, hyperframesOn, RENDER_FLAGS, renderIfChanged } from '../skills/reelson-compose/scripts/hyperframes.ts'
 import { catalog, KIT_ROOT, listDemos, RECORD_SCRIPT, ReelsonError, resolveDemoDir } from '../skills/reelson-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice, type Timeline } from '../skills/reelson-compose/scripts/timeline.ts'
+import {
+    channelsTemplate,
+    credentialsFor,
+    loadChannels,
+    metadata,
+    pickChannels,
+    publisherFor,
+    readPublished,
+    recordPublished,
+    renderFiles,
+    renderProblem,
+    type ChannelContext,
+    type Channels,
+    type Format,
+} from '../skills/reelson-compose/scripts/publish.ts'
 
 const HELP = `reelson — scripted walkthroughs → branded demo videos
 
@@ -74,12 +89,20 @@ Usage: reelson <command> [options]
                                 both (also video.json "formats": ["portrait", "square"]);
                                 --only landscape|portrait|square renders just that version;
                                 --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
+  publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again]
+                                upload the rendered video to the config's channels
+                                (asks which without --to); a channel that already has it
+                                (published.json) is skipped unless --again; --dry-run shows
+                                what would go up
+  channels [init | login <name> | logout <name>]
+                                list the channels and who each is logged in as; init adds
+                                starter ones to the config; login signs a channel in (browser)
 
 <slug> is a folder under videosDir, or a path to a demo folder or its scenario.ts.
 Docs: ${KIT_ROOT}/README.md`
 
 const [command, ...rest] = process.argv.slice(2)
-const SECRETS = ['OPENAI_API_KEY', 'ELEVENLABS_API_KEY']
+const SECRETS = ['OPENAI_API_KEY', 'ELEVENLABS_API_KEY', 'YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET']
 
 try {
     loadSecrets()
@@ -94,7 +117,7 @@ try {
 }
 
 /**
- * Picks the secrets reelson reads (OPENAI_API_KEY, ELEVENLABS_API_KEY) up from a .env next to demo.config.json, else from one in the reelson checkout;
+ * Picks the secrets reelson reads (SECRETS: API keys, YouTube's OAuth client) up from a .env next to reelson.config.json, else from one in the reelson checkout;
  * a variable already in the environment wins. The rest of those files is left alone.
  */
 function loadSecrets(): void {
@@ -156,6 +179,10 @@ async function run(cmd: string | undefined, argv: string[]): Promise<number> {
             return await render(argv)
         case 'templates':
             return templates()
+        case 'publish':
+            return await publishCommand(argv)
+        case 'channels':
+            return await channelsCommand(argv)
         default:
             console.error(`reelson: unknown command "${cmd}"\n\n${HELP}`)
             return 2
@@ -728,4 +755,180 @@ async function render(argv: string[]): Promise<number> {
         }
     }
     return failures ? 1 : 0
+}
+
+function openInBrowser(url: string): void {
+    console.log(`Opening the sign-in page in your browser — if it does not open, visit:\n  ${url}`)
+    spawnSync(process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer' : 'xdg-open', [url], { stdio: 'ignore' })
+}
+
+function channelContext(channels: Channels, name: string, cfg: LoadedConfig): ChannelContext {
+    return { name, channel: channels.channels[name], config: cfg, credentials: credentialsFor(cfg, name), open: openInBrowser, log: console.log }
+}
+
+async function channelsCommand(argv: string[]): Promise<number> {
+    const { positionals } = parseArgs({ args: argv, allowPositionals: true })
+    const [action, name, ...extra] = positionals
+    const usage = 'usage: reelson channels [init | login <name> | logout <name>]'
+    const cfg = config()
+    if (action === 'init') {
+        if (!cfg.path) {
+            throw new ReelsonError('channels live in the project config — run `reelson init` first')
+        }
+        if (cfg.channels) {
+            throw new ReelsonError(`${cfg.path} has "channels" already`)
+        }
+        const raw = JSON.parse(readFileSync(cfg.path, 'utf8')) as Record<string, unknown>
+        writeFileSync(cfg.path, JSON.stringify({ ...raw, channels: channelsTemplate() }, null, 4) + '\n')
+        console.log(`added "channels" to ${cfg.path} — then: reelson channels login youtube`)
+        return 0
+    }
+    const channels = loadChannels(cfg)
+    if (action === 'login' || action === 'logout') {
+        if (!name || extra.length) {
+            throw new ReelsonError(usage)
+        }
+        pickChannels(channels, name)
+        const ctx = channelContext(channels, name, cfg)
+        if (action === 'logout') {
+            console.log(ctx.credentials.remove() ? `logged ${name} out (removed ${ctx.credentials.path})` : `${name} was not logged in`)
+            return 0
+        }
+        const account = await publisherFor(ctx.channel).login(ctx)
+        console.log(`✓ ${name} is logged in to ${account}`)
+        return 0
+    }
+    if (action !== undefined) {
+        throw new ReelsonError(usage)
+    }
+    const width = Math.max(...Object.keys(channels.channels).map((n) => n.length))
+    console.log(`Channels in ${channels.path}:`)
+    for (const channelName of Object.keys(channels.channels)) {
+        const ctx = channelContext(channels, channelName, cfg)
+        const publisher = publisherFor(ctx.channel)
+        const account = publisher.account(ctx)
+        const state = account ? `→ ${account}` : `not logged in (${publisher.missingSetup(ctx) ?? `reelson channels login ${channelName}`})`
+        console.log(`  ${channelName.padEnd(width)}  ${publisher.label}: ${publisher.summary(ctx.channel)}  ${state}`)
+    }
+    return 0
+}
+
+async function publishCommand(argv: string[]): Promise<number> {
+    const { values, positionals } = parseArgs({
+        args: argv,
+        allowPositionals: true,
+        options: { to: { type: 'string', multiple: true }, 'all-channels': { type: 'boolean' }, 'dry-run': { type: 'boolean' }, again: { type: 'boolean' } },
+    })
+    if (!positionals.length) {
+        throw new ReelsonError('usage: reelson publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again]')
+    }
+    const cfg = config()
+    const dirs = positionals.map((p) => resolveDemoDir(p, cfg))
+    const channels = loadChannels(cfg)
+    const names = pickChannels(channels, values.to, values['all-channels']) ?? (await askChannels(channels))
+
+    // A channel that has the video already is skipped (--again: uploaded anew).
+    const jobs = dirs
+        .flatMap((dir) => names.map((name) => ({ dir, slug: basename(dir), name })))
+        .filter(({ dir, slug, name }) => {
+            const previous = readPublished(dir)[name]
+            if (previous && !values.again) {
+                console.log(`${slug} → ${name}: already published ${previous.at.slice(0, 10)} (${previous.url}) — --again uploads it anew`)
+            }
+            return !previous || values.again
+        })
+    // Everything is checked before the first upload: renders, the setup and sign-in of each channel.
+    const problems: string[] = []
+    const ready = jobs.filter(({ dir, slug, name }) => {
+        const problem = renderProblem(dir, slug, channels.channels[name].format ?? 'landscape')
+        if (problem) problems.push(`${slug} → ${name}: ${problem}`)
+        return !problem
+    })
+    for (const name of values['dry-run'] ? [] : new Set(jobs.map((job) => job.name))) {
+        const ctx = channelContext(channels, name, cfg)
+        const publisher = publisherFor(ctx.channel)
+        if (!publisher.account(ctx)) {
+            const setup = publisher.missingSetup(ctx)
+            if (setup || !process.stdin.isTTY) {
+                problems.push(`${name}: not logged in — ${setup ?? `run \`reelson channels login ${name}\``}`)
+                continue
+            }
+            console.log(`${name} is not logged in yet:`)
+            console.log(`✓ ${name} is logged in to ${await publisher.login(ctx)}`)
+        }
+    }
+    if (problems.length && !values['dry-run']) {
+        throw new ReelsonError(`nothing was published:\n  ${problems.join('\n  ')}`)
+    }
+
+    let failures = problems.length
+    problems.forEach((problem) => console.error(`reelson: ${problem}`))
+    for (const { dir, slug, name } of ready) {
+        const ctx = channelContext(channels, name, cfg)
+        const publisher = publisherFor(ctx.channel)
+        const format: Format = ctx.channel.format ?? 'landscape'
+        const { spec, timeline } = plan(dir, cfg)
+        const { file, captions } = renderFiles(dir, slug, format)
+        const job = {
+            slug,
+            demoDir: dir,
+            format,
+            file,
+            captions: existsSync(captions) ? captions : null,
+            language: cfg.language,
+            metadata: metadata(spec, timeline.callouts.map((c) => c.text), ctx.channel),
+        }
+        if (values['dry-run']) {
+            const account = publisher.account(ctx)
+            console.log(`${slug} → ${name} (${publisher.label}: ${publisher.summary(ctx.channel)}, ${account ?? 'not logged in'})`)
+            console.log(`  file:        ${relative(process.cwd(), file)}${job.captions ? ` + ${basename(job.captions)}` : ''}`)
+            console.log(`  title:       ${job.metadata.title}`)
+            console.log(`  tags:        ${job.metadata.tags.join(', ') || '(none)'}`)
+            console.log(`  description: ${job.metadata.description.replace(/\n(?=.)/g, '\n               ') || '(empty)'}`)
+            continue
+        }
+        console.log(`${slug} → ${name} (${publisher.label}):`)
+        try {
+            const published = await publisher.publish(job, ctx)
+            recordPublished(dir, name, { type: ctx.channel.type, ...published, at: new Date().toISOString(), file: relative(dir, file) })
+            console.log(`✓ ${published.url}`)
+        } catch (error) {
+            if (!(error instanceof ReelsonError)) {
+                throw error
+            }
+            failures++
+            console.error(`reelson: ${slug} → ${name}: ${error.message}`)
+        }
+    }
+    return failures ? 1 : 0
+}
+
+/** `reelson publish` without --to, at a terminal: which channels (numbers, comma-separated, or "all"). */
+async function askChannels(channels: Channels): Promise<string[]> {
+    const names = Object.keys(channels.channels)
+    if (!process.stdin.isTTY) {
+        throw new ReelsonError(`which channels? --to <${names.join(',')}> or --all-channels`)
+    }
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    try {
+        console.log('Publish to which channels?')
+        names.forEach((name, i) => {
+            const publisher = publisherFor(channels.channels[name])
+            console.log(`  ${i + 1}. ${name} — ${publisher.label}: ${publisher.summary(channels.channels[name])}`)
+        })
+        for (;;) {
+            const answer = (await rl.question('Numbers or names, comma-separated (or "all"): ')).trim()
+            if (answer === 'all') return names
+            const picked = answer.split(',').map((a) => a.trim()).filter(Boolean).map((a) => (/^\d+$/.test(a) ? names[Number(a) - 1] : a))
+            if (picked.length && picked.every((p) => p && names.includes(p))) return [...new Set(picked)]
+            console.log(`  pick from 1–${names.length} or ${names.join(', ')}`)
+        }
+    } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+            throw new ReelsonError('publish cancelled — nothing was uploaded')
+        }
+        throw error
+    } finally {
+        rl.close()
+    }
 }

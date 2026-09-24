@@ -13,9 +13,26 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
   and in its `$schema` change `demo.config.schema.json` to `reelson.config.schema.json`.
 
 ### Added
+- **`reelson publish <slug...>`** uploads the rendered video to the channels listed under a new
+  `"channels"` key in reelson.config.json. A project lists any number of channels, each
+  with a `type` and its settings; `--to a,b` (or `--to a --to b`) or `--all-channels` picks
+  them (or it asks).
+  `--dry-run` shows the title, description, tags and file; `published.json` in the demo folder
+  records each upload, and a channel that has the video is skipped unless `--again`.
+- **YouTube** (`"type": "youtube"`), the first service: resumable upload, privacy, category,
+  playlist, captions from the render's `.srt` (tried again while YouTube is still taking in the
+  new video), a `channelId` guard, per-channel `format`
+  (landscape / portrait / square), `tags` and description `footer`. Sign-in with your own Google
+  OAuth client (`YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET` in `.env`).
+- **`reelson channels`** lists the channels and who each is logged in as; `channels init` adds
+  starter channels to the config, `channels login|logout <name>`. Sign-ins live in
+  `~/.config/reelson/credentials/`, never in the project.
+- video.json **`publish`**: `title`, `description`, `tags` for the upload.
 - video.json **`calloutPosition`** (`auto` / `top` / `bottom`) and a callout's **`position`**: pin
   the callouts to the bottom (or top) of the footage instead of letting them move up while the
   cursor works under them.
+- Services are pluggable: a `Publisher` per `type` (publish.ts), with a shared browser OAuth
+  sign-in (oauth.ts).
 
 ## 0.7.2 — 2026-09-23
 

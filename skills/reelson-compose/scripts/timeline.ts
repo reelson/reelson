@@ -203,6 +203,8 @@ export interface VideoSpec {
           }
     /** Versions every `reelson render` adds besides the 16:9 one (as --portrait / --square). */
     formats?: ('portrait' | 'square')[]
+    /** How `reelson publish` words the upload (default: title, subtitle + steps). */
+    publish?: { title?: string; description?: string; tags?: string[] }
 }
 
 export interface Callout {

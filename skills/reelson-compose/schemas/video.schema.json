@@ -102,6 +102,16 @@
                 }
             ]
         },
+        "publish": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "How `reelson publish` words this video. Without it: the title, and a description made of the subtitle and the numbered steps (callouts); each channel's footer and tags are added.",
+            "properties": {
+                "title": { "type": "string", "description": "The upload's title (default: title)." },
+                "description": { "type": "string", "description": "The upload's description (default: subtitle + the steps)." },
+                "tags": { "type": "array", "items": { "type": "string" }, "description": "Added to the channel's tags." }
+            }
+        },
         "formats": {
             "type": "array",
             "uniqueItems": true,

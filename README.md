@@ -139,9 +139,55 @@ reelson templates
 reelson render customers-search
 # every demo; skips the unchanged ones
 reelson render --all
+# upload the render to the config's channels (asks which; --to youtube,shorts)
+reelson publish customers-search [--dry-run]
 ```
 
-Per video, commit `scenario.ts`, `markers.json` and `video.json`; everything else is generated.
+Per video, commit `scenario.ts`, `markers.json`, `video.json` and (after `reelson publish`)
+`published.json`; everything else is generated.
+
+## Publish — `"channels"` in reelson.config.json
+
+`reelson publish <slug>` uploads the rendered video to the channels listed under `"channels"` in
+reelson.config.json (`reelson channels init` adds starter ones). A project
+can list several channels — each with a `type` (the service; `youtube` for now) and its own
+settings — and you choose per run which ones get the video (`--to a,b`, `--all-channels`, or it
+asks):
+
+```jsonc
+{
+    // …brand, language, music…
+    "channels": {
+        "youtube": { "type": "youtube", "privacy": "unlisted", "playlist": "PL…", "footer": "https://acme.test" },
+        "shorts":  { "type": "youtube", "format": "portrait", "privacy": "public", "tags": ["acme"] }
+    }
+}
+```
+
+- `format` picks the render: `landscape` (default), `portrait` or `square` — render it first.
+- The title is video.json's; the description is the subtitle plus the numbered steps (the
+  callouts), then the channel's `footer`. Word them yourself in video.json `"publish": { "title",
+  "description", "tags" }`. `--dry-run` shows what would go up.
+- YouTube also uploads the `.srt` captions (`"captions": false` to skip) and adds the video to
+  `playlist`. `channelId` (UC…) guards against signing in to the wrong channel.
+- What went where is kept in the demo's `published.json`; publishing again skips those channels
+  unless `--again`.
+
+**YouTube setup, once:** in a Google Cloud project, enable the *YouTube Data API v3*, set up the
+OAuth consent screen (add yourself as a test user) and create an OAuth client of type *Desktop
+app*. Put its id and secret in the `.env` next to reelson.config.json:
+
+```bash
+YOUTUBE_CLIENT_ID=….apps.googleusercontent.com
+YOUTUBE_CLIENT_SECRET=…
+```
+
+Then `reelson channels login youtube` signs the channel in through the browser (pick the brand
+channel if the account has several); `reelson channels` shows who each channel is logged in as.
+Sign-ins are kept in `~/.config/reelson/credentials/` (per project and channel), never in the
+project. Until Google audits the Cloud project, YouTube keeps its uploads **private** whatever
+`privacy` says — switch them to public in YouTube Studio, or apply for the audit. Each upload
+uses a sizeable share of the project's daily API quota.
 
 ## Templates and sections
 
@@ -217,7 +263,8 @@ exist): `npm login && npm publish`. Check the contents first with `npm pack --dr
 bin/reelson.ts  the CLI (run.js: the npm entry point)
 skills/
   reelson-record/  SKILL.md, scripts/ (record, scenario, cursor-overlay, config, validate), schemas/
-  reelson-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes),
+  reelson-compose/   SKILL.md, scripts/ (build, check, timeline, zooms, composition, project, hyperframes,
+                publish + publish-<service>, oauth),
                 schemas/, templates/<name>/ (stages), sections/<slot>/<name>/
 docs/           style-guide.md, prompting.md
 examples/       reelson.config.json + todo-add-item/ (scenario, markers, video.json)

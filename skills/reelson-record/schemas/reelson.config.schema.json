@@ -224,6 +224,17 @@
                     "description": "Email domain for demo.persona()."
                 }
             }
+        },
+        "channels": {
+            "type": "object",
+            "description": "Where `reelson publish` uploads videos: channel name (letters, digits, - and _; used in `reelson publish --to <name>`) → its settings. `type` picks the service. Safe to commit: sign-ins are kept in ~/.config/reelson/credentials/, client secrets in .env.",
+            "additionalProperties": {
+                "anyOf": [
+                    {
+                        "$ref": "#/definitions/youtubeChannel"
+                    }
+                ]
+            }
         }
     },
     "definitions": {
@@ -264,6 +275,84 @@
                 }
             },
             "description": "Plural forms keyed by Intl.PluralRules category, e.g. { \"one\": \"step\", \"other\": \"steps\" }."
+        },
+        "channelFormat": {
+            "enum": [
+                "landscape",
+                "portrait",
+                "square"
+            ],
+            "description": "Which render goes up: landscape (default, video/renders/<slug>.mp4), portrait (<slug>.portrait.mp4) or square (<slug>.square.mp4)."
+        },
+        "channelTags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Tags added to every video on this channel (video.json publish.tags adds to them)."
+        },
+        "channelFooter": {
+            "type": "string",
+            "description": "Appended to every description on this channel, e.g. links or a call to action."
+        },
+        "youtubeChannel": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "enum": [
+                        "youtube"
+                    ]
+                },
+                "format": {
+                    "$ref": "#/definitions/channelFormat"
+                },
+                "tags": {
+                    "$ref": "#/definitions/channelTags"
+                },
+                "footer": {
+                    "$ref": "#/definitions/channelFooter"
+                },
+                "privacy": {
+                    "enum": [
+                        "private",
+                        "unlisted",
+                        "public"
+                    ],
+                    "description": "Default private. Uploads from a Google Cloud project that YouTube has not audited stay private whatever this says."
+                },
+                "category": {
+                    "type": "string",
+                    "description": "YouTube category id: 28 Science & Technology (default), 27 Education, 22 People & Blogs."
+                },
+                "playlist": {
+                    "type": "string",
+                    "description": "Playlist id (PL…) each video is added to."
+                },
+                "language": {
+                    "type": "string",
+                    "description": "BCP 47 language of the title and the audio, and of the captions (default: the config `language`)."
+                },
+                "captions": {
+                    "type": "boolean",
+                    "description": "Upload the .srt captions `reelson render` wrote (default true)."
+                },
+                "madeForKids": {
+                    "type": "boolean",
+                    "description": "Default false."
+                },
+                "notifySubscribers": {
+                    "type": "boolean",
+                    "description": "Tell subscribers about the upload (default true)."
+                },
+                "channelId": {
+                    "type": "string",
+                    "description": "The YouTube channel id (UC…) the sign-in must belong to: a guard against uploading to the wrong account or brand channel."
+                }
+            }
         }
     }
 }

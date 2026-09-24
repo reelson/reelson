@@ -111,6 +111,8 @@ export interface DemoConfig {
         /** `reelson record --square`: the browser the square take uses (CSS px). */
         square: { viewport: { width: number; height: number } }
     }
+    /** Where `reelson publish` uploads: channel name → settings (reelson-compose/scripts/publish.ts ChannelConfig). */
+    channels?: Record<string, { type: string } & Record<string, unknown>>
 }
 
 export const DEFAULTS: DemoConfig = {
