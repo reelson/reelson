@@ -171,7 +171,11 @@ asks):
 - YouTube also uploads the `.srt` captions (`"captions": false` to skip) and adds the video to
   `playlist`. `channelId` (UC…) guards against signing in to the wrong channel.
 - What went where is kept in the demo's `published.json`; publishing again skips those channels
-  unless `--again`.
+  unless `--again` (a second copy) or `--replace`.
+- **After a re-recording**, `--replace` uploads the new render and makes the old video private
+  (never deletes it); `published.json` keeps the old ids under `replaced`. YouTube cannot swap the
+  file behind a URL, so every upload gets a new one: share a link of your own (a redirect, or the
+  id in your app's embed) and point it at the new id that `--replace` prints.
 
 **YouTube setup, once:** in a Google Cloud project, enable the *YouTube Data API v3*, set up the
 OAuth consent screen (add yourself as a test user) and create an OAuth client of type *Desktop

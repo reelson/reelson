@@ -15,7 +15,8 @@
  * PUBLISHERS and a branch in the config schema (reelson-record/schemas/reelson.config.schema.json).
  *
  * What went where is kept in <demo>/published.json, so a second `publish` skips a channel that has
- * the video already (--again uploads it anew).
+ * the video already (--again uploads it anew; --replace uploads it anew and retires the old one —
+ * services cannot swap the file behind a URL, so a stable link of your own points at the new id).
  */
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -108,6 +109,11 @@ export interface Publisher<C extends ChannelConfig = ChannelConfig> {
     login(ctx: ChannelContext<C>): Promise<string>
     /** Uploads the job's video; problems after the upload itself are logged, not thrown. */
     publish(job: PublishJob, ctx: ChannelContext<C>): Promise<Published>
+    /**
+     * Takes a video `--replace` superseded out of sight (YouTube: makes it private) without
+     * deleting it; returns what it did, for the log. Without it, --replace leaves the old one as it is.
+     */
+    retire?(previous: Published, ctx: ChannelContext<C>): Promise<string>
 }
 
 export const PUBLISHERS: Record<string, Publisher<any>> = {
@@ -208,6 +214,16 @@ export interface PublishRecord extends Published {
     at: string
     /** The render uploaded, relative to the demo folder. */
     file: string
+    /** Earlier uploads `--replace` superseded, oldest first. */
+    replaced?: (Published & { at: string })[]
+}
+
+/** The record of a new upload; with `replace`, it carries the one it supersedes into `replaced`. */
+export function nextRecord(previous: PublishRecord | undefined, record: PublishRecord, replace: boolean): PublishRecord {
+    if (!replace || !previous) {
+        return record
+    }
+    return { ...record, replaced: [...(previous.replaced ?? []), { id: previous.id, url: previous.url, at: previous.at }] }
 }
 
 export function readPublished(demoDir: string): Record<string, PublishRecord> {

@@ -18,7 +18,9 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
   with a `type` and its settings; `--to a,b` (or `--to a --to b`) or `--all-channels` picks
   them (or it asks).
   `--dry-run` shows the title, description, tags and file; `published.json` in the demo folder
-  records each upload, and a channel that has the video is skipped unless `--again`.
+  records each upload, and a channel that has the video is skipped unless `--again` (a second
+  copy) or `--replace` (after a re-recording: the new render goes up, the old video is made
+  private — never deleted — and kept under `replaced`; the new id is printed for your own link).
 - **YouTube** (`"type": "youtube"`), the first service: resumable upload, privacy, category,
   playlist, captions from the render's `.srt` (tried again while YouTube is still taking in the
   new video), a `channelId` guard, per-channel `format`

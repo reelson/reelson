@@ -28,6 +28,7 @@ import {
     credentialsFor,
     loadChannels,
     metadata,
+    nextRecord,
     pickChannels,
     publisherFor,
     readPublished,
@@ -89,11 +90,13 @@ Usage: reelson <command> [options]
                                 both (also video.json "formats": ["portrait", "square"]);
                                 --only landscape|portrait|square renders just that version;
                                 --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
-  publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again]
+  publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again | --replace]
                                 upload the rendered video to the config's channels
                                 (asks which without --to); a channel that already has it
-                                (published.json) is skipped unless --again; --dry-run shows
-                                what would go up
+                                (published.json) is skipped unless --again (a second copy)
+                                or --replace (the new render goes up, the old video is made
+                                private: a new URL, so link to it through a URL of your own);
+                                --dry-run shows what would go up
   channels [init | login <name> | logout <name>]
                                 list the channels and who each is logged in as; init adds
                                 starter ones to the config; login signs a channel in (browser)
@@ -817,25 +820,28 @@ async function publishCommand(argv: string[]): Promise<number> {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { to: { type: 'string', multiple: true }, 'all-channels': { type: 'boolean' }, 'dry-run': { type: 'boolean' }, again: { type: 'boolean' } },
+        options: { to: { type: 'string', multiple: true }, 'all-channels': { type: 'boolean' }, 'dry-run': { type: 'boolean' }, again: { type: 'boolean' }, replace: { type: 'boolean' } },
     })
     if (!positionals.length) {
-        throw new ReelsonError('usage: reelson publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again]')
+        throw new ReelsonError('usage: reelson publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again | --replace]')
     }
+    if (values.again && values.replace) {
+        throw new ReelsonError('--again keeps the video already up, --replace retires it — pick one')
+    }
+    const anew = values.again || values.replace
     const cfg = config()
     const dirs = positionals.map((p) => resolveDemoDir(p, cfg))
     const channels = loadChannels(cfg)
     const names = pickChannels(channels, values.to, values['all-channels']) ?? (await askChannels(channels))
 
-    // A channel that has the video already is skipped (--again: uploaded anew).
+    // A channel that has the video already is skipped (--again: uploaded anew; --replace: anew, the old one retired).
     const jobs = dirs
-        .flatMap((dir) => names.map((name) => ({ dir, slug: basename(dir), name })))
-        .filter(({ dir, slug, name }) => {
-            const previous = readPublished(dir)[name]
-            if (previous && !values.again) {
-                console.log(`${slug} → ${name}: already published ${previous.at.slice(0, 10)} (${previous.url}) — --again uploads it anew`)
+        .flatMap((dir) => names.map((name) => ({ dir, slug: basename(dir), name, previous: readPublished(dir)[name] })))
+        .filter(({ slug, name, previous }) => {
+            if (previous && !anew) {
+                console.log(`${slug} → ${name}: already published ${previous.at.slice(0, 10)} (${previous.url}) — --replace uploads the new render and makes that one private`)
             }
-            return !previous || values.again
+            return !previous || anew
         })
     // Everything is checked before the first upload: renders, the setup and sign-in of each channel.
     const problems: string[] = []
@@ -863,7 +869,7 @@ async function publishCommand(argv: string[]): Promise<number> {
 
     let failures = problems.length
     problems.forEach((problem) => console.error(`reelson: ${problem}`))
-    for (const { dir, slug, name } of ready) {
+    for (const { dir, slug, name, previous } of ready) {
         const ctx = channelContext(channels, name, cfg)
         const publisher = publisherFor(ctx.channel)
         const format: Format = ctx.channel.format ?? 'landscape'
@@ -885,13 +891,26 @@ async function publishCommand(argv: string[]): Promise<number> {
             console.log(`  title:       ${job.metadata.title}`)
             console.log(`  tags:        ${job.metadata.tags.join(', ') || '(none)'}`)
             console.log(`  description: ${job.metadata.description.replace(/\n(?=.)/g, '\n               ') || '(empty)'}`)
+            if (values.replace && previous) {
+                console.log(`  replaces:    ${previous.url} (${publisher.retire ? 'made private' : 'left as it is'})`)
+            }
             continue
         }
         console.log(`${slug} → ${name} (${publisher.label}):`)
         try {
             const published = await publisher.publish(job, ctx)
-            recordPublished(dir, name, { type: ctx.channel.type, ...published, at: new Date().toISOString(), file: relative(dir, file) })
+            const record = { type: ctx.channel.type, ...published, at: new Date().toISOString(), file: relative(dir, file) }
+            recordPublished(dir, name, nextRecord(previous, record, Boolean(values.replace)))
             console.log(`✓ ${published.url}`)
+            if (values.replace && previous) {
+                // The new one is up and recorded; the old one only warns when it cannot be retired.
+                try {
+                    console.log(`  old video: ${publisher.retire ? await publisher.retire(previous, ctx) : `${previous.url} left as it is (${publisher.label} cannot retire it)`}`)
+                } catch (error) {
+                    console.log(`  warning: ${previous.url} not made private — ${(error as Error).message}`)
+                }
+                console.log(`  point your link at the new id: ${previous.id} → ${published.id}`)
+            }
         } catch (error) {
             if (!(error instanceof ReelsonError)) {
                 throw error

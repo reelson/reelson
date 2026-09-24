@@ -12,6 +12,7 @@ import {
     metadata,
     pickChannels,
     PUBLISHERS,
+    nextRecord,
     readPublished,
     recordPublished,
     renderProblem,
@@ -132,6 +133,17 @@ describe('publish bookkeeping', () => {
         recordPublished(demo, 'shorts', { ...record, id: 'def' })
         assert.deepEqual(Object.keys(readPublished(demo)), ['yt', 'shorts'])
         assert.equal(readPublished(demo).yt.id, 'abc')
+    })
+
+    it('keeps the uploads --replace superseded', () => {
+        const first = { type: 'youtube', id: 'a', url: 'https://youtu.be/a', at: '2026-09-01T10:00:00.000Z', file: 'd.mp4' }
+        const second = { ...first, id: 'b', url: 'https://youtu.be/b', at: '2026-09-02T10:00:00.000Z' }
+        const third = { ...first, id: 'c', url: 'https://youtu.be/c', at: '2026-09-03T10:00:00.000Z' }
+        assert.deepEqual(nextRecord(undefined, first, true), first)
+        assert.deepEqual(nextRecord(first, second, false), second, '--again keeps no history')
+        const replaced = nextRecord(first, second, true)
+        assert.deepEqual(replaced.replaced, [{ id: 'a', url: 'https://youtu.be/a', at: '2026-09-01T10:00:00.000Z' }])
+        assert.deepEqual(nextRecord(replaced, third, true).replaced?.map((r) => r.id), ['a', 'b'])
     })
 
     it('keeps sign-ins outside the project, one per project and channel, private to the user', () => {
@@ -333,6 +345,39 @@ describe('YouTube publisher', () => {
         } finally {
             mock.restore()
         }
+    })
+
+    it('retires a replaced video: private, the rest of its status kept, a schedule dropped', async () => {
+        const { ctx } = setup()
+        ctx.credentials.write(login(Date.now() + 3_600_000))
+        const statuses: Record<string, Record<string, unknown>> = {
+            pub: { uploadStatus: 'processed', privacyStatus: 'public', embeddable: true, license: 'youtube', madeForKids: false, selfDeclaredMadeForKids: false },
+            due: { uploadStatus: 'uploaded', privacyStatus: 'private', publishAt: '2026-10-01T09:00:00Z', embeddable: false },
+            hid: { uploadStatus: 'processed', privacyStatus: 'private' },
+        }
+        const puts: unknown[] = []
+        const mock = mockFetch((url, init) => {
+            if (init.method === 'PUT') {
+                puts.push(JSON.parse(init.body as string))
+                return json({})
+            }
+            const id = url.searchParams.get('id')!
+            return json({ items: statuses[id] ? [{ id, status: statuses[id] }] : [] })
+        })
+        try {
+            const retire = (id: string) => youtube.retire!({ id, url: `https://youtu.be/${id}` }, ctx)
+            assert.equal(await retire('pub'), 'https://youtu.be/pub is private now (it was public)')
+            assert.equal(await retire('due'), 'https://youtu.be/due is private now (it was private, due 2026-10-01T09:00:00Z)')
+            assert.equal(await retire('hid'), 'https://youtu.be/hid was private already')
+            assert.equal(await retire('gone'), 'https://youtu.be/gone is gone already')
+        } finally {
+            mock.restore()
+        }
+        assert.deepEqual(puts, [
+            { id: 'pub', status: { privacyStatus: 'private', embeddable: true, license: 'youtube', selfDeclaredMadeForKids: false } },
+            { id: 'due', status: { privacyStatus: 'private', embeddable: false } },
+        ])
+        assert.equal(mock.calls.filter((c) => c.init.method === 'PUT').every((c) => c.url.searchParams.get('part') === 'status'), true)
     })
 
     it('says what is missing before a sign-in, and who a channel is logged in as', () => {

@@ -1,7 +1,8 @@
 /**
  * YouTube publisher (a reelson.config.json channel with `"type": "youtube"`), through the YouTube
  * Data API v3: a resumable upload (videos.insert), then optionally the captions `reelson render`
- * wrote (captions.insert) and a playlist (playlistItems.insert).
+ * wrote (captions.insert) and a playlist (playlistItems.insert). `--replace` makes the video it
+ * supersedes private (videos.update) — YouTube cannot swap the file behind a URL.
  *
  * Sign-in is Google OAuth with a "Desktop app" client of your own Google Cloud project:
  * YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET (environment or the .env next to reelson.config.json).
@@ -138,6 +139,22 @@ export const youtube: Publisher<YouTubeChannel> = {
             ctx.log(`  note: YouTube made it ${video.status.privacyStatus} (asked: ${channel.privacy}) — uploads from an unaudited API project stay private`)
         }
         return { id: video.id, url }
+    },
+
+    async retire(previous, ctx) {
+        const token = await accessToken(ctx)
+        // videos.update clears the status fields it is not sent: send back what is there, private.
+        const answer = (await api('GET', `${API}/videos?part=status&id=${encodeURIComponent(previous.id)}`, token)) as { items?: { status: Record<string, unknown> }[] }
+        const status = answer.items?.[0]?.status
+        if (!status) {
+            return `${previous.url} is gone already`
+        }
+        if (status.privacyStatus === 'private' && !status.publishAt) {
+            return `${previous.url} was private already`
+        }
+        const { uploadStatus: _u, failureReason: _f, rejectionReason: _r, madeForKids: _m, publishAt: _p, ...writable } = status
+        await api('PUT', `${API}/videos?part=status`, token, { id: previous.id, status: { ...writable, privacyStatus: 'private' } })
+        return `${previous.url} is private now (it was ${status.privacyStatus}${status.publishAt ? `, due ${status.publishAt}` : ''})`
     },
 }
 
