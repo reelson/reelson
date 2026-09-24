@@ -21,9 +21,15 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
   records each upload, and a channel that has the video is skipped unless `--again` (a second
   copy) or `--replace` (after a re-recording: the new render goes up, the old video is made
   private — never deleted — and kept under `replaced`; the new id is printed for your own link).
+- **`reelson publish <slug> --update`** changes a video that is up without uploading it again:
+  the URL, views and comments stay. The title, description and tags come from today's video.json
+  and channel settings, the captions from the render's `.srt` (reelson's track is replaced; left
+  alone when the render changed after the upload), and it joins the channel's playlist if it is
+  not in it. Privacy stays as set in YouTube Studio. `published.json` now keeps each upload's
+  `sha1` and when it was `updated`.
 - **YouTube** (`"type": "youtube"`), the first service: resumable upload, privacy, category,
-  playlist, captions from the render's `.srt` (tried again while YouTube is still taking in the
-  new video), a `channelId` guard, per-channel `format`
+  playlist, captions from the render's `.srt` and the playlist (both tried again while YouTube is
+  still taking in the new video), a `channelId` guard, per-channel `format`
   (landscape / portrait / square), `tags` and description `footer`. Sign-in with your own Google
   OAuth client (`YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET` in `.env`).
 - **`reelson channels`** lists the channels and who each is logged in as; `channels init` adds

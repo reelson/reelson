@@ -24,8 +24,10 @@ import { DRAFT_FLAGS, FPS, gifIfChanged, hyperframes, hyperframesOn, RENDER_FLAG
 import { catalog, KIT_ROOT, listDemos, RECORD_SCRIPT, ReelsonError, resolveDemoDir } from '../skills/reelson-compose/scripts/project.ts'
 import { SLOTS, type SectionChoice, type Timeline } from '../skills/reelson-compose/scripts/timeline.ts'
 import {
+    captionsMismatch,
     channelsTemplate,
     credentialsFor,
+    fileSha1,
     loadChannels,
     metadata,
     nextRecord,
@@ -90,12 +92,15 @@ Usage: reelson <command> [options]
                                 both (also video.json "formats": ["portrait", "square"]);
                                 --only landscape|portrait|square renders just that version;
                                 --draft: a 2x faster 15 fps look → renders/<slug>.draft.mp4
-  publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again | --replace]
+  publish <slug...> [--to <channel,...> | --all-channels] [--dry-run]
+          [--again | --replace | --update]
                                 upload the rendered video to the config's channels
                                 (asks which without --to); a channel that already has it
                                 (published.json) is skipped unless --again (a second copy)
                                 or --replace (the new render goes up, the old video is made
                                 private: a new URL, so link to it through a URL of your own);
+                                --update rewrites the title, description, tags, captions and
+                                playlist of the video up, keeping its URL (not the video itself);
                                 --dry-run shows what would go up
   channels [init | login <name> | logout <name>]
                                 list the channels and who each is logged in as; init adds
@@ -820,13 +825,23 @@ async function publishCommand(argv: string[]): Promise<number> {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { to: { type: 'string', multiple: true }, 'all-channels': { type: 'boolean' }, 'dry-run': { type: 'boolean' }, again: { type: 'boolean' }, replace: { type: 'boolean' } },
+        options: {
+            to: { type: 'string', multiple: true },
+            'all-channels': { type: 'boolean' },
+            'dry-run': { type: 'boolean' },
+            again: { type: 'boolean' },
+            replace: { type: 'boolean' },
+            update: { type: 'boolean' },
+        },
     })
     if (!positionals.length) {
-        throw new ReelsonError('usage: reelson publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again | --replace]')
+        throw new ReelsonError('usage: reelson publish <slug...> [--to <channel,...> | --all-channels] [--dry-run] [--again | --replace | --update]')
     }
-    if (values.again && values.replace) {
-        throw new ReelsonError('--again keeps the video already up, --replace retires it — pick one')
+    if ([values.again, values.replace, values.update].filter(Boolean).length > 1) {
+        throw new ReelsonError('--again uploads a second copy, --replace a new one that retires the old, --update changes the one up — pick one')
+    }
+    if (values.update) {
+        return await updateCommand(positionals, values.to, values['all-channels'], values['dry-run'])
     }
     const anew = values.again || values.replace
     const cfg = config()
@@ -899,7 +914,7 @@ async function publishCommand(argv: string[]): Promise<number> {
         console.log(`${slug} → ${name} (${publisher.label}):`)
         try {
             const published = await publisher.publish(job, ctx)
-            const record = { type: ctx.channel.type, ...published, at: new Date().toISOString(), file: relative(dir, file) }
+            const record = { type: ctx.channel.type, ...published, at: new Date().toISOString(), file: relative(dir, file), sha1: fileSha1(file) }
             recordPublished(dir, name, nextRecord(previous, record, Boolean(values.replace)))
             console.log(`✓ ${published.url}`)
             if (values.replace && previous) {
@@ -911,6 +926,90 @@ async function publishCommand(argv: string[]): Promise<number> {
                 }
                 console.log(`  point your link at the new id: ${previous.id} → ${published.id}`)
             }
+        } catch (error) {
+            if (!(error instanceof ReelsonError)) {
+                throw error
+            }
+            failures++
+            console.error(`reelson: ${slug} → ${name}: ${error.message}`)
+        }
+    }
+    return failures ? 1 : 0
+}
+
+/**
+ * `reelson publish --update`: the title, description, tags, captions and playlist of the videos
+ * already up, from today's video.json and config; the URL stays. No render is uploaded, so none has
+ * to be current — but captions go up only while the render is the one uploaded.
+ */
+async function updateCommand(positionals: string[], to: string[] | undefined, allChannels: boolean | undefined, dryRun: boolean | undefined): Promise<number> {
+    const cfg = config()
+    const dirs = positionals.map((p) => resolveDemoDir(p, cfg))
+    const channels = loadChannels(cfg)
+    const names = pickChannels(channels, to, allChannels) ?? (await askChannels(channels))
+
+    const jobs = dirs
+        .flatMap((dir) => names.map((name) => ({ dir, slug: basename(dir), name, previous: readPublished(dir)[name] })))
+        .filter(({ slug, name, previous }) => {
+            if (!previous) {
+                console.log(`${slug} → ${name}: not published yet, nothing to update — publish it without --update`)
+            }
+            return Boolean(previous)
+        })
+    const problems: string[] = []
+    for (const name of new Set(jobs.map((job) => job.name))) {
+        const ctx = channelContext(channels, name, cfg)
+        const publisher = publisherFor(ctx.channel)
+        if (!publisher.update) {
+            problems.push(`${name}: ${publisher.label} cannot update a video — \`--replace\` uploads it anew`)
+        } else if (!dryRun && !publisher.account(ctx)) {
+            const setup = publisher.missingSetup(ctx)
+            if (setup || !process.stdin.isTTY) {
+                problems.push(`${name}: not logged in — ${setup ?? `run \`reelson channels login ${name}\``}`)
+                continue
+            }
+            console.log(`${name} is not logged in yet:`)
+            console.log(`✓ ${name} is logged in to ${await publisher.login(ctx)}`)
+        }
+    }
+    if (problems.length) {
+        throw new ReelsonError(`nothing was updated:\n  ${problems.join('\n  ')}`)
+    }
+
+    let failures = 0
+    for (const { dir, slug, name, previous } of jobs) {
+        const ctx = channelContext(channels, name, cfg)
+        const publisher = publisherFor(ctx.channel)
+        const format: Format = ctx.channel.format ?? 'landscape'
+        const { spec, timeline } = plan(dir, cfg)
+        const { file, captions } = renderFiles(dir, slug, format)
+        const mismatch = existsSync(captions) ? captionsMismatch(dir, previous) : null
+        const job = {
+            slug,
+            demoDir: dir,
+            format,
+            file,
+            captions: existsSync(captions) && !mismatch ? captions : null,
+            language: cfg.language,
+            metadata: metadata(spec, timeline.callouts.map((c) => c.text), ctx.channel),
+        }
+        if (dryRun) {
+            console.log(`${slug} → ${name} (${publisher.label}: ${publisher.summary(ctx.channel)}, ${publisher.account(ctx) ?? 'not logged in'})`)
+            console.log(`  updates:     ${previous.url} (published ${previous.at.slice(0, 10)})`)
+            console.log(`  captions:    ${job.captions ? basename(job.captions) : mismatch ? `left as they are — ${mismatch}` : 'none'}`)
+            console.log(`  title:       ${job.metadata.title}`)
+            console.log(`  tags:        ${job.metadata.tags.join(', ') || '(none)'}`)
+            console.log(`  description: ${job.metadata.description.replace(/\n(?=.)/g, '\n               ') || '(empty)'}`)
+            continue
+        }
+        console.log(`${slug} → ${name} (${publisher.label}): ${previous.url}`)
+        if (mismatch) {
+            console.log(`  captions left as they are: ${mismatch}`)
+        }
+        try {
+            await publisher.update!(previous, job, ctx)
+            recordPublished(dir, name, { ...previous, updated: new Date().toISOString() })
+            console.log(`✓ ${previous.url} updated`)
         } catch (error) {
             if (!(error instanceof ReelsonError)) {
                 throw error

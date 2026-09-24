@@ -200,7 +200,9 @@ Sharp UI text comes from the 2x capture; the build keeps it (`media.autoProxy: f
 `"channels"` in reelson.config.json (`reelson channels` lists them and their sign-in). Only publish
 when the user asks, and name the channels they asked for — never pick channels yourself, never `--again` unasked
 (it uploads a second copy) nor `--replace` (it uploads the new render and makes the old video
-private; the URL changes, so tell the user the new id for their link). Run `--dry-run` first and show the user the title and description.
+private; the URL changes, so tell the user the new id for their link). To change only the title,
+description, tags or captions of a video that is up, use `--update` (same URL; the video file and
+its privacy stay). Run `--dry-run` first and show the user the title and description.
 Word them in video.json `"publish": { "title", "description", "tags" }` when the default (title;
 subtitle + numbered steps) does not fit. A channel's `format` needs that render
 (`reelson render <slug> --only portrait`). Signing in (`reelson channels login <name>`) opens a

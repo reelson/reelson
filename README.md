@@ -176,6 +176,9 @@ asks):
   (never deletes it); `published.json` keeps the old ids under `replaced`. YouTube cannot swap the
   file behind a URL, so every upload gets a new one: share a link of your own (a redirect, or the
   id in your app's embed) and point it at the new id that `--replace` prints.
+- **To fix the words**, `--update` rewrites the title, description and tags of the video that is up,
+  replaces its captions and adds it to `playlist` — same URL, views and comments. It never changes
+  the video itself or its privacy; captions are left alone when the render changed after the upload.
 
 **YouTube setup, once:** in a Google Cloud project, enable the *YouTube Data API v3*, set up the
 OAuth consent screen (add yourself as a test user) and create an OAuth client of type *Desktop

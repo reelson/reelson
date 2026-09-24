@@ -16,7 +16,8 @@
  *
  * What went where is kept in <demo>/published.json, so a second `publish` skips a channel that has
  * the video already (--again uploads it anew; --replace uploads it anew and retires the old one —
- * services cannot swap the file behind a URL, so a stable link of your own points at the new id).
+ * services cannot swap the file behind a URL, so a stable link of your own points at the new id;
+ * --update rewrites the title, description, tags and captions of the one up, keeping its URL).
  */
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -114,6 +115,12 @@ export interface Publisher<C extends ChannelConfig = ChannelConfig> {
      * deleting it; returns what it did, for the log. Without it, --replace leaves the old one as it is.
      */
     retire?(previous: Published, ctx: ChannelContext<C>): Promise<string>
+    /**
+     * `--update`: gives a video already up the job's title, description and tags, and its captions
+     * and playlist like `publish` (problems with those logged, not thrown). The file itself stays;
+     * `job.captions` is null when they would not match it.
+     */
+    update?(previous: Published, job: PublishJob, ctx: ChannelContext<C>): Promise<void>
 }
 
 export const PUBLISHERS: Record<string, Publisher<any>> = {
@@ -214,6 +221,10 @@ export interface PublishRecord extends Published {
     at: string
     /** The render uploaded, relative to the demo folder. */
     file: string
+    /** Its SHA-1, so `--update` can tell whether the render is still the one up (older records have none). */
+    sha1?: string
+    /** When `--update` last rewrote it (ISO 8601). */
+    updated?: string
     /** Earlier uploads `--replace` superseded, oldest first. */
     replaced?: (Published & { at: string })[]
 }
@@ -224,6 +235,25 @@ export function nextRecord(previous: PublishRecord | undefined, record: PublishR
         return record
     }
     return { ...record, replaced: [...(previous.replaced ?? []), { id: previous.id, url: previous.url, at: previous.at }] }
+}
+
+export function fileSha1(file: string): string {
+    return createHash('sha1').update(readFileSync(file)).digest('hex')
+}
+
+/**
+ * Why `--update` must leave the captions alone — the render changed since the upload, so its
+ * captions may not match the video up — or null. Records made before `sha1` was kept cannot tell.
+ */
+export function captionsMismatch(demoDir: string, record: PublishRecord): string | null {
+    if (!record.sha1) {
+        return null
+    }
+    const file = resolve(demoDir, record.file)
+    if (!existsSync(file)) {
+        return `${record.file} is gone, so reelson cannot tell whether its captions match the video up`
+    }
+    return fileSha1(file) === record.sha1 ? null : `${record.file} was rendered again after the upload, so its captions may not match the video up — \`--replace\` uploads the new render`
 }
 
 export function readPublished(demoDir: string): Record<string, PublishRecord> {

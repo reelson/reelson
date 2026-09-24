@@ -2,7 +2,8 @@
  * YouTube publisher (a reelson.config.json channel with `"type": "youtube"`), through the YouTube
  * Data API v3: a resumable upload (videos.insert), then optionally the captions `reelson render`
  * wrote (captions.insert) and a playlist (playlistItems.insert). `--replace` makes the video it
- * supersedes private (videos.update) — YouTube cannot swap the file behind a URL.
+ * supersedes private (videos.update) — YouTube cannot swap the file behind a URL. `--update` rewrites
+ * the snippet of the video up (videos.update) and replaces reelson's caption track (captions.update).
  *
  * Sign-in is Google OAuth with a "Desktop app" client of your own Google Cloud project:
  * YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET (environment or the .env next to reelson.config.json).
@@ -117,29 +118,7 @@ export const youtube: Publisher<YouTubeChannel> = {
         const url = `https://youtu.be/${video.id}`
 
         // The video is up: what follows only warns, so the upload is still recorded.
-        if (job.captions && channel.captions !== false) {
-            try {
-                await uploadCaptions(video.id, job.captions, language, token)
-                ctx.log(`  captions (${language}) added`)
-            } catch (error) {
-                ctx.log(`  warning: captions not added — ${(error as Error).message}`)
-            }
-        }
-        if (channel.playlist) {
-            try {
-                const body = JSON.stringify({ snippet: { playlistId: channel.playlist, resourceId: { kind: 'youtube#video', videoId: video.id } } })
-                await untilKnown('adding to the playlist', () =>
-                    call(`${API}/playlistItems?part=snippet`, {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
-                        body,
-                    }),
-                )
-                ctx.log(`  added to playlist ${channel.playlist}`)
-            } catch (error) {
-                ctx.log(`  warning: not added to playlist ${channel.playlist} — ${(error as Error).message}`)
-            }
-        }
+        await extras(video.id, job, ctx, token, false)
         if (video.status?.privacyStatus && video.status.privacyStatus !== (channel.privacy ?? 'private')) {
             ctx.log(`  note: YouTube made it ${video.status.privacyStatus} (asked: ${channel.privacy}) — uploads from an unaudited API project stay private`)
         }
@@ -161,10 +140,87 @@ export const youtube: Publisher<YouTubeChannel> = {
         await api('PUT', `${API}/videos?part=status`, token, { id: previous.id, status: { ...writable, privacyStatus: 'private' } })
         return `${previous.url} is private now (it was ${status.privacyStatus}${status.publishAt ? `, due ${status.publishAt}` : ''})`
     },
+
+    async update(previous, job, ctx) {
+        const token = await accessToken(ctx)
+        const answer = (await api('GET', `${API}/videos?part=snippet&id=${encodeURIComponent(previous.id)}`, token)) as { items?: { snippet: Snippet }[] }
+        const current = answer.items?.[0]?.snippet
+        if (!current) {
+            throw new ReelsonError(`${previous.url} is not on the channel any more — \`--again\` uploads the video anew`)
+        }
+        // Privacy stays as it is (it may have gone public in YouTube Studio): only the snippet is sent.
+        const { snippet } = videoResource(job, ctx.channel, ctx.channel.language ?? job.language)
+        const fields = ['title', 'description', 'categoryId', 'defaultLanguage', 'defaultAudioLanguage'] as const
+        const same = fields.every((field) => (current[field] ?? '') === snippet[field]) && (current.tags ?? []).join('\n') === snippet.tags.join('\n')
+        if (same) {
+            ctx.log('  title, description and tags unchanged')
+        } else {
+            // videos.update clears what the snippet leaves out; ours has every field reelson sets.
+            await api('PUT', `${API}/videos?part=snippet`, token, { id: previous.id, snippet })
+            ctx.log('  title, description and tags updated')
+        }
+        await extras(previous.id, job, ctx, token, true)
+    },
+}
+
+/**
+ * After an upload or on `--update`: the captions and the playlist. They only warn, so the video
+ * is still recorded. An update replaces reelson's caption track and skips a playlist it is in.
+ */
+async function extras(videoId: string, job: PublishJob, ctx: ChannelContext<YouTubeChannel>, token: string, updating: boolean): Promise<void> {
+    const channel = ctx.channel
+    const language = channel.language ?? job.language
+    if (job.captions && channel.captions !== false) {
+        try {
+            const track = updating ? await captionTrack(videoId, language, token) : null
+            await uploadCaptions(videoId, job.captions, language, token, track)
+            ctx.log(`  captions (${language}) ${track ? 'replaced' : 'added'}`)
+        } catch (error) {
+            ctx.log(`  warning: captions not ${updating ? 'updated' : 'added'} — ${(error as Error).message}`)
+        }
+    }
+    if (channel.playlist) {
+        try {
+            const query = `playlistId=${encodeURIComponent(channel.playlist)}&videoId=${encodeURIComponent(videoId)}`
+            if (updating && ((await api('GET', `${API}/playlistItems?part=id&${query}`, token)) as { items?: unknown[] }).items?.length) {
+                ctx.log(`  in playlist ${channel.playlist} already`)
+                return
+            }
+            const body = JSON.stringify({ snippet: { playlistId: channel.playlist, resourceId: { kind: 'youtube#video', videoId } } })
+            await untilKnown('adding to the playlist', () =>
+                call(`${API}/playlistItems?part=snippet`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+                    body,
+                }),
+            )
+            ctx.log(`  added to playlist ${channel.playlist}`)
+        } catch (error) {
+            ctx.log(`  warning: not added to playlist ${channel.playlist} — ${(error as Error).message}`)
+        }
+    }
+}
+
+/** The id of the caption track reelson adds (the language's unnamed standard track), or null. */
+async function captionTrack(videoId: string, language: string, token: string): Promise<string | null> {
+    const answer = (await api('GET', `${API}/captions?part=snippet&videoId=${encodeURIComponent(videoId)}`, token)) as {
+        items?: { id: string; snippet: { language: string; name?: string; trackKind?: string } }[]
+    }
+    const track = answer.items?.find(({ snippet }) => snippet.language === language && !snippet.name && snippet.trackKind !== 'asr')
+    return track?.id ?? null
+}
+
+interface Snippet {
+    title: string
+    description: string
+    tags: string[]
+    categoryId: string
+    defaultLanguage: string
+    defaultAudioLanguage: string
 }
 
 /** The snippet + status of videos.insert: YouTube's limits applied (100-char title, no "<" or ">"). */
-export function videoResource(job: PublishJob, channel: YouTubeChannel, language: string): unknown {
+export function videoResource(job: PublishJob, channel: YouTubeChannel, language: string): { snippet: Snippet; status: { privacyStatus: string; selfDeclaredMadeForKids: boolean } } {
     const clean = (text: string) => text.replace(/[<>]/g, '')
     let description = clean(job.metadata.description)
     while (Buffer.byteLength(description) > DESCRIPTION_MAX_BYTES) {
@@ -247,18 +303,18 @@ async function uploadVideo(job: PublishJob, channel: YouTubeChannel, language: s
     }
 }
 
-/** captions.insert: the .srt as a multipart upload (metadata + file). */
-async function uploadCaptions(videoId: string, srtFile: string, language: string, token: string): Promise<void> {
+/** captions.insert, or captions.update of `track`: the .srt as a multipart upload (metadata + file). */
+async function uploadCaptions(videoId: string, srtFile: string, language: string, token: string, track: string | null = null): Promise<void> {
     const boundary = `reelson-${randomUUID()}`
-    const metadata = JSON.stringify({ snippet: { videoId, language, name: '', isDraft: false } })
+    const metadata = JSON.stringify(track ? { id: track, snippet: { isDraft: false } } : { snippet: { videoId, language, name: '', isDraft: false } })
     const body = Buffer.concat([
         Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n`),
         readFileSync(srtFile),
         Buffer.from(`\r\n--${boundary}--\r\n`),
     ])
-    await untilKnown('adding captions', () =>
+    await untilKnown(track ? 'replacing captions' : 'adding captions', () =>
         call(`${UPLOAD_API}/captions?uploadType=multipart&part=snippet`, {
-            method: 'POST',
+            method: track ? 'PUT' : 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
             body,
         }),

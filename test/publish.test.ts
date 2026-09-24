@@ -6,8 +6,10 @@ import { afterEach, beforeEach, describe, it } from 'node:test'
 import { authorize, LoginExpired, refresh, type OAuthClient } from '../skills/reelson-compose/scripts/oauth.ts'
 import { ReelsonError } from '../skills/reelson-compose/scripts/project.ts'
 import {
+    captionsMismatch,
     channelsTemplate,
     credentialsFor,
+    fileSha1,
     loadChannels,
     metadata,
     pickChannels,
@@ -89,11 +91,8 @@ describe('publish metadata', () => {
 
     it('keeps YouTube limits: 100-character title, no angle brackets', () => {
         const job = { slug: 's', metadata: { title: `<b>${'x'.repeat(200)}`, description: 'a < b', tags: ['<t>'] } } as PublishJob
-        const { snippet, status } = videoResource(job, { type: 'youtube', privacy: 'unlisted' }, 'ro') as {
-            snippet: Record<string, unknown>
-            status: Record<string, unknown>
-        }
-        assert.equal((snippet.title as string).length, 100)
+        const { snippet, status } = videoResource(job, { type: 'youtube', privacy: 'unlisted' }, 'ro')
+        assert.equal(snippet.title.length, 100)
         assert.ok(!(snippet.title as string).includes('<'))
         assert.equal(snippet.description, 'a  b')
         assert.deepEqual(snippet.tags, ['t'])
@@ -144,6 +143,20 @@ describe('publish bookkeeping', () => {
         const replaced = nextRecord(first, second, true)
         assert.deepEqual(replaced.replaced, [{ id: 'a', url: 'https://youtu.be/a', at: '2026-09-01T10:00:00.000Z' }])
         assert.deepEqual(nextRecord(replaced, third, true).replaced?.map((r) => r.id), ['a', 'b'])
+    })
+
+    it('lets --update add captions only while the render is the one uploaded', () => {
+        const demo = mkdtempSync(join(tmpdir(), 'reelson-demo-'))
+        mkdirSync(join(demo, 'video/renders'), { recursive: true })
+        const file = join(demo, 'video/renders/d.mp4')
+        writeFileSync(file, 'take 1')
+        const record = { type: 'youtube', id: 'a', url: 'https://youtu.be/a', at: '2026-09-24T10:00:00.000Z', file: 'video/renders/d.mp4', sha1: fileSha1(file) }
+        assert.equal(captionsMismatch(demo, record), null)
+        const { sha1: _, ...older } = record
+        writeFileSync(file, 'take 2')
+        assert.match(captionsMismatch(demo, record)!, /rendered again after the upload.*--replace/)
+        assert.equal(captionsMismatch(demo, older), null, 'a record without sha1 cannot tell')
+        assert.match(captionsMismatch(demo, { ...record, file: 'gone.mp4' })!, /gone\.mp4 is gone/)
     })
 
     it('keeps sign-ins outside the project, one per project and channel, private to the user', () => {
@@ -396,6 +409,57 @@ describe('YouTube publisher', () => {
             { id: 'due', status: { privacyStatus: 'private', embeddable: false } },
         ])
         assert.equal(mock.calls.filter((c) => c.init.method === 'PUT').every((c) => c.url.searchParams.get('part') === 'status'), true)
+    })
+
+    it('updates a video in place: snippet, captions replaced, playlist skipped when it is in it', async () => {
+        const { ctx, job, logs } = setup({ playlist: 'PL1', category: '27' })
+        ctx.credentials.write(login(Date.now() + 3_600_000))
+        const calls: string[] = []
+        const bodies: Record<string, string> = {}
+        const mock = mockFetch((url, init) => {
+            const call = `${init.method} ${url.pathname.split('/').pop()}`
+            calls.push(call)
+            bodies[call] = typeof init.body === 'string' ? init.body : init.body ? Buffer.from(init.body as Uint8Array).toString() : ''
+            if (call === 'GET videos') return json({ items: [{ snippet: { title: 'Old', description: 'D', tags: [], categoryId: '27', defaultLanguage: 'en', defaultAudioLanguage: 'en' } }] })
+            if (call === 'GET captions') return json({ items: [{ id: 'asr1', snippet: { language: 'en', name: '', trackKind: 'asr' } }, { id: 'cap1', snippet: { language: 'en', name: '', trackKind: 'standard' } }] })
+            if (call === 'GET playlistItems') return json({ items: [{ id: 'item' }] })
+            return json({})
+        })
+        try {
+            await youtube.update!({ id: 'vid1', url: 'https://youtu.be/vid1' }, job, ctx)
+        } finally {
+            mock.restore()
+        }
+        assert.deepEqual(calls, ['GET videos', 'PUT videos', 'GET captions', 'PUT captions', 'GET playlistItems'])
+        const put = JSON.parse(bodies['PUT videos'])
+        assert.deepEqual(put, { id: 'vid1', snippet: { title: 'T', description: 'D', tags: [], categoryId: '27', defaultLanguage: 'en', defaultAudioLanguage: 'en' } })
+        assert.equal(mock.calls[1].url.searchParams.get('part'), 'snippet', 'privacy (status) is left alone')
+        assert.match(bodies['PUT captions'], /"id":"cap1"/)
+        assert.deepEqual(logs, ['  title, description and tags updated', '  captions (en) replaced', '  in playlist PL1 already'])
+    })
+
+    it('updates nothing it does not have to, adds missing captions, and fails on a video that is gone', async () => {
+        const { ctx, job, logs } = setup()
+        ctx.credentials.write(login(Date.now() + 3_600_000))
+        const snippet = { title: 'T', description: 'D', tags: [], categoryId: '28', defaultLanguage: 'en', defaultAudioLanguage: 'en', channelTitle: 'Acme' }
+        let gone = false
+        const mock = mockFetch((url, init) => {
+            if (url.pathname.endsWith('/videos')) return json({ items: gone ? [] : [{ snippet }] })
+            if (init.method === 'GET') return json({ items: [] })
+            return json({ id: 'cap' })
+        })
+        try {
+            await youtube.update!({ id: 'vid1', url: 'https://youtu.be/vid1' }, job, ctx)
+            assert.deepEqual(
+                mock.calls.map((c) => `${c.init.method} ${c.url.pathname.split('/').pop()}`),
+                ['GET videos', 'GET captions', 'POST captions'],
+            )
+            assert.deepEqual(logs, ['  title, description and tags unchanged', '  captions (en) added'])
+            gone = true
+            await assert.rejects(youtube.update!({ id: 'vid1', url: 'https://youtu.be/vid1' }, job, ctx), /not on the channel any more — `--again`/)
+        } finally {
+            mock.restore()
+        }
     })
 
     it('says what is missing before a sign-in, and who a channel is logged in as', () => {
