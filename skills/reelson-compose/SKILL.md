@@ -102,7 +102,10 @@ changing the trim or the template never re-times anything. Validated against
 - To find click numbers, read `clicks` in markers.json (each has `at`, `x`, `y`, `kind`).
 - **Cursor**: recordings made with `record.cursor: "layer"` (the default) have their cursor
   drawn by the video. `"cursor": { "size": 56, "ripple": false }` restyles it, `"idle": 3` fades
-  it out after 3 s without moving or clicking (back in as it moves), `"cursor": false` hides it. For a recording with the cursor filmed in, the build warns that `cursor` has no
+  it out after 3 s without moving or clicking (back in as it moves), `"cursor": false` hides it.
+  `"lag": 0.08` draws it that many seconds later: a heavy page (or a drag) paints its response a
+  few frames after the move, so a dragged card trails the cursor — measure the gap on a drag and
+  set it. For a recording with the cursor filmed in, the build warns that `cursor` has no
   effect.
 
 ## Templates and sections

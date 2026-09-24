@@ -132,7 +132,8 @@
                     "properties": {
                         "size": { "type": "number", "minimum": 16, "maximum": 120, "description": "Arrow size in recording CSS px. Default 44 (the classic macOS-style arrow)." },
                         "ripple": { "type": "boolean", "description": "The brand-coloured ring on each press. Default true." },
-                        "idle": { "type": "number", "minimum": 0, "maximum": 30, "description": "Fade the cursor out after this many seconds without moving or clicking, back in as it moves again. Default 0 (always shown)." }
+                        "idle": { "type": "number", "minimum": 0, "maximum": 30, "description": "Fade the cursor out after this many seconds without moving or clicking, back in as it moves again. Default 0 (always shown)." },
+                        "lag": { "type": "number", "minimum": 0, "maximum": 0.5, "description": "Seconds to draw the cursor later than logged, for a page that paints late (a heavy page, a drag): the page's response then lands under the cursor, not behind it. Default 0." }
                     }
                 }
             ]

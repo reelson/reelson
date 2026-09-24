@@ -222,6 +222,10 @@ describe('hand-offs (demo.transition)', () => {
         assert.equal(t.cursor.size, 44)
         assert.ok(Math.abs(t.cursor.scale - t.frame.width / markers.viewport.width) < 1e-4)
 
+        const lagged = computeTimeline(markers, spec({ trim: { start: 1 }, cursor: { lag: 0.1 } })).timeline.cursor
+        assert.deepEqual(lagged?.path.slice(1).map((p) => p[0]), [t.toComposition(1.6), t.toComposition(4.1), t.toComposition(12.1)], 'lag: drawn later')
+        assert.deepEqual(lagged?.presses, [[t.toComposition(4.1), 30, 30]])
+
         assert.equal(computeTimeline(markers, spec({ cursor: false })).timeline.cursor, null)
         assert.equal(computeTimeline(markers, spec({ cursor: { size: 60, ripple: false } })).timeline.cursor?.size, 60)
         const filmed = { ...markers, cursor: { ...markers.cursor, drawn: true } }

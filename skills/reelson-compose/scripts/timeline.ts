@@ -113,6 +113,11 @@ export interface CursorSpec {
     ripple?: boolean
     /** Fade the cursor out after this many seconds without moving or clicking (0 = never). */
     idle?: number
+    /**
+     * Seconds to draw the cursor later than logged, for a page that paints late (a heavy page
+     * or a drag): the page's response then lands under the cursor, not behind it. Default 0.
+     */
+    lag?: number
 }
 
 export interface CalloutSpec {
@@ -431,11 +436,14 @@ export function computeTimeline(
     let cursor: Timeline['cursor'] = null
     if (log && !log.drawn && spec.cursor !== false && log.path.length) {
         const inside = (t: number): boolean => t >= mediaStart && t <= mediaEnd
+        const lag = spec.cursor?.lag ?? 0
+        const later = ([t, x, y]: [number, number, number]): [number, number, number] => [t + lag, x, y]
+        const moves = log.path.map(later)
         // Where the cursor rests when the footage starts: the last move before the trim.
-        const before = log.path.filter(([t]) => t < mediaStart).at(-1)
+        const before = moves.filter(([t]) => t < mediaStart).at(-1)
         const path: [number, number, number][] = [
             ...(before ? [[clipStart, before[1], before[2]] as [number, number, number]] : []),
-            ...log.path.filter(([t]) => inside(t)).map(([t, x, y]): [number, number, number] => [toComposition(t), x, y]),
+            ...moves.filter(([t]) => inside(t)).map(([t, x, y]): [number, number, number] => [toComposition(t), x, y]),
         ]
         cursor = {
             size: spec.cursor?.size ?? 44,
@@ -443,7 +451,7 @@ export function computeTimeline(
             idle: spec.cursor?.idle ?? 0,
             scale: Math.round((frame.width / markers.viewport.width) * 10000) / 10000,
             path,
-            presses: log.presses.filter(([t]) => inside(t)).map(([t, x, y]) => [toComposition(t), x, y]),
+            presses: log.presses.map(later).filter(([t]) => inside(t)).map(([t, x, y]) => [toComposition(t), x, y]),
         }
     }
 
