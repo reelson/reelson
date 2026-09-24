@@ -1,5 +1,6 @@
 # reelson
 
+[![GitHub stars](https://img.shields.io/github/stars/reelson/reelson?style=flat&logo=github)](https://github.com/reelson/reelson/stargazers)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/icaliman)
 
 Turn a prompt into a finished, branded demo video of a web app. Two
@@ -33,6 +34,8 @@ video/                     a HyperFrames project
     v
 video/renders/<slug>.mp4   + .gif, portrait, square, .srt/.vtt captions
 ```
+
+⭐ If reelson is useful to you, please [star the repo](https://github.com/reelson/reelson) to support our open source work. If it saves you time, you can also [sponsor its development](https://github.com/sponsors/icaliman).
 
 ## Requirements
 
@@ -285,5 +288,3 @@ music/          local-only tracks (git-ignored; licences are per project)
 ```
 
 MIT licence ([LICENSE](LICENSE)). Third-party code and fonts: [NOTICE.md](NOTICE.md).
-
-If reelson saves you time, you can [sponsor its development](https://github.com/sponsors/icaliman).
