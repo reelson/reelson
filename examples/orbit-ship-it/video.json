@@ -1,0 +1,41 @@
+{
+    "$schema": "../../skills/reelson-compose/schemas/video.schema.json",
+    "title": "Ship it faster",
+    "subtitle": "Add a task, assign it, finish it",
+    "sections": {
+        "intro": "poster",
+        "recap": "none",
+        "outro": "compact"
+    },
+    "brand": {
+        "name": "ORBIT",
+        "tagline": "PROJECT BOARDS",
+        "eyebrow": "Orbit"
+    },
+    "trim": {
+        "start": "auto"
+    },
+    "callouts": [
+        {
+            "marker": "Add a task",
+            "text": "Add a task"
+        },
+        {
+            "marker": "Assign it to yourself",
+            "text": "Assign it to yourself"
+        },
+        {
+            "marker": "Drag it to Done",
+            "text": "Move it to Done"
+        }
+    ],
+    "zooms": [
+        {
+            "clicks": [
+                2,
+                4
+            ],
+            "scale": 1.55
+        }
+    ]
+}

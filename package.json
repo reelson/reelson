@@ -39,6 +39,9 @@
         "examples/reelson.config.json",
         "examples/todo-add-item/scenario.ts",
         "examples/todo-add-item/video.json",
+        "examples/orbit/index.html",
+        "examples/orbit-ship-it/scenario.ts",
+        "examples/orbit-ship-it/video.json",
         "reelson.config.example.json",
         "CHANGELOG.md",
         "NOTICE.md",
@@ -58,11 +61,11 @@
         "postpack": "npm run clean",
         "prepublishOnly": "npm run ci",
         "ci": "npm run typecheck && npm test",
-        "example:verify": "cd examples && node ../bin/reelson.ts verify todo-add-item",
-        "example:record": "cd examples && node ../bin/reelson.ts record todo-add-item --all-takes",
-        "example:build": "cd examples && node ../bin/reelson.ts build todo-add-item",
-        "example:check": "cd examples && node ../bin/reelson.ts check todo-add-item",
-        "example:render": "cd examples && node ../bin/reelson.ts render todo-add-item --all-formats"
+        "example:verify": "cd examples && node ../bin/reelson.ts verify orbit-ship-it",
+        "example:record": "cd examples && node ../bin/reelson.ts record orbit-ship-it --all-takes",
+        "example:build": "cd examples && node ../bin/reelson.ts build orbit-ship-it",
+        "example:check": "cd examples && node ../bin/reelson.ts check orbit-ship-it",
+        "example:render": "cd examples && node ../bin/reelson.ts render orbit-ship-it --all-formats"
     },
     "dependencies": {
         "@playwright/test": "^1.55.0"

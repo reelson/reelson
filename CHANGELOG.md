@@ -13,6 +13,10 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
   and in its `$schema` change `demo.config.schema.json` to `reelson.config.schema.json`.
 
 ### Added
+- **Orbit example** (`examples/orbit/` + `examples/orbit-ship-it/`): a pretend project board in one
+  static page — add a task, assign it, drag it to Done (the phone take taps it instead). It opens
+  from disk (`baseURL` is a `file://` URL next to the scenario), so it needs no server. CI now
+  records, renders and cuts the README clip from it; the TodoMVC example stays as a second example.
 - **`reelson publish <slug...>`** uploads the rendered video to the channels listed under a new
   `"channels"` key in reelson.config.json. A project lists any number of channels, each
   with a `type` and its settings; `--to a,b` (or `--to a --to b`) or `--all-channels` picks

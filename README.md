@@ -15,10 +15,13 @@ that reads `SKILL.md` skills:
 The same prompt re-creates the video after a UI change: a scenario re-records in ~20 s,
 headless, with identical pacing, and callouts/zooms follow their markers and clicks.
 
-![The TodoMVC example: poster intro, the recorded walkthrough with callouts and zooms, recap and outro](https://github.com/reelson/reelson/releases/download/demo/demo.webp)
+![The Orbit example: branded intro, a task added and assigned in a zoom, dragged to Done, outro](https://github.com/reelson/reelson/releases/download/demo/demo.webp)
 
-<sub>The [TodoMVC example](examples/todo-add-item/scenario.ts), recorded and rendered by CI on every
-push to main.</sub>
+<sub>The [Orbit example](examples/orbit-ship-it/scenario.ts) (a pretend project board in
+[one static page](examples/orbit/index.html)), recorded and rendered by CI on every push to main.</sub>
+
+**▶ [Watch the 1-minute launch video](https://github.com/reelson/reelson/releases/download/launch-video/reelson-launch.mp4)**
+— recorded and edited with reelson itself, studio included.
 
 ```
 scenario.ts
@@ -282,7 +285,7 @@ skills/
                 publish + publish-<service>, oauth),
                 schemas/, templates/<name>/ (stages), sections/<slot>/<name>/
 docs/           style-guide.md, prompting.md
-examples/       reelson.config.json + todo-add-item/ (scenario, markers, video.json)
+examples/       reelson.config.json + orbit/ (the demo app) + orbit-ship-it/ and todo-add-item/ (scenario, markers, video.json)
 test/           unit + golden tests, fixtures
 music/          local-only tracks (git-ignored; licences are per project)
 ```
