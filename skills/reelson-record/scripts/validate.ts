@@ -81,11 +81,13 @@ export function validate(
     }
 
     if (Array.isArray(value)) {
+        // The count alone hides what the items are (clicks is [first, last]): the description's first sentence says.
+        const what = schema.description ? ` — ${schema.description.split(/\.(\s|$)/)[0]}` : ''
         if (schema.minItems !== undefined && value.length < schema.minItems) {
-            problems.push(`${where}: needs at least ${schema.minItems} item(s)`)
+            problems.push(`${where}: needs at least ${schema.minItems} item(s)${what}`)
         }
         if (schema.maxItems !== undefined && value.length > schema.maxItems) {
-            problems.push(`${where}: takes at most ${schema.maxItems} item(s)`)
+            problems.push(`${where}: takes at most ${schema.maxItems} item(s)${what}`)
         }
         if (schema.items) {
             value.forEach((item, i) => problems.push(...validate(item, schema.items as Schema, `${at}[${i}]`, root)))

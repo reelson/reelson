@@ -312,6 +312,24 @@ describe('YouTube publisher', () => {
         assert.deepEqual(logs.slice(1), ['  captions (en) added'])
     })
 
+    it('tries the playlist again while YouTube does not know the new video yet', async () => {
+        const { ctx, job, logs } = setup({ captions: false, playlist: 'PL1' })
+        ctx.credentials.write(login(Date.now() + 3_600_000))
+        let tries = 0
+        const mock = mockFetch((url) => {
+            if (url.host === 'upload.test') return json({ id: 'vid4' })
+            if (url.pathname.endsWith('/playlistItems')) return ++tries < 3 ? json({ error: { message: 'video not found' } }, 404) : json({ id: 'item' })
+            return new Response(null, { status: 200, headers: { Location: 'https://upload.test/session' } })
+        })
+        try {
+            assert.equal((await youtube.publish(job, ctx)).id, 'vid4')
+        } finally {
+            mock.restore()
+        }
+        assert.equal(tries, 3)
+        assert.deepEqual(logs.slice(1), ['  added to playlist PL1'])
+    })
+
     it('resumes an upload that broke off where YouTube says it stopped', async () => {
         const { ctx, job } = setup({ captions: false })
         ctx.credentials.write(login(Date.now() + 3_600_000))

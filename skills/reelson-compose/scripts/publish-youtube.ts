@@ -127,9 +127,14 @@ export const youtube: Publisher<YouTubeChannel> = {
         }
         if (channel.playlist) {
             try {
-                await api('POST', `${API}/playlistItems?part=snippet`, token, {
-                    snippet: { playlistId: channel.playlist, resourceId: { kind: 'youtube#video', videoId: video.id } },
-                })
+                const body = JSON.stringify({ snippet: { playlistId: channel.playlist, resourceId: { kind: 'youtube#video', videoId: video.id } } })
+                await untilKnown('adding to the playlist', () =>
+                    call(`${API}/playlistItems?part=snippet`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+                        body,
+                    }),
+                )
                 ctx.log(`  added to playlist ${channel.playlist}`)
             } catch (error) {
                 ctx.log(`  warning: not added to playlist ${channel.playlist} — ${(error as Error).message}`)
@@ -242,10 +247,7 @@ async function uploadVideo(job: PublishJob, channel: YouTubeChannel, language: s
     }
 }
 
-/**
- * captions.insert: the .srt as a multipart upload (metadata + file). Right after the upload
- * YouTube may not know the video yet (404) — tried again a few times, like a server error.
- */
+/** captions.insert: the .srt as a multipart upload (metadata + file). */
 async function uploadCaptions(videoId: string, srtFile: string, language: string, token: string): Promise<void> {
     const boundary = `reelson-${randomUUID()}`
     const metadata = JSON.stringify({ snippet: { videoId, language, name: '', isDraft: false } })
@@ -254,17 +256,28 @@ async function uploadCaptions(videoId: string, srtFile: string, language: string
         readFileSync(srtFile),
         Buffer.from(`\r\n--${boundary}--\r\n`),
     ])
-    for (let attempt = 0; ; attempt++) {
-        const response = await call(`${UPLOAD_API}/captions?uploadType=multipart&part=snippet`, {
+    await untilKnown('adding captions', () =>
+        call(`${UPLOAD_API}/captions?uploadType=multipart&part=snippet`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
             body,
-        })
+        }),
+    )
+}
+
+/**
+ * A request about the video just uploaded (captions, playlist). Right after the upload YouTube
+ * may not know the video yet (404) — tried again a few times, like a server error.
+ */
+async function untilKnown(doing: string, send: () => Promise<Response>): Promise<void> {
+    for (let attempt = 0; ; attempt++) {
+        const response = await send()
         if (response.ok) {
+            await response.body?.cancel()
             return
         }
         if ((response.status !== 404 && response.status < 500) || attempt >= RETRIES) {
-            throw await apiError(response, 'adding captions')
+            throw await apiError(response, doing)
         }
         await response.body?.cancel()
         await new Promise((resolve) => setTimeout(resolve, backoff.ms(attempt + 1)))

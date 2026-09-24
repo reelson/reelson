@@ -179,7 +179,10 @@ asks):
 
 **YouTube setup, once:** in a Google Cloud project, enable the *YouTube Data API v3*, set up the
 OAuth consent screen (add yourself as a test user) and create an OAuth client of type *Desktop
-app*. Put its id and secret in the `.env` next to reelson.config.json:
+app*. While the consent screen is in *Testing*, Google ends the sign-in after 7 days and
+`reelson publish` asks you to log in again. To stay signed in, publish the app (*Audience →
+Publish app*). For your own channels it needs no Google verification, only an "unverified app"
+warning at sign-in. Put the client's id and secret in the `.env` next to reelson.config.json:
 
 ```bash
 YOUTUBE_CLIENT_ID=….apps.googleusercontent.com

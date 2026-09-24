@@ -41,6 +41,12 @@ describe('schemas', () => {
         assert.deepEqual(validate({ title: 'x', zoom: [] }, videoSchema), ['zoom: unknown key — did you mean "zooms"?'])
     })
 
+    it('say what the items are when a list has too many', () => {
+        assert.deepEqual(validate({ title: 'x', zooms: [{ clicks: [1, 2, 3], scale: 1.5 }] }, videoSchema), [
+            'zooms[0].clicks: takes at most 2 item(s) — [first, last] click numbers (1-based, markers.json `clicks`) the zoom frames',
+        ])
+    })
+
     it('report wrong types, ranges and missing keys with their path', () => {
         assert.deepEqual(validate({ record: { viewport: { width: '1440' } } }, configSchema), [
             'record.viewport: missing required "height"',
