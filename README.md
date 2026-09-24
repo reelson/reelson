@@ -1,5 +1,7 @@
 # reelson
 
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/icaliman)
+
 Turn a prompt into a finished, branded demo video of a web app. Two
 [Agent Skills](https://agentskills.io) plus a `reelson` CLI, for Claude Code, Codex or any agent
 that reads `SKILL.md` skills:
@@ -283,3 +285,5 @@ music/          local-only tracks (git-ignored; licences are per project)
 ```
 
 MIT licence ([LICENSE](LICENSE)). Third-party code and fonts: [NOTICE.md](NOTICE.md).
+
+If reelson saves you time, you can [sponsor its development](https://github.com/sponsors/icaliman).
