@@ -193,8 +193,9 @@ export const CALLOUT_BAND = 150
 /**
  * Callouts that would cover what the demo works on while they show: the cursor (moves and
  * presses) or the focused area reaching into the band a bottom callout covers. The stage
- * shows those at the top instead. Only where callouts sit over the footage (landscape,
- * square); portrait puts them below the frame.
+ * shows those at the top instead, as it does any callout with `position: "top"` (one with
+ * "bottom" stays down). Only where callouts sit over the footage (landscape, square);
+ * portrait puts them below the frame.
  */
 export function calloutsAtTop(t: Timeline, layout: Layout): Set<number> {
     const top = new Set<number>()
@@ -208,6 +209,10 @@ export function calloutsAtTop(t: Timeline, layout: Layout): Set<number> {
     const limit = (layout.stage.height - CALLOUT_BAND - footageTop) / scale
     const points = [...(t.cursor?.path ?? []), ...(t.cursor?.presses ?? [])]
     t.callouts.forEach((c, i) => {
+        if (c.position) {
+            if (c.position === 'top') top.add(i)
+            return
+        }
         const during = (at: number) => at >= c.at && at <= c.at + c.duration
         const low =
             points.some(([at, , y]) => during(at) && y > limit) ||

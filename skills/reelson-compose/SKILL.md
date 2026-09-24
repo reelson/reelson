@@ -176,7 +176,8 @@ reelson render <slug> [--gif] [--draft] [--portrait] [--square] [--all-formats] 
    `--all-formats` adds both (a missing square take is skipped with a note), and video.json
    `"formats": ["portrait", "square"]` makes every plain `reelson render` add them. In landscape
    and square the callouts sit over the bottom of the footage; one that would cover what the
-   cursor works on there moves to the top by itself. Every render also writes
+   cursor works on there moves to the top by itself (video.json `"calloutPosition": "bottom"`
+   or `"top"` pins them all; a callout's `"position"` pins just it). Every render also writes
    `renders/<slug>.srt` and `.vtt` (and `<slug>.portrait.*` / `<slug>.square.*` for those
    versions, timed to their takes): the title and the callouts as captions, timed to the video. For a quick look, `--draft` renders
    15 fps at draft quality (about 2x faster) to `renders/<slug>.draft.mp4` — or skip rendering

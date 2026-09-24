@@ -75,9 +75,14 @@
                     "at": { "type": "number", "minimum": 0, "description": "Recording time instead of a marker (manual recordings)." },
                     "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds on screen. Default: through its step and 1.2 s past its marker (at least 3 s), ending before the next callout." },
                     "group": { "type": "string", "description": "Role tag (two-actor videos). Default: taken from the hand-off cards." },
-                    "say": { "type": ["string", "boolean"], "not": { "const": true }, "description": "Voice-over (\"voice\": true): what is spoken for this step, when it should differ from the text (e.g. a full sentence); false: nothing." }
+                    "say": { "type": ["string", "boolean"], "not": { "const": true }, "description": "Voice-over (\"voice\": true): what is spoken for this step, when it should differ from the text (e.g. a full sentence); false: nothing." },
+                    "position": { "enum": ["auto", "top", "bottom"], "description": "Where it sits over the footage (landscape, square). Default: `calloutPosition`." }
                 }
             }
+        },
+        "calloutPosition": {
+            "enum": ["auto", "top", "bottom"],
+            "description": "Where the callouts sit over the footage (landscape, square): auto (default) — at the bottom, moving to the top while they would cover what the cursor works on; top / bottom — always there. A callout's `position` overrides it."
         },
         "voice": {
             "description": "Voice-over: true speaks each callout (its `say`, else its text) with the reelson.config.json `voice` provider (OpenAI by default; ElevenLabs, a local Piper voice or a local command); lines are cached in <demo>/voice/. An object turns it on with this video's own provider / model / voice / instructions / speed and may add an `intro` line spoken over the intro.",

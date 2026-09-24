@@ -131,7 +131,15 @@ export interface CalloutSpec {
     group?: string
     /** Voice-over: what is spoken for this step (default: its text); false: nothing. */
     say?: string | false
+    /** Where it sits over the footage (default: video.json `calloutPosition`). */
+    position?: CalloutPosition
 }
+
+/**
+ * Where a callout sits over the footage (landscape, square): "auto" — at the bottom, or at the
+ * top while the bottom would cover what the demo works on; "top" / "bottom" — always there.
+ */
+export type CalloutPosition = 'auto' | 'top' | 'bottom'
 
 export interface ZoomSpec {
     scale: number
@@ -167,6 +175,8 @@ export interface VideoSpec {
     trim?: { start?: TrimPoint; end?: TrimPoint }
     music?: string | boolean | null
     callouts?: CalloutSpec[]
+    /** Where every callout sits unless it says otherwise (default "auto"). */
+    calloutPosition?: CalloutPosition
     zooms?: ZoomSpec[]
     /** false: no cursor at all. Only for recordings with a logged (not filmed) cursor. */
     cursor?: false | CursorSpec
@@ -202,6 +212,8 @@ export interface Callout {
     group?: string
     /** Voice-over line, when it differs from the text (false: silent). */
     say?: string | false
+    /** Pinned to the top or the bottom (none: placed automatically). */
+    position?: 'top' | 'bottom'
     /** Index in video.json `callouts` (or in the default callouts when it has none). */
     source: number
 }
@@ -367,7 +379,16 @@ export function computeTimeline(
         const before = handOffs.filter((t) => t.at <= c.recordingAt)
         const group = c.group ?? (before.length ? before.at(-1)?.to : handOffs[0]?.from)
 
-        return { at, duration, text: c.text, ...(group ? { group } : {}), ...(c.say !== undefined ? { say: c.say } : {}), source: c.source }
+        const position = c.position ?? spec.calloutPosition
+        return {
+            at,
+            duration,
+            text: c.text,
+            ...(group ? { group } : {}),
+            ...(c.say !== undefined ? { say: c.say } : {}),
+            ...(position && position !== 'auto' ? { position } : {}),
+            source: c.source,
+        }
     })
     const recapTiming = timing.recap
     if (recapTiming && callouts.length > recapTiming.maxSteps) {

@@ -74,7 +74,7 @@ export function renderComposition(input: CompositionInput): string {
         clipDuration: t.clipDuration,
         mediaStart: t.mediaStart,
         sections: { intro: t.intro, recap: t.recap, outro: t.outro },
-        callouts: t.callouts.map(({ source: _source, say: _say, ...c }, i) => (atTop.has(i) ? { ...c, top: true } : c)),
+        callouts: t.callouts.map(({ source: _source, say: _say, position: _position, ...c }, i) => (atTop.has(i) ? { ...c, top: true } : c)),
         zooms: input.zooms,
         cursor: input.cursor !== undefined ? input.cursor : t.cursor,
         layout: { format: layout.format, stage: layout.stage, bandZoom: layout.bandZoom, camera: layout.camera },

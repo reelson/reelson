@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { calloutsAtTop, landscapeLayout, PORTRAIT, phoneLayout, portraitLayout, SQUARE, squareLayout } from '../skills/reelson-compose/scripts/portrait.ts'
-import { computeTimeline, type Markers } from '../skills/reelson-compose/scripts/timeline.ts'
+import { computeTimeline, defaultCallouts, type Markers, type VideoSpec } from '../skills/reelson-compose/scripts/timeline.ts'
 import { fixture } from './helpers.ts'
 
 // The todo fixture (1440x900) plus what the demo worked on: a wide field, then a small button.
@@ -61,6 +61,24 @@ describe('layouts', () => {
         // Higher up the screen, it stays at the bottom.
         const high = { ...low, cursor: { ...low.cursor, path: [], presses: [[second.at + 0.5, 500, 600]] as [number, number, number][] } }
         assert.deepEqual([...calloutsAtTop(high, squareLayout(high).layout)], [])
+    })
+
+    it('keeps a callout where video.json pins it', () => {
+        const take = { ...fixture('todo'), viewport: { width: 1080, height: 1080 } }
+        const pinned = (spec: Partial<VideoSpec>) => {
+            const { timeline } = computeTimeline(take, { title: 'T', trim: { start: 2.6 }, ...spec })
+            const second = timeline.callouts[1]
+            const t = { ...timeline, cursor: { ...timeline.cursor!, path: [], presses: [[second.at + 0.5, 500, 1040]] as [number, number, number][] } }
+            return [...calloutsAtTop(t, squareLayout(t).layout)]
+        }
+        const all = computeTimeline(take, { title: 'T', trim: { start: 2.6 } }).timeline.callouts.map((_, i) => i)
+        assert.deepEqual(pinned({ calloutPosition: 'bottom' }), [], 'all at the bottom, even over the cursor')
+        assert.deepEqual(pinned({ calloutPosition: 'top' }), all)
+        assert.deepEqual(pinned({ calloutPosition: 'auto' }), [1])
+        // A callout's own position wins over the video's.
+        const specs = defaultCallouts(fixture('todo'))
+        specs[1] = { ...specs[1], position: 'auto' }
+        assert.deepEqual(pinned({ calloutPosition: 'bottom', callouts: specs }), [1])
     })
 
     it('square: the square take fills the whole stage, cursor at its scale', () => {

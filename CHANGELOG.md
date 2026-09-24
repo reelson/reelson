@@ -12,6 +12,11 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
   has `demo.config.json` keeps working, with a notice to rename it. To update: rename the file,
   and in its `$schema` change `demo.config.schema.json` to `reelson.config.schema.json`.
 
+### Added
+- video.json **`calloutPosition`** (`auto` / `top` / `bottom`) and a callout's **`position`**: pin
+  the callouts to the bottom (or top) of the footage instead of letting them move up while the
+  cursor works under them.
+
 ## 0.7.2 — 2026-09-23
 
 The first release published by CI (staged, then approved on npm).
