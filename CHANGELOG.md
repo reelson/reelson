@@ -14,6 +14,8 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
   `reelson.config.schema.json`; the example `reelson.config.example.json`). A project that still
   has `demo.config.json` keeps working, with a notice to rename it. To update: rename the file,
   and in its `$schema` change `demo.config.schema.json` to `reelson.config.schema.json`.
+- README: the pipeline diagram is an SVG (`.github/readme/pipeline.svg`), and a link to the
+  1-minute launch video, recorded and edited with reelson itself.
 
 ### Added
 - **`video.json` `cursor.lag`** (seconds, default 0) draws the cursor that much later, for a page
@@ -53,15 +55,17 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
   cursor works under them.
 - Services are pluggable: a `Publisher` per `type` (publish.ts), with a shared browser OAuth
   sign-in (oauth.ts).
+- A **Sponsor** button (GitHub Sponsors) and `funding` in package.json, so `npm fund` lists reelson.
+
+### Fixed
+- `reelson render` refreshes the timestamp of a render it finds up to date, so `publish` no longer
+  refuses it as older than a video.json edit that does not change the video (a `publish` block).
 
 ## 0.7.2 — 2026-09-23
 
 The first release published by CI (staged, then approved on npm).
 
 ### Changed
-- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
-  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
-  was four drifting glows). Nothing to update; re-render to get it.
 - The README clip is re-rendered by CI on every push to main and served from the rolling `demo`
   pre-release, so the npm package no longer ships it (2.6 MB → about 0.3 MB).
 - Hardened publishing: actions pinned to commit SHAs (Dependabot keeps them current, npm updates
@@ -73,9 +77,6 @@ The first release published by CI (staged, then approved on npm).
 ## 0.7.1 — 2026-09-23
 
 ### Changed
-- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
-  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
-  was four drifting glows). Nothing to update; re-render to get it.
 - **Works with any agent that reads Agent Skills**, not only Claude Code: `reelson install` links the
   skills into `.agents/skills/` (Codex and others) and links `.claude/skills/` to them (nothing to do
   when the whole `.claude/skills` folder already links to `.agents/skills`); `--global` does the same
@@ -91,9 +92,6 @@ The first release published by CI (staged, then approved on npm).
 The first release on npm.
 
 ### Changed
-- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
-  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
-  was four drifting glows). Nothing to update; re-render to get it.
 - **Renamed reelkit → reelson**: the `reelson` command, the `reelson-record` / `reelson-compose`
   skills, the Piper cache in `~/.cache/reelson`. Re-run `reelson install` (or `install.sh`) for each
   project: it drops the old `reelkit` command and `reelkit-*` skill links. Then point scenario
@@ -135,9 +133,6 @@ The first release on npm.
 - Pop-ups and new tabs: `demo.popup()` / `switchTo()` move the demo and the camera there and back.
 
 ### Changed
-- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
-  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
-  was four drifting glows). Nothing to update; re-render to get it.
 - Callouts start with their step (not after its marker), get a minimum reading time, and move to the
   top over action at the bottom of the screen.
 - `reelson check` lints each composition on its own.

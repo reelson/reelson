@@ -20,23 +20,10 @@ headless, with identical pacing, and callouts/zooms follow their markers and cli
 <sub>The [Orbit example](examples/orbit-ship-it/scenario.ts) (a pretend project board in
 [one static page](examples/orbit/index.html)), recorded and rendered by CI on every push to main.</sub>
 
-**▶ [Watch the 1-minute launch video](https://github.com/reelson/reelson/releases/download/launch-video/reelson-launch.mp4)**
+**▶ [Watch the 1-minute launch video](https://youtu.be/tFDWFsBgs9w)**
 — recorded and edited with reelson itself, studio included.
 
-```
-scenario.ts
-    |  reelson record
-    v
-recording.mp4 + markers.json
-    |  reelson build  <--  video.json        (title, trim, callouts, zooms)
-    |                 <--  reelson.config.json  (brand, logo, language, music)
-    |                 <--  template + sections
-    v
-video/                     a HyperFrames project
-    |  reelson render
-    v
-video/renders/<slug>.mp4   + .gif, portrait, square, .srt/.vtt captions
-```
+![How reelson works: scenario.ts → reelson record → recording.mp4 + markers.json → reelson build (with video.json, reelson.config.json, template + sections) → video/, a HyperFrames project → reelson render → video/renders/<slug>.mp4, plus .gif, portrait, square and .srt/.vtt captions](https://raw.githubusercontent.com/reelson/reelson/main/.github/readme/pipeline.svg)
 
 ⭐ If reelson is useful to you, please [star the repo](https://github.com/reelson/reelson) to support our open source work. If it saves you time, you can also [sponsor its development](https://github.com/sponsors/icaliman).
 

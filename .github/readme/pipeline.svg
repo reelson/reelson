@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 430" width="1060" height="430" role="img" aria-labelledby="t d">
+  <title id="t">How reelson works</title>
+  <desc id="d">scenario.ts goes through reelson record to recording.mp4 and markers.json; reelson build combines them with video.json, reelson.config.json and a template with sections into video/, a HyperFrames project; reelson render turns that into video/renders/slug.mp4, plus a GIF, portrait and square versions and .srt/.vtt captions.</desc>
+  <style>
+    svg { --card: #f6f8fa; --line: #d0d7de; --text: #1f2328; --muted: #59636e; --wire: #8c959f;
+          --mine: #eef0ff; --mine-line: #6366f1; --mine-text: #4338ca; --pill: #6366f1; --pill-text: #ffffff; }
+    @media (prefers-color-scheme: dark) {
+      svg { --card: #161b22; --line: #30363d; --text: #e6edf3; --muted: #9198a1; --wire: #6e7681;
+            --mine: #1c1d3b; --mine-line: #818cf8; --mine-text: #a5b4fc; --pill: #6366f1; --pill-text: #ffffff; }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; fill: var(--text); }
+    .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+    .card { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+    .mine { fill: var(--mine); stroke: var(--mine-line); stroke-width: 1.5; }
+    .name { font-size: 17px; font-weight: 600; }
+    .mine-name { fill: var(--mine-text); }
+    .desc { font-size: 13.5px; fill: var(--muted); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .08em; fill: var(--muted); }
+    .mine-tag { fill: var(--mine-text); }
+    .pill { fill: var(--pill); }
+    .cmd { font-size: 14px; font-weight: 600; fill: var(--pill-text); }
+    .wire { stroke: var(--wire); stroke-width: 2; fill: none; }
+    .head { fill: var(--wire); }
+    .chip { fill: none; stroke: var(--line); stroke-width: 1.2; }
+    .chip-text { font-size: 12.5px; fill: var(--muted); }
+    .legend { font-size: 13px; fill: var(--muted); }
+  </style>
+
+  <!-- step pills: the commands -->
+  <g>
+    <rect class="pill" x="192" y="58" width="136" height="30" rx="15"/>
+    <text class="cmd mono" x="260" y="78" text-anchor="middle">reelson record</text>
+    <rect class="pill" x="466" y="58" width="128" height="30" rx="15"/>
+    <text class="cmd mono" x="530" y="78" text-anchor="middle">reelson build</text>
+    <rect class="pill" x="732" y="58" width="136" height="30" rx="15"/>
+    <text class="cmd mono" x="800" y="78" text-anchor="middle">reelson render</text>
+  </g>
+
+  <!-- arrows between the cards -->
+  <g>
+    <path class="wire" d="M224 175 H290"/><path class="head" d="M298 175 l-10 -6 v12 z"/>
+    <path class="wire" d="M494 175 H560"/><path class="head" d="M568 175 l-10 -6 v12 z"/>
+    <path class="wire" d="M764 175 H830"/><path class="head" d="M838 175 l-10 -6 v12 z"/>
+    <path class="wire" d="M260 88 V160" stroke-dasharray="3 4"/>
+    <path class="wire" d="M530 88 V160" stroke-dasharray="3 4"/>
+    <path class="wire" d="M800 88 V160" stroke-dasharray="3 4"/>
+  </g>
+
+  <!-- 1. scenario -->
+  <rect class="mine" x="30" y="110" width="190" height="140" rx="14"/>
+  <text class="tag mine-tag" x="50" y="138">YOU WRITE</text>
+  <text class="name mono mine-name" x="50" y="166">scenario.ts</text>
+  <text class="desc" x="50" y="194">A Playwright walkthrough:</text>
+  <text class="desc" x="50" y="213">clicks, typing and</text>
+  <text class="desc" x="50" y="232">step markers</text>
+
+  <!-- 2. recording -->
+  <rect class="card" x="300" y="110" width="190" height="140" rx="14"/>
+  <text class="tag" x="320" y="138">FOOTAGE</text>
+  <text class="name mono" x="320" y="166">recording.mp4</text>
+  <text class="name mono" x="320" y="188">markers.json</text>
+  <text class="desc" x="320" y="214">Human-paced cursor,</text>
+  <text class="desc" x="320" y="233">logged steps and clicks</text>
+
+  <!-- 3. video/ -->
+  <rect class="card" x="570" y="110" width="190" height="140" rx="14"/>
+  <text class="tag" x="590" y="138">HYPERFRAMES PROJECT</text>
+  <text class="name mono" x="590" y="166">video/</text>
+  <text class="desc" x="590" y="194">Intro, framed footage,</text>
+  <text class="desc" x="590" y="213">callouts, zooms,</text>
+  <text class="desc" x="590" y="232">recap and outro</text>
+
+  <!-- 4. renders -->
+  <rect class="card" x="840" y="110" width="190" height="140" rx="14"/>
+  <text class="tag" x="860" y="138">VIDEO</text>
+  <text class="name mono" x="860" y="166">&lt;slug&gt;.mp4</text>
+  <rect class="chip" x="860" y="182" width="48" height="24" rx="12"/>
+  <text class="chip-text mono" x="884" y="198" text-anchor="middle">.gif</text>
+  <rect class="chip" x="914" y="182" width="70" height="24" rx="12"/>
+  <text class="chip-text" x="949" y="198" text-anchor="middle">portrait</text>
+  <rect class="chip" x="860" y="212" width="64" height="24" rx="12"/>
+  <text class="chip-text" x="892" y="228" text-anchor="middle">square</text>
+  <rect class="chip" x="930" y="212" width="84" height="24" rx="12"/>
+  <text class="chip-text mono" x="972" y="228" text-anchor="middle">.srt/.vtt</text>
+
+  <!-- inputs of reelson build -->
+  <g>
+    <path class="wire" d="M284 300 V276 H776 V300"/>
+    <path class="wire" d="M530 300 V276"/>
+    <path class="wire" d="M530 276 V194"/><path class="head" d="M530 186 l-6 10 h12 z"/>
+  </g>
+  <rect class="mine" x="169" y="300" width="230" height="72" rx="12"/>
+  <text class="name mono mine-name" x="189" y="328" style="font-size:15px">video.json</text>
+  <text class="desc" x="189" y="352">title, trim, callouts, zooms</text>
+  <rect class="mine" x="415" y="300" width="230" height="72" rx="12"/>
+  <text class="name mono mine-name" x="435" y="328" style="font-size:15px">reelson.config.json</text>
+  <text class="desc" x="435" y="352">brand, logo, language, music</text>
+  <rect class="card" x="661" y="300" width="230" height="72" rx="12"/>
+  <text class="name mono" x="681" y="328" style="font-size:15px">template + sections</text>
+  <text class="desc" x="681" y="352">intro, recap, outro styles</text>
+
+  <!-- legend -->
+  <rect class="mine" x="360" y="400" width="14" height="14" rx="4"/>
+  <text class="legend" x="382" y="412">you write or edit</text>
+  <rect class="card" x="530" y="400" width="14" height="14" rx="4"/>
+  <text class="legend" x="552" y="412">reelson makes or ships</text>
+</svg>
