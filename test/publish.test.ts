@@ -18,6 +18,7 @@ import {
     type ChannelContext,
     type PublishJob,
 } from '../skills/reelson-compose/scripts/publish.ts'
+import { renderIfChanged, renderKey } from '../skills/reelson-compose/scripts/hyperframes.ts'
 import { backoff, videoResource, youtube, type YouTubeChannel, type YouTubeLogin } from '../skills/reelson-compose/scripts/publish-youtube.ts'
 import { CONFIG_SCHEMA_PATH, loadConfig } from '../skills/reelson-record/scripts/config.ts'
 import { loadSchema, validate } from '../skills/reelson-record/scripts/validate.ts'
@@ -110,6 +111,16 @@ describe('publish bookkeeping', () => {
         utimesSync(join(demo, 'video/renders/d.mp4'), new Date(1000), new Date(1000))
         assert.match(renderProblem(demo, 'd', 'landscape')!, /video\.json changed after/)
         utimesSync(join(demo, 'video.json'), new Date(500), new Date(500))
+        assert.equal(renderProblem(demo, 'd', 'landscape'), null)
+
+        // An edit the video does not show (a "publish" block): render finds it up to date and marks it current.
+        writeFileSync(join(demo, 'video/index.html'), '<html></html>')
+        const output = 'renders/d.mp4'
+        writeFileSync(join(demo, 'video', `${output}.key`), renderKey(join(demo, 'video'), [output]))
+        writeFileSync(join(demo, 'video.json'), '{"publish":{"tags":["x"]}}')
+        utimesSync(join(demo, 'video.json'), new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
+        assert.match(renderProblem(demo, 'd', 'landscape')!, /video\.json changed after/)
+        assert.equal(renderIfChanged(join(demo, 'video'), output, []), 'unchanged')
         assert.equal(renderProblem(demo, 'd', 'landscape'), null)
     })
 

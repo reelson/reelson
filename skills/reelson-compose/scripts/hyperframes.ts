@@ -5,7 +5,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 
@@ -68,6 +68,10 @@ export function renderIfChanged(
     const stamp = `${target}.key`
     const key = renderKey(videoDir, [...flags, output], composition)
     if (!force && existsSync(target) && existsSync(stamp) && readFileSync(stamp, 'utf8') === key) {
+        // Marks it current: `publish` refuses a render older than video.json, and an edit the video
+        // does not show (a "publish" block) leaves the key alone.
+        const now = new Date()
+        utimesSync(target, now, now)
         return 'unchanged'
     }
     const which = composition === 'index.html' ? [] : ['-c', composition]
