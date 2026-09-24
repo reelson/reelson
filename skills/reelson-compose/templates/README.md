@@ -86,7 +86,7 @@ from-state is the poster.
 Nothing on `tl` may run past `DEMO.total`: HyperFrames' snapshots and the studio player go by
 the timeline's length. A looping effect lives on its own paused timeline, played to the end with
 `tl.add(loop.tweenFromTo(0, DEMO.total, { duration: DEMO.total, ease: 'none' }), 0)` (see the
-glows in `classic/stage.html`).
+aurora in `classic/stage.html`).
 
 ## Timing
 

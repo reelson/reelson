@@ -2,6 +2,7 @@
     "$schema": "../../skills/reelson-compose/schemas/video.schema.json",
     "title": "Ship it faster",
     "subtitle": "Add a task, assign it, finish it",
+    "template": "orbit",
     "sections": {
         "intro": "poster",
         "recap": "none",

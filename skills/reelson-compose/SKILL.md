@@ -153,7 +153,7 @@ reelson render <slug> [--gif] [--draft] [--portrait] [--square] [--all-formats] 
    --intro/--recap/--outro/--music/--no-music` edit video.json in place on any build.
 2. **Edit video.json**, rebuild. Nothing in `video/` is edited by hand; it is overwritten.
 3. **Check and look.** `reelson check` must report "ready to render" (0 problems). Layout
-   `info` items about the recap/brand cross-fade overlap and off-canvas glows are expected.
+   `info` items about the recap/brand cross-fade overlap and the off-canvas background layers are expected.
    Then snapshot the poster (t=0), the intro's hand-over, a callout, a zoom and the recap, and
    look at them. When the user wants to review or adjust it themselves, run `reelson studio <slug>
    --no-open` in the background and give them the URL: it follows your video.json edits live,

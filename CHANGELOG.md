@@ -7,6 +7,9 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
 ## Unreleased
 
 ### Changed
+- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
+  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
+  was four drifting glows). Nothing to update; re-render to get it.
 - **`demo.config.json` is now `reelson.config.json`** (and its schema
   `reelson.config.schema.json`; the example `reelson.config.example.json`). A project that still
   has `demo.config.json` keeps working, with a notice to rename it. To update: rename the file,
@@ -15,7 +18,9 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
 ### Added
 - **Orbit example** (`examples/orbit/` + `examples/orbit-ship-it/`): a pretend project board in one
   static page — add a task, assign it, drag it to Done (the phone take taps it instead). It opens
-  from disk (`baseURL` is a `file://` URL next to the scenario), so it needs no server. CI now
+  from disk (`baseURL` is a `file://` URL next to the scenario), so it needs no server. It brings its own
+  template, `examples/_templates/orbit/` (a project template forked from classic: deep space violet,
+  a neon aurora, orbital rings with travelling moons, twinkling stars). CI now
   records, renders and cuts the README clip from it; the TodoMVC example stays as a second example.
 - **`reelson publish <slug...>`** uploads the rendered video to the channels listed under a new
   `"channels"` key in reelson.config.json. A project lists any number of channels, each
@@ -51,6 +56,9 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
 The first release published by CI (staged, then approved on npm).
 
 ### Changed
+- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
+  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
+  was four drifting glows). Nothing to update; re-render to get it.
 - The README clip is re-rendered by CI on every push to main and served from the rolling `demo`
   pre-release, so the npm package no longer ships it (2.6 MB → about 0.3 MB).
 - Hardened publishing: actions pinned to commit SHAs (Dependabot keeps them current, npm updates
@@ -62,6 +70,9 @@ The first release published by CI (staged, then approved on npm).
 ## 0.7.1 — 2026-09-23
 
 ### Changed
+- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
+  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
+  was four drifting glows). Nothing to update; re-render to get it.
 - **Works with any agent that reads Agent Skills**, not only Claude Code: `reelson install` links the
   skills into `.agents/skills/` (Codex and others) and links `.claude/skills/` to them (nothing to do
   when the whole `.claude/skills` folder already links to `.agents/skills`); `--global` does the same
@@ -77,6 +88,9 @@ The first release published by CI (staged, then approved on npm).
 The first release on npm.
 
 ### Changed
+- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
+  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
+  was four drifting glows). Nothing to update; re-render to get it.
 - **Renamed reelkit → reelson**: the `reelson` command, the `reelson-record` / `reelson-compose`
   skills, the Piper cache in `~/.cache/reelson`. Re-run `reelson install` (or `install.sh`) for each
   project: it drops the old `reelkit` command and `reelkit-*` skill links. Then point scenario
@@ -118,6 +132,9 @@ The first release on npm.
 - Pop-ups and new tabs: `demo.popup()` / `switchTo()` move the demo and the camera there and back.
 
 ### Changed
+- **The `classic` background is an aurora now**: three wide, blurred ribbons in the brand colours
+  sweep, tilt and breathe over a deeper navy, and a slow spotlight wanders over the dot grid (it
+  was four drifting glows). Nothing to update; re-render to get it.
 - Callouts start with their step (not after its marker), get a minimum reading time, and move to the
   top over action at the bottom of the screen.
 - `reelson check` lints each composition on its own.

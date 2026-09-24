@@ -29,23 +29,26 @@
         --band-zoom: 1;  /* portrait, square: 16:9 cards zoomed to the stage width */
       }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
-        background: linear-gradient(160deg, #0b1220 0%, #101a2e 50%, #0c1424 100%); }
+        background: linear-gradient(160deg, #070a15 0%, #0c1122 55%, #080b17 100%); }
       .clip { position: absolute; inset: 0; }
 
-      /* Background: four soft glows that drift and breathe (GSAP, yoyo) — slow but perceptible —
-         plus a faint dot grid. #glows is a wrapper so the intro can settle the whole layer at once. */
+      /* Background: an aurora — three wide, blurred ribbons in the brand colours that sweep, tilt
+         and breathe (GSAP, yoyo) over a deep navy, plus a faint dot grid lit by a slow, wandering
+         spotlight. #glows is a wrapper so the intro can settle the whole layer at once. */
       #bg { pointer-events: none; }
       #glows { position: absolute; inset: 0; will-change: transform; }
-      .glow { position: absolute; border-radius: 50%; filter: blur(100px); will-change: transform; }
-      #glow-a { width: 1200px; height: 1200px; left: -320px; top: -560px; background: radial-gradient(circle, color-mix(in srgb, var(--brand) 58%, transparent), transparent 64%); }
-      #glow-b { width: 1100px; height: 1100px; right: -420px; bottom: -600px; background: radial-gradient(circle, rgba(56, 120, 246, 0.50), rgba(56, 120, 246, 0) 64%); }
-      #glow-c { width: 900px; height: 900px; right: 120px; top: -520px; background: radial-gradient(circle, rgba(139, 92, 246, 0.38), rgba(139, 92, 246, 0) 64%); }
-      #glow-d { width: 800px; height: 800px; left: 260px; bottom: -560px; background: radial-gradient(circle, rgba(20, 184, 166, 0.30), rgba(20, 184, 166, 0) 64%); }
-      #grid { position: absolute; inset: 0; opacity: 0.35;
-        background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1.2px, transparent 1.4px);
+      .ribbon { position: absolute; left: -35%; width: 170%; border-radius: 50%; filter: blur(80px); will-change: transform, opacity; }
+      #ribbon-a { top: 2%; height: 34%; transform: rotate(-14deg);
+        background: linear-gradient(90deg, transparent 8%, color-mix(in srgb, var(--brand) 62%, transparent) 38%, color-mix(in srgb, var(--brand-soft) 40%, transparent) 62%, transparent 92%); }
+      #ribbon-b { top: 40%; height: 30%; transform: rotate(9deg);
+        background: linear-gradient(90deg, transparent 10%, rgba(20, 184, 166, 0.34) 36%, color-mix(in srgb, var(--brand) 38%, transparent) 70%, transparent 94%); }
+      #ribbon-c { top: 68%; height: 36%; transform: rotate(-6deg);
+        background: linear-gradient(90deg, transparent 6%, rgba(56, 120, 246, 0.36) 30%, rgba(139, 92, 246, 0.30) 64%, transparent 90%); }
+      #grid { position: absolute; inset: 0; opacity: 0.5; --mx: 30%; --my: 40%;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1.2px, transparent 1.4px);
         background-size: 36px 36px; background-position: 18px 18px;
-        -webkit-mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%);
-                mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%); }
+        -webkit-mask-image: radial-gradient(circle at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, 0.35) 30%, transparent 62%);
+                mask-image: radial-gradient(circle at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, 0.35) 30%, transparent 62%); }
 
       /* Brand pieces any section can use. .wordmark[data-text] is split into letters (.l) by the
          stage script — or, when brand.logo is set, holds the logo as a single .l.logo image sized
@@ -238,10 +241,9 @@
       <!-- Background (untimed, always on) -->
       <div id="bg" class="clip">
         <div id="glows">
-          <div id="glow-a" class="glow"></div>
-          <div id="glow-b" class="glow"></div>
-          <div id="glow-c" class="glow"></div>
-          <div id="glow-d" class="glow"></div>
+          <div id="ribbon-a" class="ribbon"></div>
+          <div id="ribbon-b" class="ribbon"></div>
+          <div id="ribbon-c" class="ribbon"></div>
         </div>
         <div id="grid"></div>
       </div>
@@ -410,18 +412,19 @@
         return el;
       };
 
-      // Background: glows drift and breathe on sine curves for the whole video — slow but
-      // perceptible, never busy — and the whole layer settles from a zoomed, slightly
-      // rotated pose over the intro so the opening feels alive.
+      // Background: the aurora ribbons sweep, tilt and breathe on sine curves for the whole
+      // video, and a spotlight wanders over the dot grid — always moving, never busy. The whole
+      // layer settles from a zoomed, slightly rotated pose over the intro so the opening feels alive.
       // The drifts live on their own timeline, played exactly to the end, so the
       // composition's timeline is never longer than the video.
       const drift = gsap.timeline({ paused: true });
-      const breathe = (sel, vars, period) =>
-        drift.fromTo(sel, { x: 0, y: 0, scale: 1 }, { ...vars, duration: period, ease: 'sine.inOut', yoyo: true, repeat: Math.ceil(DEMO.total / period) }, 0);
-      breathe('#glow-a', { x: 560, y: 340, scale: 1.28 }, 4.8);
-      breathe('#glow-b', { x: -520, y: -320, scale: 1.22 }, 5.6);
-      breathe('#glow-c', { x: -420, y: 300, scale: 1.35 }, 4.2);
-      breathe('#glow-d', { x: 460, y: -260, scale: 1.3 }, 6.4);
+      const breathe = (sel, from, to, period) =>
+        drift.fromTo(sel, from, { ...to, duration: period, ease: 'sine.inOut', yoyo: true, repeat: Math.ceil(DEMO.total / period) }, 0);
+      breathe('#ribbon-a', { xPercent: -10, yPercent: 0, rotation: -14, scaleY: 1, opacity: 0.85 }, { xPercent: 12, yPercent: 22, rotation: -6, scaleY: 1.3, opacity: 1 }, 5.2);
+      breathe('#ribbon-b', { xPercent: 10, yPercent: 0, rotation: 9, scaleY: 1, opacity: 0.7 }, { xPercent: -12, yPercent: -26, rotation: 2, scaleY: 1.4, opacity: 1 }, 6.4);
+      breathe('#ribbon-c', { xPercent: -6, yPercent: 0, rotation: -6, scaleY: 1.1, opacity: 0.9 }, { xPercent: 14, yPercent: -18, rotation: -13, scaleY: 0.8, opacity: 0.6 }, 4.6);
+      breathe('#grid', { '--mx': '22%' }, { '--mx': '78%' }, 7.4);
+      breathe('#grid', { '--my': '28%' }, { '--my': '72%' }, 5.8);
       tl.add(drift.tweenFromTo(0, DEMO.total, { duration: DEMO.total, ease: 'none' }), 0);
       tl.fromTo('#glows', { scale: 1.4, rotation: -9 }, { scale: 1, rotation: 0, duration: DEMO.sections.intro.duration - 0.2, ease: 'power2.out' }, 0);
 

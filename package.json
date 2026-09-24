@@ -42,6 +42,7 @@
         "examples/orbit/index.html",
         "examples/orbit-ship-it/scenario.ts",
         "examples/orbit-ship-it/video.json",
+        "examples/_templates/",
         "reelson.config.example.json",
         "CHANGELOG.md",
         "NOTICE.md",

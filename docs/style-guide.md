@@ -21,8 +21,9 @@ accounts), but should not loosen them without a reason.
    letters one after another from the centre), holds ~1.8 s, and at 3.0 s lifts out through
    the top while the recording rides in from below on the same upward motion. Other intros
    keep the poster rule and hand over with `stage.enter()`.
-3. **Background**: deep navy gradient with four soft glows (brand colour, blue, violet, teal)
-   drifting and breathing on 4–6.5 s loops — slow but perceptible — plus a faint dot grid.
+3. **Background**: deep navy with an aurora — three wide, blurred ribbons (brand colour, teal,
+   blue/violet) that sweep, tilt and breathe on 4.5–6.5 s loops — plus a faint dot grid lit by a
+   slow, wandering spotlight. Always moving, never busy.
 4. **Cursor**: large black macOS-style arrow with a white outline, press squash, and a
    brand-coloured double ring on click. It never jumps on click, and it keeps its size
    during zooms (the video draws it as a layer from the recorder's log).

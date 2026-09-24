@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{LANG}}">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, height=1080" />
+    <meta name="viewport" content="width={{STAGE_W}}, height={{STAGE_H}}" />
     <!-- Vendored (assets/vendor/, copied by reelson build): renders work offline and never drift. -->
     <script src="assets/vendor/gsap.min.js"></script>
     <style>
@@ -14,41 +14,39 @@
         src: url(assets/vendor/inter-latin-wght-normal.woff2) format('woff2-variations');
         unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0b1220; }
+      html, body { width: {{STAGE_W}}px; height: {{STAGE_H}}px; overflow: hidden; background: #0b1220; }
       /* Design tokens: the ONLY things sections may assume about the stage (templates/README.md). */
       :root {
-        --brand: #6366f1;          /* reelson.config.json brand.color */
-        --brand-soft: #a5b4fc;
+        --brand: {{BRAND_COLOR}};          /* reelson.config.json brand.color */
+        --brand-soft: {{BRAND_COLOR_SOFT}};
         --ink: #f8fafc;
         --muted: #94a3b8;
         --line: rgba(255, 255, 255, 0.10);
         --surface: rgba(255, 255, 255, 0.04);
         --bg: #0b1220;
         --font: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
-        --stage-h: 1080px;
-        --band-zoom: 1;  /* portrait, square: 16:9 cards zoomed to the stage width */
+        --stage-h: {{STAGE_H}}px;
+        --band-zoom: {{BAND_ZOOM}};  /* portrait, square: 16:9 cards zoomed to the stage width */
       }
-      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font); color: var(--ink);
-        background: linear-gradient(160deg, #070a15 0%, #0c1122 55%, #080b17 100%); }
+      #root { position: relative; width: {{STAGE_W}}px; height: {{STAGE_H}}px; overflow: hidden; font-family: var(--font); color: var(--ink);
+        background: radial-gradient(120% 90% at 70% 30%, #1a0d3a 0%, #0b0719 55%, #05040c 100%); }
       .clip { position: absolute; inset: 0; }
 
-      /* Background: an aurora — three wide, blurred ribbons in the brand colours that sweep, tilt
-         and breathe (GSAP, yoyo) over a deep navy, plus a faint dot grid lit by a slow, wandering
-         spotlight. #glows is a wrapper so the intro can settle the whole layer at once. */
+      /* Background (Orbit's own template, forked from classic): deep space violet, a neon aurora
+         (magenta, violet, cyan) that drifts and breathes, tilted orbital rings with moons that
+         travel round them, and a twinkling starfield. #glows is a wrapper so the intro can settle
+         the whole layer at once. */
       #bg { pointer-events: none; }
       #glows { position: absolute; inset: 0; will-change: transform; }
-      .ribbon { position: absolute; left: -35%; width: 170%; border-radius: 50%; filter: blur(80px); will-change: transform, opacity; }
-      #ribbon-a { top: 2%; height: 34%; transform: rotate(-14deg);
-        background: linear-gradient(90deg, transparent 8%, color-mix(in srgb, var(--brand) 62%, transparent) 38%, color-mix(in srgb, var(--brand-soft) 40%, transparent) 62%, transparent 92%); }
-      #ribbon-b { top: 40%; height: 30%; transform: rotate(9deg);
-        background: linear-gradient(90deg, transparent 10%, rgba(20, 184, 166, 0.34) 36%, color-mix(in srgb, var(--brand) 38%, transparent) 70%, transparent 94%); }
-      #ribbon-c { top: 68%; height: 36%; transform: rotate(-6deg);
-        background: linear-gradient(90deg, transparent 6%, rgba(56, 120, 246, 0.36) 30%, rgba(139, 92, 246, 0.30) 64%, transparent 90%); }
-      #grid { position: absolute; inset: 0; opacity: 0.5; --mx: 30%; --my: 40%;
-        background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1.2px, transparent 1.4px);
-        background-size: 36px 36px; background-position: 18px 18px;
-        -webkit-mask-image: radial-gradient(circle at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, 0.35) 30%, transparent 62%);
-                mask-image: radial-gradient(circle at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, 0.35) 30%, transparent 62%); }
+      .glow { position: absolute; border-radius: 50%; filter: blur(110px); will-change: transform, opacity; }
+      #glow-a { width: 62%; aspect-ratio: 1; left: -14%; top: -30%; background: radial-gradient(circle, rgba(255, 79, 216, 0.42), rgba(255, 79, 216, 0) 64%); }
+      #glow-b { width: 70%; aspect-ratio: 1; right: -22%; top: -16%; background: radial-gradient(circle, rgba(124, 92, 255, 0.55), rgba(124, 92, 255, 0) 64%); }
+      #glow-c { width: 58%; aspect-ratio: 1; left: 22%; bottom: -44%; background: radial-gradient(circle, rgba(34, 211, 238, 0.36), rgba(34, 211, 238, 0) 64%); }
+      #stars { position: absolute; inset: 0; }
+      .stars { position: absolute; left: 0; top: 0; width: 2px; height: 2px; border-radius: 50%; background: transparent; will-change: opacity; }
+      #orbits { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+      #orbits .ring { fill: none; stroke: rgba(196, 181, 253, 0.13); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+      #orbits .moon { filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 22px currentColor); }
 
       /* Brand pieces any section can use. .wordmark[data-text] is split into letters (.l) by the
          stage script — or, when brand.logo is set, holds the logo as a single .l.logo image sized
@@ -75,7 +73,7 @@
 
       /* Framed recording */
       #screen { display: grid; place-items: center; }
-      #frame { position: relative; width: 1504px; height: 940px; border-radius: 20px; overflow: hidden;
+      #frame { position: relative; width: {{FRAME_W}}px; height: {{FRAME_H}}px; border-radius: 20px; overflow: hidden;
         /* No will-change here: it makes Chrome rasterize the frame once at 1x and stretch that
            bitmap during zooms, which blurs the 2x capture. */
         background: #fff; border: 1px solid rgba(255, 255, 255, 0.14);
@@ -83,7 +81,7 @@
       /* The footage: fills the frame in landscape and square; in portrait it can be bigger than
          the frame and moves with the camera (DEMO.layout.camera). Videos and the cursor layer ride inside it. */
       #footage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-      #root.portrait #footage { width: 1504px; height: 940px; }
+      #root.portrait #footage { width: {{FOOTAGE_W}}px; height: {{FOOTAGE_H}}px; }
       #frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
       /* Portrait (1080x1920): sections lay themselves out for the tall stage (their
@@ -106,7 +104,7 @@
       /* Square (1080x1080): the square take fills the stage edge to edge — no bands, no margin.
          The callouts ride over the bottom of the footage, as in landscape. */
       #root.square #frame { border: 0; border-radius: 0; box-shadow: none; }
-      #root.square #footage { width: 1504px; height: 940px; left: 50%; top: 50%; translate: -50% -50%; }
+      #root.square #footage { width: {{FOOTAGE_W}}px; height: {{FOOTAGE_H}}px; left: 50%; top: 50%; translate: -50% -50%; }
       #root.square .callout { bottom: 40px; font-size: 34px; max-width: 1000px; white-space: normal; text-align: left; }
       #root.square .transition-card .stack { gap: 48px; padding: 0 70px; }
       #root.square .transition-card .title { font-size: 84px; max-width: 940px; }
@@ -154,121 +152,32 @@
         padding-right: 18px; border-right: 1px solid var(--line); }
 
       /* ---- Sections (intro, recap, outro), each scoped under its #slot id ---- */
-      /* ── intro: split ── */
-      #intro { display: grid; grid-template-columns: 760px 1fr; align-items: center; }
-      #intro .panel { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 0 60px;
-        background: linear-gradient(160deg, color-mix(in srgb, var(--brand) 82%, #000) 0%, color-mix(in srgb, var(--brand) 45%, var(--bg)) 100%);
-        box-shadow: 30px 0 120px rgba(0, 0, 0, 0.45), inset -1px 0 0 rgba(255, 255, 255, 0.12); will-change: transform; }
-      #intro .wordmark { font-size: 96px; color: #fff; will-change: transform; }
-      #intro .brand-line { width: 160px; background: linear-gradient(90deg, #fff, var(--brand-soft)); opacity: 0.85; }
-      #intro .brand-sub { font-size: 26px; color: rgba(255, 255, 255, 0.72); }
-      #intro .text { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; padding: 0 120px 0 130px; will-change: transform, opacity; }
-      #intro .title { font-size: 96px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.04; will-change: transform, opacity; }
-      #intro .subtitle { font-size: 36px; font-weight: 400; color: var(--muted); line-height: 1.35; }
-
-      /* Portrait: the brand panel on top, the text below */
-      #root.portrait #intro { grid-template-columns: 1fr; grid-template-rows: 820px 1fr; align-items: stretch; }
-      #root.portrait #intro .panel { box-shadow: 0 30px 120px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12); }
-      #root.portrait #intro .wordmark { font-size: 120px; }
-      #root.portrait #intro .brand-sub { font-size: 32px; }
-      #root.portrait #intro .text { justify-content: center; gap: 34px; padding: 0 90px 120px; }
-      #root.portrait #intro .title { font-size: 100px; }
-      #root.portrait #intro .subtitle { font-size: 42px; }
-      #root.portrait #intro .meta { font-size: 30px; }
-
-      /* Square: the brand panel on top, the text below */
-      #root.square #intro { grid-template-columns: 1fr; grid-template-rows: 400px 1fr; align-items: stretch; }
-      #root.square #intro .panel { gap: 20px; box-shadow: 0 30px 120px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12); }
-      #root.square #intro .wordmark { font-size: 96px; }
-      #root.square #intro .brand-sub { font-size: 26px; }
-      #root.square #intro .text { justify-content: center; gap: 24px; padding: 0 80px 20px; }
-      #root.square #intro .title { font-size: 78px; }
-      #root.square #intro .subtitle { font-size: 34px; }
-      #root.square #intro .meta { font-size: 24px; }
-
-      /* ── recap: compact ── */
-      #recap { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 64px; padding: 0 140px; text-align: center; }
-      #recap .head { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-      #recap .title { font-size: 96px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
-      #recap .accent { transform-origin: center; }
-      #recap .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 18px; max-width: 1600px; }
-      #recap .chip { display: inline-flex; align-items: center; gap: 14px; padding: 10px 26px 10px 10px; border-radius: 999px;
-        border: 1px solid var(--line); background: var(--surface); font-size: 28px; font-weight: 500; white-space: nowrap; }
-      #recap .chip .n { width: 40px; height: 40px; font-size: 19px; }
-      #recap .chip .who { font-size: 17px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-soft);
-        padding-right: 14px; border-right: 1px solid var(--line); }
-
-      /* Portrait: the chips stack one per row */
-      #root.portrait #recap { gap: 80px; padding: 0 80px; }
-      #root.portrait #recap .title { font-size: 116px; }
-      #root.portrait #recap .chips { flex-direction: column; align-items: center; gap: 22px; max-width: 920px; }
-      #root.portrait #recap .chip { font-size: 38px; white-space: normal; text-align: left; padding: 14px 34px 14px 14px; }
-      #root.portrait #recap .chip .n { width: 54px; height: 54px; font-size: 26px; }
-      #root.portrait #recap .chip .who { font-size: 22px; }
-
-      /* Square: the chips stack one per row */
-      #root.square #recap { gap: 56px; padding: 0 70px; }
-      #root.square #recap .title { font-size: 96px; }
-      #root.square #recap .chips { flex-direction: column; align-items: center; gap: 16px; max-width: 940px; }
-      #root.square #recap .chip { font-size: 32px; white-space: normal; text-align: left; padding: 12px 30px 12px 12px; }
-      #root.square #recap .chip .n { width: 46px; height: 46px; font-size: 22px; }
-      #root.square #recap .chip .who { font-size: 19px; }
-
-      /* ── outro: endcard ── */
-      #outro { display: grid; place-items: center; }
-      #outro .card { display: flex; flex-direction: column; align-items: center; gap: 72px; text-align: center; will-change: transform; }
-      #outro .brand { display: flex; flex-direction: column; align-items: center; gap: 26px; }
-      #outro .wordmark { font-size: 120px; }
-      #outro .brand-line { width: 180px; }
-      #outro .what { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-      #outro .title { font-size: 76px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 1400px; }
-      #outro .subtitle { font-size: 34px; font-weight: 400; color: var(--muted); max-width: 1300px; line-height: 1.35; }
-      #outro .subtitle:empty { display: none; }
-
-      /* Portrait: the same card, sized for a phone screen */
-      #root.portrait #outro .card { gap: 90px; padding: 0 80px; }
-      #root.portrait #outro .wordmark { font-size: 132px; }
-      #root.portrait #outro .brand-sub { font-size: 34px; }
-      #root.portrait #outro .title { font-size: 92px; max-width: 920px; }
-      #root.portrait #outro .subtitle { font-size: 42px; max-width: 880px; }
-      #root.portrait #outro .meta { font-size: 30px; }
-
-      /* Square: the same card, narrower */
-      #root.square #outro .card { gap: 64px; padding: 0 70px; }
-      #root.square #outro .wordmark { font-size: 112px; }
-      #root.square #outro .brand-sub { font-size: 30px; }
-      #root.square #outro .title { font-size: 76px; max-width: 940px; }
-      #root.square #outro .subtitle { font-size: 36px; max-width: 900px; }
-      #root.square #outro .meta { font-size: 26px; }
+{{SECTION_STYLES}}
     </style>
   </head>
   <body>
-    <div id="root" class="landscape" data-composition-id="main" data-start="0" data-duration="26.93" data-width="1920" data-height="1080">
+    <div id="root" class="{{FORMAT}}" data-composition-id="main" data-start="0" data-duration="{{TOTAL}}" data-width="{{STAGE_W}}" data-height="{{STAGE_H}}">
 
       <!-- Background (untimed, always on) -->
       <div id="bg" class="clip">
         <div id="glows">
-          <div id="ribbon-a" class="ribbon"></div>
-          <div id="ribbon-b" class="ribbon"></div>
-          <div id="ribbon-c" class="ribbon"></div>
+          <div id="glow-a" class="glow"></div>
+          <div id="glow-b" class="glow"></div>
+          <div id="glow-c" class="glow"></div>
+          <div id="stars"><div class="stars" id="stars-a"></div><div class="stars" id="stars-b"></div><div class="stars" id="stars-c"></div></div>
+          <svg id="orbits" viewBox="-960 -540 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <g transform="translate(300 110) rotate(-18) scale(1 0.4)">
+              <g id="orbit-1"><circle class="ring" r="430" /><circle class="moon" cx="430" cy="0" r="7" fill="#ff4fd8" color="#ff4fd8" /></g>
+              <g id="orbit-2"><circle class="ring" r="640" /><circle class="moon" cx="-640" cy="0" r="9" fill="#22d3ee" color="#22d3ee" /></g>
+              <g id="orbit-3"><circle class="ring" r="880" /><circle class="moon" cx="0" cy="880" r="6" fill="#c4b5fd" color="#c4b5fd" /><circle class="moon" cx="0" cy="-880" r="4" fill="#ff4fd8" color="#ff4fd8" /></g>
+              <g id="orbit-4"><circle class="ring" r="1160" /><circle class="moon" cx="1160" cy="0" r="8" fill="#7c5cff" color="#7c5cff" /></g>
+            </g>
+          </svg>
         </div>
-        <div id="grid"></div>
       </div>
 
       <!-- 1. Intro section: 0 → DEMO.sections.intro.duration. Frame 0 is the poster. -->
-      <!-- ── intro: split ── -->
-      <section id="intro" class="clip" data-start="0" data-duration="4" data-track-index="3">
-        <div class="panel">
-          <div class="wordmark" data-text="ACME" data-logo="assets/brand-logo.svg"></div>
-          <div class="brand-line"></div>
-          <div class="brand-sub">PLATFORM</div>
-        </div>
-        <div class="text">
-          <h1 class="title">Plan your day</h1>
-          <p class="subtitle">Add tasks and tick them off</p>
-          <div class="meta" data-chip></div>
-        </div>
-      </section>
+{{INTRO}}
 
       <!-- 2. Screen recording, framed and centred. The wrapper is NOT timed (lint:
            a timed <video> must not sit inside a timed element); the <video>
@@ -276,43 +185,20 @@
       <section id="screen" class="clip">
         <div id="frame">
           <div id="footage">
-          <video id="recording" class="clip" src="assets/recording.mp4" muted playsinline
-            data-start="3" data-duration="17.53" data-media-start="2.6" data-track-index="1"></video>
+{{VIDEOS}}
           </div>
         </div>
         <div id="callouts"></div>
       </section>
-
-
-      <!-- Music bed, pre-rendered by reelson build (trim + loudnorm + fades) -->
-      <audio id="music" class="clip" src="assets/music.m4a" data-start="0" data-duration="26.93" data-track-index="4"></audio>
+{{TRANSITIONS}}
+{{AUDIO}}
+{{MUSIC}}
 
       <!-- 3. Recap section (absent when video.json says "recap": "none") -->
-      <!-- ── recap: compact ── -->
-      <section id="recap" class="clip" data-start="20.13" data-duration="3.2" data-track-index="2">
-        <div class="head">
-          <div class="eyebrow">Acme</div>
-          <h1 class="title">In short</h1>
-          <div class="accent"></div>
-        </div>
-        <div class="chips"></div>
-      </section>
+{{RECAP}}
 
       <!-- 4. Outro section: ends on the brand, never on an empty frame -->
-      <!-- ── outro: endcard ── -->
-      <section id="outro" class="clip" data-start="22.93" data-duration="4" data-track-index="3">
-        <div class="card">
-          <div class="brand">
-            <div class="wordmark" data-text="ACME" data-logo="assets/brand-logo.svg"></div>
-            <div class="brand-line"></div>
-          </div>
-          <div class="what">
-            <h1 class="title">Plan your day</h1>
-            <p class="subtitle">Add tasks and tick them off</p>
-            <div class="meta" data-chip></div>
-          </div>
-        </div>
-      </section>
+{{OUTRO}}
     </div>
 
     <script>
@@ -332,110 +218,7 @@
        *           format: landscape | portrait | square; camera: the portrait camera (else [])
        *   chip: { steps, seconds }   "4 steps · 27 seconds", already pluralised
        * ------------------------------------------------------------------ */
-      const DEMO = {
-        "total": 26.93,
-        "clipStart": 3,
-        "clipDuration": 17.53,
-        "mediaStart": 2.6,
-        "sections": {
-          "intro": {
-            "start": 0,
-            "duration": 4,
-            "exit": 3
-          },
-          "recap": {
-            "start": 20.13,
-            "duration": 3.2,
-            "maxSteps": 10
-          },
-          "outro": {
-            "start": 22.93,
-            "duration": 4
-          }
-        },
-        "callouts": [
-          {
-            "at": 3.9,
-            "duration": 3.04,
-            "text": "Type a task and press Enter"
-          },
-          {
-            "at": 7.14,
-            "duration": 4.23,
-            "text": "Add as many as you need"
-          },
-          {
-            "at": 11.57,
-            "duration": 2.04,
-            "text": "Tick a task when it is done"
-          },
-          {
-            "at": 13.81,
-            "duration": 3.76,
-            "text": "Filter what is left"
-          }
-        ],
-        "zooms": [
-          {
-            "at": 11.28,
-            "duration": 5.18,
-            "x": 0.399,
-            "y": 0.392,
-            "scale": 1.7,
-            "in": 0.8,
-            "out": 0.8
-          }
-        ],
-        "cursor": {
-          "size": 44,
-          "ripple": true,
-          "idle": 0,
-          "scale": 1.0444,
-          "path": [
-            [3, 720, 470],
-            [3.65, 720.4, 418.2],
-            [3.76, 720.8, 366.4],
-            [3.88, 721.2, 314.6],
-            [3.99, 721.6, 262.8],
-            [4.11, 722, 211],
-            [7.23, 721.8, 209.8],
-            [7.31, 721.6, 208.6],
-            [7.4, 721.4, 207.4],
-            [7.49, 721.2, 206.2],
-            [7.57, 721, 205],
-            [11.67, 669.6, 229.2],
-            [11.77, 618.2, 253.4],
-            [11.86, 566.8, 277.6],
-            [11.96, 515.4, 301.8],
-            [12.06, 464, 326],
-            [13.91, 508.4, 336.6],
-            [14.02, 552.8, 347.2],
-            [14.12, 597.2, 357.8],
-            [14.23, 641.6, 368.4],
-            [14.33, 686, 379]
-          ],
-          "presses": [
-            [4.28, 722, 211],
-            [7.71, 721, 205],
-            [12.21, 464, 326],
-            [14.49, 686, 379]
-          ]
-        },
-        "layout": {
-          "format": "landscape",
-          "stage": {
-            "width": 1920,
-            "height": 1080
-          },
-          "bandZoom": 1,
-          "camera": []
-        },
-        "transitions": [],
-        "chip": {
-          "steps": "4 steps",
-          "seconds": "27 seconds"
-        }
-      };
+      const DEMO = {{DEMO}};
 
       /* ---- Stage builder: normally nothing below needs editing. ---- */
       window.__timelines = window.__timelines || {};
@@ -453,19 +236,36 @@
         return el;
       };
 
-      // Background: the aurora ribbons sweep, tilt and breathe on sine curves for the whole
-      // video, and a spotlight wanders over the dot grid — always moving, never busy. The whole
-      // layer settles from a zoomed, slightly rotated pose over the intro so the opening feels alive.
-      // The drifts live on their own timeline, played exactly to the end, so the
+      // Background: the neon aurora drifts and breathes, the moons travel round their rings (each
+      // ring at its own speed, inner ones faster) and the stars twinkle in three groups — always
+      // moving, never busy. The whole layer settles from a zoomed, slightly rotated pose over the
+      // intro. The drifts live on their own timeline, played exactly to the end, so the
       // composition's timeline is never longer than the video.
       const drift = gsap.timeline({ paused: true });
       const breathe = (sel, from, to, period) =>
         drift.fromTo(sel, from, { ...to, duration: period, ease: 'sine.inOut', yoyo: true, repeat: Math.ceil(DEMO.total / period) }, 0);
-      breathe('#ribbon-a', { xPercent: -10, yPercent: 0, rotation: -14, scaleY: 1, opacity: 0.85 }, { xPercent: 12, yPercent: 22, rotation: -6, scaleY: 1.3, opacity: 1 }, 5.2);
-      breathe('#ribbon-b', { xPercent: 10, yPercent: 0, rotation: 9, scaleY: 1, opacity: 0.7 }, { xPercent: -12, yPercent: -26, rotation: 2, scaleY: 1.4, opacity: 1 }, 6.4);
-      breathe('#ribbon-c', { xPercent: -6, yPercent: 0, rotation: -6, scaleY: 1.1, opacity: 0.9 }, { xPercent: 14, yPercent: -18, rotation: -13, scaleY: 0.8, opacity: 0.6 }, 4.6);
-      breathe('#grid', { '--mx': '22%' }, { '--mx': '78%' }, 7.4);
-      breathe('#grid', { '--my': '28%' }, { '--my': '72%' }, 5.8);
+      breathe('#glow-a', { x: 0, y: 0, scale: 1, opacity: 0.8 }, { x: 380, y: 220, scale: 1.3, opacity: 1 }, 5.4);
+      breathe('#glow-b', { x: 0, y: 0, scale: 1, opacity: 1 }, { x: -420, y: 260, scale: 1.2, opacity: 0.75 }, 6.6);
+      breathe('#glow-c', { x: 0, y: 0, scale: 1.1, opacity: 0.8 }, { x: 360, y: -200, scale: 0.9, opacity: 1 }, 4.8);
+      breathe('#stars-a', { opacity: 1 }, { opacity: 0.25 }, 1.7);
+      breathe('#stars-b', { opacity: 0.3 }, { opacity: 1 }, 2.3);
+      breathe('#stars-c', { opacity: 0.9 }, { opacity: 0.4 }, 3.1);
+      [[1, 34], [2, -22], [3, 15], [4, -9]].forEach(([n, degPerSec]) =>
+        drift.fromTo('#orbit-' + n, { rotation: 0, svgOrigin: '0 0' }, { rotation: degPerSec * DEMO.total, svgOrigin: '0 0', duration: DEMO.total, ease: 'none' }, 0));
+      // The starfield: three layers of box-shadow points, placed by a seeded random so every
+      // render is identical.
+      (() => {
+        let seed = 7;
+        const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+        const W = {{STAGE_W}}, H = {{STAGE_H}};
+        ['#stars-a', '#stars-b', '#stars-c'].forEach((sel, i) => {
+          const pts = Array.from({ length: 70 }, () => {
+            const x = Math.round(rnd() * W), y = Math.round(rnd() * H), a = (0.35 + rnd() * 0.6).toFixed(2), r = rnd() < 0.15 ? 1 : 0;
+            return `${x}px ${y}px 0 ${r}px rgba(255, 255, 255, ${a})`;
+          });
+          document.querySelector(sel).style.boxShadow = pts.join(', ');
+        });
+      })();
       tl.add(drift.tweenFromTo(0, DEMO.total, { duration: DEMO.total, ease: 'none' }), 0);
       tl.fromTo('#glows', { scale: 1.4, rotation: -9 }, { scale: 1, rotation: 0, duration: DEMO.sections.intro.duration - 0.2, ease: 'power2.out' }, 0);
 
@@ -660,72 +460,7 @@
 
       /* ---- Sections: each runs with `section` = its DEMO.sections entry, and may use
        *      tl, DEMO, FADE, later, node, stage. ---- */
-      // ── intro: split ──
-      ;((section) => {
-        // Frame 0 = the poster: the panel is already in place with its wordmark a little big and
-        // 60% transparent, the title legible at 65% slightly to the right. Both settle, subtitle
-        // and chip rise in, the card holds; at section.exit the panel slides out left, the text
-        // out right, and the recording grows out of the middle.
-        // The from-states below ARE the poster — keep them sharp (no blur, no `later` at t=0).
-        const s0 = section.start + 0.08;
-        tl.fromTo('#intro .panel .wordmark', { scale: 1.18 }, { scale: 1, duration: 1.3, ease: 'sine.inOut' }, s0);
-        tl.fromTo('#intro .panel .l', { opacity: 0.6 }, { opacity: 1, duration: 1.1, ease: 'sine.inOut', stagger: { each: 0.05, from: 'center' } }, s0);
-        tl.fromTo('#intro .brand-line', { scaleX: 0.4 }, { scaleX: 1, duration: 1.1, ease: 'power3.inOut' }, s0 + 0.25);
-        tl.fromTo('#intro .brand-sub', { opacity: 0.6 }, { opacity: 1, duration: 1.0, ease: 'sine.inOut' }, s0 + 0.3);
-        tl.fromTo('#intro .title', { opacity: 0.65, x: 40 }, { opacity: 1, x: 0, duration: 1.3, ease: 'sine.inOut' }, s0 + 0.1);
-        tl.fromTo('#intro .subtitle', { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', ...later }, section.start + 0.8);
-        tl.fromTo('#intro .meta', { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out', ...later }, section.start + 1.0);
-        // The panels are mostly gone before the frame grows in, so the text never shows through it.
-        tl.fromTo('#intro .panel', { x: 0 }, { x: -900, duration: 0.7, ease: 'power3.inOut', ...later }, section.exit - 0.25);
-        tl.fromTo('#intro .text', { x: 0, opacity: 1 }, { x: 1300, opacity: 0, duration: 0.7, ease: 'power3.inOut', ...later }, section.exit - 0.25);
-        stage.enter(section.exit + 0.2, 'zoom');
-
-        gsap.set(['#intro .subtitle', '#intro .meta'], { opacity: 0 });
-      })(DEMO.sections.intro);
-
-      // ── recap: compact ──
-      ;((section) => {
-        // Head rises, chips pop in one after another, then the card fades.
-        const chips = document.querySelector('#recap .chips');
-        const steps = DEMO.callouts.slice(0, section.maxSteps);
-        const rows = steps.map((c, i) => {
-          const el = node('div', 'chip');
-          el.append(node('span', 'n', String(i + 1)));
-          // Two-actor videos: the role tag opens each role's first chip.
-          if (c.group && c.group !== steps[i - 1]?.group) el.append(node('span', 'who', c.group));
-          el.append(node('span', '', c.text));
-          return chips.appendChild(el);
-        });
-        const r0 = section.start;
-        tl.fromTo('#recap', { opacity: 0 }, { opacity: 1, duration: FADE, ease: 'power2.inOut', ...later }, r0);
-        tl.fromTo('#recap .eyebrow', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, r0 + 0.05);
-        tl.fromTo('#recap .title', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, r0 + 0.12);
-        tl.fromTo('#recap .accent', { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: 'power3.inOut', ...later }, r0 + 0.35);
-        rows.forEach((row, i) => {
-          tl.fromTo(row, { opacity: 0, y: 18, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: 'back.out(1.6)', ...later }, r0 + 0.4 + i * 0.08);
-        });
-        tl.fromTo('#recap', { opacity: 1 }, { opacity: 0, duration: FADE, ease: 'power2.in', ...later }, r0 + section.duration - FADE);
-
-        gsap.set(['#recap', '#recap .eyebrow', '#recap .title', ...rows], { opacity: 0 });
-        gsap.set('#recap .accent', { scaleX: 0 });
-      })(DEMO.sections.recap);
-
-      // ── outro: endcard ──
-      ;((section) => {
-        // Waits out the recap's cross-fade (0.3 s) so nothing lands on its text, then letters rise
-        // from the centre, the line wipes open, title / subtitle / chip follow. Then it holds with a barely-there drift and ends
-        // fully visible: the paused last frame is a readable end card.
-        const e0 = section.start + 0.3;
-        tl.fromTo('#outro .l', { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: { each: 0.05, from: 'center' }, ...later }, e0 + 0.1);
-        tl.fromTo('#outro .brand-line', { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: 'power3.inOut', ...later }, e0 + 0.45);
-        tl.fromTo('#outro .title', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', ...later }, e0 + 0.6);
-        tl.fromTo('#outro .subtitle', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', ...later }, e0 + 0.8);
-        tl.fromTo('#outro .meta', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', ...later }, e0 + 0.95);
-        tl.fromTo('#outro .card', { scale: 1 }, { scale: 1.02, duration: Math.max(0.5, section.duration - 1.9), ease: 'sine.inOut', ...later }, e0 + 1.6);
-
-        gsap.set(['#outro .l', '#outro .title', '#outro .subtitle', '#outro .meta'], { opacity: 0 });
-        gsap.set('#outro .brand-line', { scaleX: 0 });
-      })(DEMO.sections.outro);
+{{SECTION_SCRIPTS}}
 
       // An intro that never handed over still gets the recording on screen.
       if (!stage.entered) stage.enter(DEMO.clipStart, 'fade');
