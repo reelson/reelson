@@ -1,0 +1,9 @@
+{
+    "description": "Light and modern: a bright canvas with a soft brand glow, the title word by word on the left and a live peek of the finished demo on the right, tilted like a product shot. Frame 0 is the poster. At the hand-over the text slides away, the peek straightens and grows, and the recording zooms in.",
+    "timing": {
+        "duration": 4.0,
+        "exit": 3.0
+    },
+    "portrait": true,
+    "square": true
+}

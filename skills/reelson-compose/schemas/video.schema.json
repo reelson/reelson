@@ -15,7 +15,7 @@
             "additionalProperties": false,
             "description": "Overrides reelson.config.json `sections` per slot, e.g. { \"intro\": \"minimal\", \"recap\": \"none\" }. Run `reelson templates` for the list.",
             "properties": {
-                "intro": { "type": "string", "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split." },
+                "intro": { "type": "string", "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split, showcase." },
                 "recap": { "type": "string", "description": "Steps card after the recording, or \"none\". Kit: steps, compact, none." },
                 "outro": { "type": "string", "description": "Closing brand card. Kit: wordmark, compact, endcard." }
             }

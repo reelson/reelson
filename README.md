@@ -207,7 +207,7 @@ A video is a **template** (the stage: background, framed recording, callouts) pl
 
 | Slot    | Sections (first = default)                   |
 |---------|----------------------------------------------|
-| `intro` | `poster`, `minimal`, `split`                 |
+| `intro` | `poster`, `minimal`, `split`, `showcase`     |
 | `recap` | `steps`, `compact`, `none`                   |
 | `outro` | `wordmark`, `compact`, `endcard`             |
 

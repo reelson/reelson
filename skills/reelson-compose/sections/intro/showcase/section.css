@@ -1,0 +1,51 @@
+/* Its own light palette: the stage's tokens are for the dark stage behind the recording. */
+#intro { --i-ink: #14122b; --i-muted: #5d5b76; --i-line: rgba(20, 18, 43, 0.10); color: var(--i-ink); }
+#intro .canvas { position: absolute; inset: 0; overflow: hidden; background: #f7f6fc; will-change: opacity; }
+#intro .glow { position: absolute; inset: -20%; will-change: transform;
+  background:
+    radial-gradient(38% 42% at 78% 38%, color-mix(in srgb, var(--brand) 26%, transparent), transparent 70%),
+    radial-gradient(30% 34% at 18% 82%, color-mix(in srgb, var(--brand-soft) 22%, transparent), transparent 70%),
+    radial-gradient(26% 30% at 40% 12%, rgba(20, 184, 166, 0.12), transparent 70%); }
+#intro .dots { position: absolute; inset: 0; opacity: 0.55;
+  background-image: radial-gradient(rgba(20, 18, 43, 0.16) 1.2px, transparent 1.4px); background-size: 34px 34px;
+  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgba(0, 0, 0, 0.4) 45%, transparent 75%);
+          mask-image: linear-gradient(100deg, #000 0%, rgba(0, 0, 0, 0.4) 45%, transparent 75%); }
+
+#intro .text { position: absolute; left: 130px; top: 0; bottom: 0; width: 820px; display: flex; flex-direction: column; justify-content: center; gap: 30px; will-change: transform, opacity; }
+#intro .brand { display: flex; align-items: center; gap: 20px; margin-bottom: 26px; }
+#intro .wordmark { font-size: 44px; color: var(--i-ink); }
+#intro .brand-sub { font-size: 18px; letter-spacing: 0.3em; color: var(--i-muted); padding-left: 20px; border-left: 2px solid var(--i-line); }
+#intro .title { font-size: 112px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.98; }
+#intro .title .w { display: inline-block; margin-right: 0.22em; will-change: transform, opacity; }
+#intro .title .w:last-child { margin-right: 0;
+  background: linear-gradient(95deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 55%, #ec4899) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: 0.08em; }
+#intro .subtitle { font-size: 34px; font-weight: 450; color: var(--i-muted); line-height: 1.35; }
+#intro .meta { border-color: var(--i-line); background: rgba(255, 255, 255, 0.75); color: var(--i-muted);
+  box-shadow: 0 6px 20px rgba(20, 18, 43, 0.06); }
+#intro .meta b { color: var(--i-ink); }
+
+/* The peek: a tilted product shot of the demo's last seconds; sized to the footage by the script */
+#intro .shot { position: absolute; left: 960px; right: 40px; top: 0; bottom: 0; display: grid; place-items: center; perspective: 2200px; }
+#intro .peek { position: relative; border-radius: 22px; overflow: hidden; background: #0b1220;
+  box-shadow: 0 50px 110px rgba(38, 30, 110, 0.28), 0 14px 34px rgba(20, 18, 43, 0.16), 0 0 0 1px rgba(20, 18, 43, 0.08);
+  transform-origin: 50% 50%; will-change: transform, opacity; }
+#intro .peek video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* Portrait: text on top, the peek below it */
+#root.portrait #intro .text { left: 90px; right: 90px; width: auto; top: 170px; bottom: auto; justify-content: flex-start; gap: 34px; }
+#root.portrait #intro .wordmark { font-size: 52px; }
+#root.portrait #intro .brand-sub { font-size: 22px; }
+#root.portrait #intro .title { font-size: 120px; }
+#root.portrait #intro .subtitle { font-size: 42px; }
+#root.portrait #intro .meta { font-size: 30px; }
+#root.portrait #intro .shot { left: 60px; right: 60px; top: 640px; bottom: 60px; }
+
+/* Square: text on the left, a smaller peek bottom-right */
+#root.square #intro .text { left: 80px; width: 640px; top: 90px; bottom: auto; justify-content: flex-start; gap: 24px; }
+#root.square #intro .brand { margin-bottom: 14px; }
+#root.square #intro .wordmark { font-size: 40px; }
+#root.square #intro .title { font-size: 92px; }
+#root.square #intro .subtitle { font-size: 32px; }
+#root.square #intro .meta { font-size: 24px; }
+#root.square #intro .shot { left: 380px; right: 30px; top: 400px; bottom: 10px; }

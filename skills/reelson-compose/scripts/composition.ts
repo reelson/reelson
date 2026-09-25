@@ -106,6 +106,9 @@ export function renderComposition(input: CompositionInput): string {
         STAGE_H: String(layout.stage.height),
         BAND_ZOOM: String(layout.bandZoom),
         FORMAT: layout.phone ? `${layout.format} phone` : layout.format,
+        // For an intro that shows the footage: the file, and where its last intro-length stretch starts.
+        RECORDING: (input.media ?? MEDIA).recording,
+        TEASER_MEDIA_START: String(teaserStart(t)),
     }
     const unfilled = new Set<string>()
     const fill = (source: string, values: Record<string, string>): string =>
@@ -167,6 +170,12 @@ export function renderComposition(input: CompositionInput): string {
     }
 
     return html
+}
+
+/** Media time of the footage's last intro-length stretch (the finished result), for an intro to preview. */
+function teaserStart(t: Timeline): number {
+    const from = t.segments.at(-1)?.mediaStart ?? t.mediaStart
+    return Math.round(Math.max(from, t.mediaEnd - t.intro.duration - 0.5) * 1000) / 1000
 }
 
 /**

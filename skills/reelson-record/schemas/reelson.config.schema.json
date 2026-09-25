@@ -60,7 +60,7 @@
             "properties": {
                 "intro": {
                     "type": "string",
-                    "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split."
+                    "description": "Opening section; frame 0 is the poster. Kit: poster, minimal, split, showcase."
                 },
                 "recap": {
                     "type": "string",

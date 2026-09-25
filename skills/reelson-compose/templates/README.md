@@ -9,7 +9,7 @@ A video is a **template** (the stage) plus one **section** per slot:
 
 | Slot    | Kit sections                     | Rules every section in the slot keeps                                 |
 |---------|----------------------------------|-----------------------------------------------------------------------|
-| `intro` | `poster` (classic), `minimal`, `split` | **Frame 0 is the poster**: brand and title legible at t=0, never hidden or blurred. Hands the stage to the recording at `exit` with `stage.enter()`. |
+| `intro` | `poster` (classic), `minimal`, `split`, `showcase` | **Frame 0 is the poster**: brand and title legible at t=0, never hidden or blurred. Hands the stage to the recording at `exit` with `stage.enter()`. |
 | `recap` | `steps` (classic), `compact`, `none` | One numbered entry per callout, up to `maxSteps`. Cross-fades in over the recording's fade-out. |
 | `outro` | `wordmark` (classic), `compact`, `endcard` | **Ends on the brand**, never on an empty frame (it is what players show when playback stops). No URLs. |
 
@@ -126,6 +126,7 @@ In `stage.html` and every section file:
 | `{{TITLE_PLAIN}}`                             | the title with each rotating phrase as its first option (the built-in sections use it) |
 | `{{TOTAL}}`, `{{FRAME_W}}`, `{{FRAME_H}}`     | composition length, framed recording size in px         |
 | `{{STAGE_W}}`, `{{STAGE_H}}`, `{{FORMAT}}`, `{{FOOTAGE_W}}`, `{{FOOTAGE_H}}`, `{{BAND_ZOOM}}` | the layout (see **Layouts**): stage size, `landscape` / `portrait` / `square`, footage size, card zoom |
+| `{{RECORDING}}`, `{{TEASER_MEDIA_START}}`     | the footage file, and the media time its last intro-length stretch starts (for an intro that previews the result in its own `<video class="clip">` on track 4, like `showcase`) |
 
 Only in sections: `{{START}}`, `{{DURATION}}`, `{{TRACK}}` (put all three on the root
 `<section id="<slot>" class="clip" data-start data-duration data-track-index>`) and `{{ASSETS}}`

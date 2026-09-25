@@ -1,0 +1,20 @@
+<section id="intro" class="clip" data-start="{{START}}" data-duration="{{DURATION}}" data-track-index="{{TRACK}}">
+  <div class="canvas"><div class="glow"></div><div class="dots"></div></div>
+  <div class="text">
+    <div class="brand">
+      <div class="wordmark" data-text="{{BRAND}}" data-logo="{{BRAND_LOGO}}"></div>
+      <div class="brand-sub">{{BRAND_SUB}}</div>
+    </div>
+    <h1 class="title" data-title="{{TITLE_PLAIN}}">{{TITLE_PLAIN}}</h1>
+    <p class="subtitle">{{SUBTITLE}}</p>
+    <div class="meta" data-chip></div>
+  </div>
+  <div class="shot">
+    <div class="peek">
+      <!-- Nested in the timed #intro: safe only because the intro always starts at 0, so the
+           video's own data-start and the wrapper's window agree. -->
+      <video id="intro-peek" class="clip" src="{{RECORDING}}" muted playsinline
+        data-start="{{START}}" data-duration="{{DURATION}}" data-media-start="{{TEASER_MEDIA_START}}" data-track-index="4"></video>
+    </div>
+  </div>
+</section>
