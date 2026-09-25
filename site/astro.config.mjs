@@ -12,7 +12,7 @@ export default defineConfig({
             title: 'reelson',
             description:
                 'Turn a prompt into a finished, branded demo video of your web app. Agent Skills + a CLI for Claude Code, Codex and any agent that reads SKILL.md.',
-            // "reels" + a switched-on toggle: reels·on. Outlined Inter (wght 760), so it needs no font.
+            // the wordmark with the dot in its "o" (the dot from the launch video). Outlined Inter (wght 860), so it needs no font.
             logo: { dark: './src/assets/logo-dark.svg', light: './src/assets/logo-light.svg', replacesTitle: true },
             favicon: '/favicon.svg',
             social: [
