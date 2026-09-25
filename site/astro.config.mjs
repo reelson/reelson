@@ -17,7 +17,7 @@ export default defineConfig({
             favicon: '/favicon.svg',
             social: [
                 { icon: 'github', label: 'GitHub', href: 'https://github.com/reelson/reelson' },
-                { icon: 'youtube', label: 'Launch video', href: 'https://youtu.be/tFDWFsBgs9w' },
+                { icon: 'youtube', label: 'Launch video', href: 'https://youtu.be/AkEeA9QAUy4' },
             ],
             editLink: { baseUrl: 'https://github.com/reelson/reelson/edit/main/site/' },
             lastUpdated: true,

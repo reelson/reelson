@@ -25,7 +25,7 @@ headless, with identical pacing, and callouts/zooms follow their markers and cli
 <sub>The [Orbit example](examples/orbit-ship-it/scenario.ts) (a pretend project board in
 [one static page](examples/orbit/index.html)), recorded and rendered by CI on every push to main.</sub>
 
-**📖 [Documentation](https://reelson.github.io/reelson/)** · **▶ [Watch the 1-minute launch video](https://youtu.be/tFDWFsBgs9w)**
+**📖 [Documentation](https://reelson.github.io/reelson/)** · **▶ [Watch the 1-minute launch video](https://youtu.be/AkEeA9QAUy4)**
 — recorded and edited with reelson itself, studio included.
 
 ![How reelson works: scenario.ts → reelson record → recording.mp4 + markers.json → reelson build (with video.json, reelson.config.json, template + sections) → video/, a HyperFrames project → reelson render → video/renders/<slug>.mp4, plus .gif, portrait, square and .srt/.vtt captions](https://raw.githubusercontent.com/reelson/reelson/main/.github/readme/pipeline.svg)
