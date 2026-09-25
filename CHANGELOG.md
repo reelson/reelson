@@ -4,19 +4,15 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
-## Unreleased
+## 0.9.0 — 2026-09-25
+
+Nothing to update. Re-render a video with a rotating title to fix its captions.
 
 ### Added
 - **`showcase` intro**: light and modern — the title word by word on a bright canvas with a soft
   brand glow, and a tilted live peek of the demo's last seconds that straightens, lands on the
   frame and becomes the recording. Portrait and square layouts. Sections can use the new
   `{{RECORDING}}` and `{{TEASER_MEDIA_START}}` placeholders to show the footage.
-
-## 0.9.0 — 2026-09-24
-
-Nothing to update. Re-render a video with a rotating title to fix its captions.
-
-### Added
 - **`reelson render --low-memory`**: HyperFrames' low-memory mode (one browser, frames streamed to
   the encoder instead of kept on disk) for a machine short on RAM or temporary disk space; slower,
   the same video. It is not part of the render key, so the next render without it still says up
