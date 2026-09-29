@@ -82,8 +82,8 @@ export function voiceLines(t: Timeline, spec: VideoSpec, settings: VoiceSettings
     }))
 }
 
-/** Bumped when the post-processing (the trim) changes, so cached lines are made again. */
-const CACHE_VERSION = 2
+/** Bumped when the post-processing (the trim, the levelling) changes, so cached lines are made again. */
+const CACHE_VERSION = 3
 
 /** The cache name of a line: everything that changes how it sounds (not the loudness: the mix sets it). */
 export function lineHash(text: string, s: VoiceSettings): string {
@@ -153,18 +153,44 @@ export async function fetchLines(texts: string[], settings: VoiceSettings, cache
     return missing.length
 }
 
-/** The silence around a line, cut (a breath of it kept) and saved as mp3. */
+/** The silence around a line, cut (a breath of it kept). */
 const TRIM = 'silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.05'
 
+/**
+ * Every line is brought to this loudness before it is cached, so the lines sit level with
+ * each other (a provider can vary by several dB from one line to the next); the mix then sets
+ * the loudness of the track as a whole.
+ */
+const LINE_LUFS = -20
+
+/** The line, trimmed, levelled to LINE_LUFS by a plain gain (the limiter only catches peaks) and saved as mp3. */
 function trimInto(raw: string, target: string): void {
-    const run = spawnSync(
-        'ffmpeg',
-        ['-y', '-loglevel', 'error', '-i', raw, '-af', `${TRIM},areverse,${TRIM},areverse`, '-ar', '48000', '-c:a', 'libmp3lame', '-q:a', '2', target],
-        { stdio: 'inherit' },
-    )
-    if (run.status !== 0 || !existsSync(target)) {
+    const trimmed = `${raw}.trimmed.wav`
+    const trim = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', raw, '-af', `${TRIM},areverse,${TRIM},areverse`, '-ar', '48000', trimmed], {
+        stdio: 'inherit',
+    })
+    if (trim.status !== 0 || !existsSync(trimmed)) {
         throw new ReelsonError(`ffmpeg could not read the spoken line ${raw}`)
     }
+    const loudness = loudnessOf(trimmed)
+    const gain = loudness === null ? 0 : round(LINE_LUFS - loudness)
+    const run = spawnSync(
+        'ffmpeg',
+        ['-y', '-loglevel', 'error', '-i', trimmed, '-af', `volume=${gain}dB,alimiter=limit=0.89:level=false`, '-c:a', 'libmp3lame', '-q:a', '2', target],
+        { stdio: 'inherit' },
+    )
+    rmSync(trimmed, { force: true })
+    if (run.status !== 0 || !existsSync(target)) {
+        throw new ReelsonError(`ffmpeg could not level the spoken line ${raw}`)
+    }
+}
+
+/** Integrated loudness of `file` in LUFS (EBU R128); null when it is silent or too short to measure. */
+function loudnessOf(file: string): number | null {
+    const probe = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128', '-f', 'null', '-'], { encoding: 'utf8' })
+    const matches = [...(probe.stderr ?? '').matchAll(/^\s+I:\s+(-?[\d.]+) LUFS/gm)]
+    const value = matches.length ? Number.parseFloat(matches[matches.length - 1][1]) : Number.NaN
+    return Number.isFinite(value) && value > -70 ? value : null
 }
 
 /** Seconds of audio in `file` (ffprobe). */

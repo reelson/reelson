@@ -4,6 +4,15 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
+## Unreleased
+
+Voice-over lines are made again on the next `reelson voice` / `render` (the cache version changed).
+
+### Fixed
+- **Voice-over lines sit level with each other**: each line is brought to -20 LUFS (a plain gain,
+  a limiter for the peaks) before it is cached. Providers vary by several dB from one line to the
+  next, and the mix only set the loudness of the track as a whole.
+
 ## 0.9.0 — 2026-09-25
 
 Nothing to update. Re-render a video with a rotating title to fix its captions.
