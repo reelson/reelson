@@ -88,16 +88,20 @@ export function followPath(z: Zoom, cursor: NonNullable<Timeline['cursor']>, vie
     return out
 }
 
-/** A recorded click placed on the composition timeline. */
+/** A recorded click (or a hover, kind 'move') placed on the composition timeline. */
 export interface CompClick {
-    /** 1-based position in markers.json `clicks` (what video.json zooms refer to). */
+    /**
+     * 1-based position in markers.json `clicks` (what video.json zooms refer to); for a
+     * 'move', its position in markers.json `focus`.
+     */
     index: number
-    kind: 'click' | 'type'
-    /** The click. */
+    /** 'move': a demo.moveTo of its own (a hover, no click), read from markers.json `focus`. */
+    kind: 'click' | 'type' | 'move'
+    /** The click (a move: when the cursor lands). */
     comp: number
     /** The glide towards it starts. */
     glide: number
-    /** Typing ends (kind 'type'); equals comp for clicks. */
+    /** Typing ends (kind 'type'); equals comp for clicks and moves. */
     until: number
     /** Position as a fraction of the frame. */
     fx: number
@@ -124,15 +128,51 @@ export function compositionClicks(markers: Markers, timeline: Timeline): CompCli
         }))
 }
 
+/**
+ * The hovers: every demo.moveTo that is not the glide of a click (those log a focus between the
+ * click's `move` and `at`). A hover lands when the logged cursor first enters its box (else
+ * the longest glide after it starts), so a zoom can be checked against it like a click.
+ */
+export function compositionMoves(markers: Markers, timeline: Timeline): CompClick[] {
+    const clicks = markers.clicks ?? []
+    const path = markers.cursor?.path ?? []
+    return (markers.focus ?? [])
+        .map((f, i) => ({ f, index: i + 1 }))
+        .filter(({ f }) => !clicks.some((c) => f.at >= (c.move ?? c.at) - 1e-6 && f.at <= c.at + 1e-6))
+        .filter(({ f }) => f.at >= timeline.mediaStart && f.at <= timeline.mediaEnd)
+        .map(({ f, index }) => {
+            const { x, y, width, height } = f.box
+            const inBox = path.find(([t, px, py]) => t >= f.at && px >= x && px <= x + width && py >= y && py <= y + height)
+            const landed = timeline.toComposition(Math.min(inBox?.[0] ?? f.at + 0.72, timeline.mediaEnd))
+            return {
+                index,
+                kind: 'move' as const,
+                comp: landed,
+                glide: timeline.toComposition(f.at),
+                until: landed,
+                fx: (x + width / 2) / timeline.viewport.width,
+                fy: (y + height / 2) / timeline.viewport.height,
+            }
+        })
+}
+
 /** Resolves a video.json zoom (click-anchored or manual) to composition time. */
-export function planZoom(spec: ZoomSpec, clicks: CompClick[], timeline: Timeline): Zoom {
+export function planZoom(spec: ZoomSpec, clicks: CompClick[], timeline: Timeline, markers?: Markers): Zoom {
     const scale = spec.scale
     if (!spec.clicks) {
-        if (spec.at === undefined || spec.duration === undefined || spec.x === undefined || spec.y === undefined) {
-            throw new ZoomError('a zoom needs `clicks`, or all of `at`, `duration`, `x`, `y` (manual)')
+        if ((spec.at === undefined) === (spec.marker === undefined) || spec.duration === undefined || spec.x === undefined || spec.y === undefined) {
+            throw new ZoomError('a zoom needs `clicks`, or `duration`, `x`, `y` and one of `at` / `marker` (manual)')
+        }
+        let at = spec.at ?? 0
+        if (spec.marker !== undefined) {
+            const found = markers?.markers.find((m) => m.label === spec.marker)
+            if (!found) {
+                throw new ZoomError(`no marker "${spec.marker}" — markers.json has ${markers?.markers.map((m) => JSON.stringify(m.label)).join(', ') || 'none'}`)
+            }
+            at = round(found.at + (spec.offset ?? 0))
         }
         return {
-            at: timeline.toComposition(spec.at),
+            at: timeline.toComposition(at),
             duration: spec.duration,
             x: spec.x,
             y: spec.y,
@@ -141,8 +181,8 @@ export function planZoom(spec: ZoomSpec, clicks: CompClick[], timeline: Timeline
             out: spec.out ?? R.defaultEase,
         }
     }
-    if (spec.at !== undefined || spec.duration !== undefined) {
-        throw new ZoomError('a zoom with `clicks` is timed automatically; drop `at`/`duration` (or drop `clicks` for a manual zoom)')
+    if (spec.at !== undefined || spec.marker !== undefined || spec.duration !== undefined) {
+        throw new ZoomError('a zoom with `clicks` is timed automatically; drop `at`/`marker`/`duration` (or drop `clicks` for a manual zoom)')
     }
 
     const [a, b = a] = spec.clicks
@@ -240,12 +280,16 @@ export function zoomOverlaps(zooms: Zoom[]): { index: number; message: string }[
     return found
 }
 
-/** Verifies a zoom against the clicks; problems carry a copy-paste fix. */
-export function checkZoom(z: Zoom, clicks: CompClick[], timeline: Timeline): ZoomCheck {
+/**
+ * Verifies a zoom against the clicks, and the hovers (`moves`, see compositionMoves) a manual
+ * zoom may frame instead; problems carry a copy-paste fix.
+ */
+export function checkZoom(z: Zoom, clicks: CompClick[], timeline: Timeline, moves: CompClick[] = []): ZoomCheck {
     const end = round(z.at + z.duration)
     const visible = isVisibleIn(viewOf(z.x, z.y, z.scale))
     const describe = (c: CompClick): string =>
-        `${c.kind} #${c.index} at ${c.comp}s (glide from ${c.glide}s, ${Math.round(c.fx * 100)}%, ${Math.round(c.fy * 100)}%)`
+        `${c.kind === 'move' ? 'hover' : c.kind} #${c.index} at ${c.comp}s (glide from ${c.glide}s, ${Math.round(c.fx * 100)}%, ${Math.round(c.fy * 100)}%)`
+    clicks = [...clicks, ...moves].sort((a, b) => a.comp - b.comp)
 
     const problems: string[] = []
     const inside = clicks.filter((c) => c.comp >= z.at && c.comp <= end)
@@ -256,9 +300,13 @@ export function checkZoom(z: Zoom, clicks: CompClick[], timeline: Timeline): Zoo
     const next = clicks.find((c) => c.comp > (last?.comp ?? z.at) && !(c.comp <= end && (z.path || visible(c))))
 
     if (!first) {
-        problems.push('frames no click — anchor it with `clicks`, or drop the zoom')
+        problems.push('frames no click or hover — anchor it with `clicks`, or drop the zoom')
     } else {
-        const fix = ` → use { "clicks": [${first.index}, ${(last ?? first).index}], "scale": ${z.scale} }`
+        const anchors = framed.filter((c) => c.kind !== 'move')
+        const fix =
+            first.kind === 'move'
+                ? ` → start it between ${round(first.glide - R.early)}s and ${first.glide}s, done by ${round(first.comp - R.settle)}s (\`marker\` + \`offset\`, a shorter \`in\`)`
+                : ` → use { "clicks": [${first.index}, ${(anchors.at(-1) ?? first).index}], "scale": ${z.scale} }`
         if (z.at + z.in > first.comp - R.settle + R.eps) {
             problems.push(`zoom-in not done before the ${describe(first)}${fix}`)
         } else if (z.at < first.glide - R.early - R.eps) {

@@ -77,8 +77,8 @@ Usage: reelson <command> [options]
                                 re-record every take (desktop, phone, square) headless into a
                                 scratch folder and check video.json still fits (markers, click
                                 numbers, zooms); --update keeps them
-  snapshot <slug> --at 1,3.5,8 [--portrait | --square]
-                                PNG frames into video/snapshots/ (…/portrait/, …/square/)
+  snapshot <slug> --at 1,3.5,8 [--portrait | --square] [--no-build]
+                                build, then PNG frames into video/snapshots/ (…/portrait/, …/square/)
   studio <slug> [--port 4800] [--no-open]
                                 preview + edit on a timeline of every layer (saves video.json)
   preview <slug>                open the HyperFrames studio (raw composition)
@@ -649,9 +649,14 @@ function snapshot(argv: string[]): number {
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,
-        options: { at: { type: 'string' }, portrait: { type: 'boolean' }, square: { type: 'boolean' } },
+        options: { at: { type: 'string' }, portrait: { type: 'boolean' }, square: { type: 'boolean' }, 'no-build': { type: 'boolean' } },
     })
-    const slug = one(positionals, 'snapshot <slug> --at 1,3.5,8 [--portrait | --square]')
+    const slug = one(positionals, 'snapshot <slug> --at 1,3.5,8 [--portrait | --square] [--no-build]')
+    // Like render: build first, so the frames show video.json as it is now, not the last build.
+    if (!values['no-build']) {
+        const cfg = config()
+        build(resolveDemoDir(slug, cfg), cfg, { log: () => {} })
+    }
     const videoDir = builtVideoDir(slug)
     const format = values.portrait ? 'portrait' : values.square ? 'square' : null
     const composition = format ? `${format}.html` : 'index.html'

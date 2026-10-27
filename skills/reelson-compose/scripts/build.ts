@@ -43,7 +43,7 @@ import {
     type TrimPoint,
     type VideoSpec,
 } from './timeline.ts'
-import { compositionClicks, followPath, planZoom, ZoomError, type CompClick, type Zoom } from './zooms.ts'
+import { compositionClicks, compositionMoves, followPath, planZoom, ZoomError, type CompClick, type Zoom } from './zooms.ts'
 
 export interface BuildOptions {
     title?: string
@@ -64,6 +64,8 @@ export interface Plan {
     design: Design
     timeline: Timeline
     clicks: CompClick[]
+    /** The hovers (demo.moveTo with no click), which a manual zoom may frame. */
+    moves: CompClick[]
     zooms: Zoom[]
     warnings: string[]
     /** video.json did not exist and was derived from markers.json. */
@@ -101,7 +103,7 @@ export function planSpec(demoDir: string, spec: VideoSpec, markers: Markers, con
     const clicks = compositionClicks(markers, timeline)
     const zooms = (spec.zooms ?? []).map((z, i) => {
         try {
-            const zoom = planZoom(z, clicks, timeline)
+            const zoom = planZoom(z, clicks, timeline, markers)
             if (z.follow && timeline.cursor) {
                 zoom.path = followPath(zoom, timeline.cursor, timeline.viewport)
             } else if (z.follow) {
@@ -116,7 +118,7 @@ export function planSpec(demoDir: string, spec: VideoSpec, markers: Markers, con
         }
     })
 
-    return { spec, markers, design, timeline, clicks, zooms, warnings }
+    return { spec, markers, design, timeline, clicks, moves: compositionMoves(markers, timeline), zooms, warnings }
 }
 
 /** What `build` made: the plan, plus the timelines of the portrait and square versions (their takes' own timing). */

@@ -21,7 +21,7 @@ import { build, planSpec, serializeVideoSpec, type Plan } from './build.ts'
 import { hyperframesDist } from './hyperframes.ts'
 import { BUILTIN_SECTIONS, BUILTIN_TEMPLATES, catalog, readMarkers, ReelsonError, validateVideoSpec } from './project.ts'
 import { defaultCallouts, round, SLOTS, type VideoSpec } from './timeline.ts'
-import { checkZoom, zoomOverlaps } from './zooms.ts'
+import { checkZoom, zoomOverlaps, type CompClick } from './zooms.ts'
 
 const STUDIO_DIR = resolve(import.meta.dirname, '../studio')
 
@@ -45,7 +45,7 @@ export interface StudioData {
     callouts: { n: number; source: number; at: number; end: number; text: string; group?: string }[]
     zooms: { n: number; at: number; end: number; in: number; out: number; scale: number; x: number; y: number; problems: string[] }[]
     handOffs: { at: number; end: number; belt: number; title: string; subtitle?: string; from?: string; to?: string }[]
-    clicks: { n: number; kind: 'click' | 'type'; glide: number; at: number; until: number }[]
+    clicks: { n: number; kind: CompClick['kind']; glide: number; at: number; until: number }[]
     markers: { label: string; at: number; recordingAt: number; used: boolean }[]
     audio: { narration: { start: number; end: number } | null; music: { start: number; end: number } | null }
     /**
@@ -57,7 +57,7 @@ export interface StudioData {
 }
 
 export function studioData(slug: string, result: Plan, audio: { narration: boolean; music: boolean }): StudioData {
-    const { spec, markers, design, timeline: t, clicks, zooms, warnings } = result
+    const { spec, markers, design, timeline: t, clicks, moves, zooms, warnings } = result
     const { intro, recap, outro } = design.sections
     const sections: StudioData['sections'] = [
         { slot: 'intro', name: intro.name, start: 0, end: t.intro.duration, detail: `hands over at ${t.intro.exit}s` },
@@ -116,7 +116,7 @@ export function studioData(slug: string, result: Plan, audio: { narration: boole
             scale: z.scale,
             x: z.x,
             y: z.y,
-            problems: [...checkZoom(z, clicks, t).problems, ...overlaps.filter((o) => o.index === i).map((o) => o.message)],
+            problems: [...checkZoom(z, clicks, t, moves).problems, ...overlaps.filter((o) => o.index === i).map((o) => o.message)],
         })),
         handOffs: t.transitions.map((tr) => ({
             at: tr.at,

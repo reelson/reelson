@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { computeTimeline } from '../skills/reelson-compose/scripts/timeline.ts'
-import { checkZoom, compositionClicks, followPath, planZoom, zoomOverlaps, ZoomError, type CompClick, type Zoom } from '../skills/reelson-compose/scripts/zooms.ts'
+import { computeTimeline, stepStart, type Markers } from '../skills/reelson-compose/scripts/timeline.ts'
+import { checkZoom, compositionClicks, compositionMoves, followPath, planZoom, zoomOverlaps, ZoomError, type CompClick, type Zoom } from '../skills/reelson-compose/scripts/zooms.ts'
 import { fixture } from './helpers.ts'
 
 function setup(name: 'todo' | 'handoff' = 'todo', trimStart = 2.6) {
@@ -165,5 +165,51 @@ describe('followPath', () => {
         const z = planZoom({ clicks: [1, 2], scale: 2, follow: true }, clicks, timeline)
         z.path = followPath(z, cursorAt([[0, 50, 500], [11.5, 950, 500]]), viewport)
         assert.deepEqual(checkZoom(z, clicks, timeline).problems, [])
+    })
+})
+
+describe('hovers (demo.moveTo without a click)', () => {
+    const box = (x: number, y: number, width: number, height: number) => ({ x, y, width, height })
+    const markers: Markers = {
+        viewport: { width: 1000, height: 500 },
+        durationSeconds: 20,
+        markers: [
+            { label: 'Clicked', at: 4 },
+            { label: 'Hovered the id', at: 9 },
+        ],
+        clicks: [{ move: 2, at: 3, x: 100, y: 100, kind: 'click' }],
+        focus: [
+            { at: 2.05, box: box(90, 90, 20, 20), area: box(0, 0, 1000, 200) },
+            { at: 6, box: box(700, 300, 100, 20), area: box(600, 250, 400, 150) },
+        ],
+        cursor: { drawn: false, path: [[3, 100, 100], [6, 100, 100], [6.3, 600, 300], [6.5, 750, 310]], presses: [[3, 100, 100]] },
+    }
+    const { timeline } = computeTimeline(markers, { title: 'T', trim: { start: 1 } })
+    const clicks = compositionClicks(markers, timeline)
+    const moves = compositionMoves(markers, timeline)
+
+    it('reads the moveTo of its own from focus, landing where the cursor enters the box', () => {
+        assert.deepEqual(
+            moves.map((m) => [m.index, m.kind, m.glide, m.comp]),
+            [[2, 'move', timeline.toComposition(6), timeline.toComposition(6.5)]],
+        )
+    })
+
+    it('lets a manual zoom frame a hover, timed from a marker', () => {
+        const zoom = planZoom({ marker: 'Hovered the id', offset: -3.2, duration: 3, x: 0.75, y: 0.62, scale: 1.6, in: 0.5 }, clicks, timeline, markers)
+        assert.equal(zoom.at, timeline.toComposition(5.8))
+        assert.deepEqual(checkZoom(zoom, clicks, timeline, moves).problems, [])
+        assert.deepEqual(checkZoom(zoom, clicks, timeline).problems, ['frames no click or hover — anchor it with `clicks`, or drop the zoom'])
+        const late = planZoom({ marker: 'Hovered the id', offset: -3.2, duration: 3, x: 0.75, y: 0.62, scale: 1.6 }, clicks, timeline, markers)
+        assert.match(checkZoom(late, clicks, timeline, moves).problems[0], /zoom-in not done before the hover #2 .* a shorter `in`/)
+    })
+
+    it('refuses an unknown marker, and `at` with `marker`', () => {
+        assert.throws(() => planZoom({ marker: 'Nope', duration: 3, x: 0.5, y: 0.5, scale: 1.6 }, clicks, timeline, markers), /no marker "Nope"/)
+        assert.throws(() => planZoom({ marker: 'Clicked', at: 2, duration: 3, x: 0.5, y: 0.5, scale: 1.6 }, clicks, timeline, markers), /one of `at` \/ `marker`/)
+    })
+
+    it('starts a callout step with a hover glide, not only a click', () => {
+        assert.equal(stepStart(markers, 9, 1), 6)
     })
 })

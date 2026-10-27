@@ -43,6 +43,11 @@ export function check(demoDir: string, config: LoadedConfig, options: CheckOptio
             )
         }
     }
+    ;(result.spec.zooms ?? []).forEach((z, i) => {
+        if (z.at !== undefined) {
+            log(`! zoom ${i + 1}: \`at\` is a fixed time — after a re-record it zooms at the wrong moment; use \`clicks\`, or { "marker": "…", "offset": … }`)
+        }
+    })
     if ((result.spec.zooms ?? []).length && !result.clicks.length) {
         log('✗ zooms need logged clicks — re-record with the current reelson-record scripts')
         problems++
@@ -50,7 +55,7 @@ export function check(demoDir: string, config: LoadedConfig, options: CheckOptio
 
     const overlaps = zoomOverlaps(result.zooms)
     result.zooms.forEach((z, i) => {
-        const { problems: checked, framed } = checkZoom(z, result.clicks, result.timeline)
+        const { problems: checked, framed } = checkZoom(z, result.clicks, result.timeline, result.moves)
         const found = [...checked, ...overlaps.filter((o) => o.index === i).map((o) => o.message)]
         const label = `zoom ${i + 1} (${z.at}–${round(z.at + z.duration)}s, in ${z.in}s / out ${z.out}s, ${z.scale}x at ${z.x},${z.y})`
         if (found.length) {
@@ -58,7 +63,7 @@ export function check(demoDir: string, config: LoadedConfig, options: CheckOptio
             log(`✗ ${label}`)
             found.forEach((p) => log(`    ${p}`))
         } else {
-            log(`✓ ${label}: ${framed.map((c) => `${c.kind} #${c.index} ${c.comp}s`).join(', ')}`)
+            log(`✓ ${label}: ${framed.map((c) => `${c.kind === 'move' ? 'hover' : c.kind} #${c.index} ${c.comp}s`).join(', ')}`)
         }
     })
     if (!result.zooms.length) {

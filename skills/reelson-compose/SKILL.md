@@ -94,8 +94,11 @@ changing the trim or the template never re-times anything. Validated against
   `demo.click`/`demo.type` log). reelson computes the focus point and the timing from the
   cursor — in with the glide to the first click, out with the glide to the next target,
   never easing during a click or typing (style guide #13). `scale` 1.5–2.0; `x`/`y` (0..1)
-  override the focus; `in`/`out` override the eases. A manual zoom (`at`, `duration`, `x`, `y`)
-  is possible but rarely needed. Never add pauses to the scenario for a zoom. Two zooms must
+  override the focus; `in`/`out` override the eases. A manual zoom (`duration`, `x`, `y`, and
+  `"marker"` + `"offset"` — the seconds from that marker — or a fixed `at`, which `check` warns
+  goes stale after a re-record) is for what no click frames: a `demo.moveTo` hover (a value the
+  demo points at), which `check` accepts like a click — start it as the cursor heads there, with
+  an `in` short enough to be done when it lands. Never add pauses to the scenario for a zoom. Two zooms must
   not be on screen at once (`reelson check` flags it). A zoom holds its own clicks and ends at
   the next pause (a click still in view < 1 s later joins it; > 3 s of nothing, it lingers and
   leaves): to hold longer, widen `clicks`; for two overlapping zooms, use one over both ranges.
@@ -148,7 +151,7 @@ reelson build <slug> --title "Find a customer" --subtitle "..."   # first run cr
 reelson build <slug>                  # regenerate video/ from video.json
 reelson check <slug>                  # schemas, zoom timing, `hyperframes check`
 reelson studio <slug>                 # for the user: preview + edit on a layer timeline
-reelson snapshot <slug> --at 1.2,3.5,6,10 [--portrait | --square]   # PNGs in video/snapshots/ — read them
+reelson snapshot <slug> --at 1.2,3.5,6,10 [--portrait | --square]   # builds, then PNGs in video/snapshots/ — read them
 reelson render <slug> [--gif] [--draft] [--portrait] [--square] [--all-formats]   # build + render video/renders/<slug>.mp4
 ```
 

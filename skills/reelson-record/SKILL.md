@@ -59,7 +59,8 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
   Clicks land where the glide ended (no snap to the element's centre).
 - **Human pacing**: curved, eased glides with a faint tremor, landing slightly off-centre;
   typing with uneven delays and beats after spaces/punctuation. Seeded per scenario, so
-  re-records are identical. Never slow.
+  re-records are identical. Never slow: a glide is paced by the clock, so on a busy page (a
+  video, a canvas, a replay playing) it skips steps instead of stretching, and lands on time.
 - **Cursor starts mid-screen**: parked at a random point in the middle third before the first
   action and before every `demo.goto()`, so the video never opens with a jump from a corner.
   Raw `page.click()`/`fill()` (e.g. a login helper) move the mouse without telling `demo`; the
@@ -92,7 +93,7 @@ Common dev overlays (Laravel Debugbar, Vite/Next.js/webpack error overlays) are 
    stub with the right type import; the kit's `examples/todo-add-item/scenario.ts` is a full
    example. Rules:
    - `demo.marker('...')` right **after** the UI reaches each state worth a callout: it ends
-     that step, and its callout is shown from the step's first glide/click (after the previous
+     that step, and its callout is shown from the step's first glide (to a click or a `moveTo`, after the previous
      marker) until just past the marker — so it names what the viewer is watching. Labels
      become the callouts in video.json (and its `marker` keys) — write them in the UI language
      as imperative steps, and keep them stable: video.json refers to them by label.

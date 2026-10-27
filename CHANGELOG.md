@@ -7,8 +7,27 @@ versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor 
 ## Unreleased
 
 Voice-over lines are made again on the next `reelson voice` / `render` (the cache version changed).
+Re-record a demo whose glides ran slow on a busy page to get them at their normal pace.
+
+### Added
+- **Manual zooms timed from a marker**: `{ "marker": "…", "offset": -2.5, "duration": 4, "x": …,
+  "y": …, "scale": … }` instead of a fixed `at`, so the zoom follows a re-record. `reelson check`
+  warns about a fixed `at`, as it does for the trim.
+- **Zooms on a hover**: `reelson check` (and `verify`, the studio) accepts a manual zoom that
+  frames a `demo.moveTo` of its own (logged in markers.json `focus`) instead of flagging it as
+  "frames no click", and checks its timing against the glide like a click's.
+
+### Changed
+- **`reelson snapshot` builds first**, like `render`, so the frames show video.json as it is now
+  (`--no-build` for the last build as it is).
+- A callout's step starts with its first glide to a `demo.moveTo` too, not only to a click.
 
 ### Fixed
+- **Glides on a busy page**: a glide waited a fixed time after each of its steps, so on a page
+  where every `mouse.move` takes tens of milliseconds (a video or a replay playing, a canvas) a
+  0.7 s glide took two or three. It is paced by the clock now: a late step skips ahead, and the
+  glide lands on time. The steps and the random stream are the same, so a re-record still moves
+  the same way.
 - **Voice-over lines sit level with each other**: each line is brought to -20 LUFS (a plain gain,
   a limiter for the peaks) before it is cached. Providers vary by several dB from one line to the
   next, and the mix only set the loudness of the track as a whole.

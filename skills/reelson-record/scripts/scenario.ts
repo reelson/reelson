@@ -285,22 +285,32 @@ export function createDemo(
         const cy = from.y + dy / 2 + dx * bow
         const steps = Math.round(Math.min(42, Math.max(14, dist / 16)))
         const durationMs = Math.min(720, Math.max(260, 200 + dist * 0.55))
+        const points: { x: number; y: number }[] = []
         for (let i = 1; i <= steps; i++) {
             const u = i / steps
             const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2
             const tremor = (1 - e) * 1.2
-            const x =
-                (1 - e) * (1 - e) * from.x +
-                2 * (1 - e) * e * cx +
-                e * e * to.x +
-                (rng() - 0.5) * tremor
-            const y =
-                (1 - e) * (1 - e) * from.y +
-                2 * (1 - e) * e * cy +
-                e * e * to.y +
-                (rng() - 0.5) * tremor
-            await page.mouse.move(x, y)
-            await page.waitForTimeout(durationMs / steps)
+            points.push({
+                x: (1 - e) * (1 - e) * from.x + 2 * (1 - e) * e * cx + e * e * to.x + (rng() - 0.5) * tremor,
+                y: (1 - e) * (1 - e) * from.y + 2 * (1 - e) * e * cy + e * e * to.y + (rng() - 0.5) * tremor,
+            })
+        }
+        // Paced by the clock, not by the steps: on a busy page (a video, a replay, a canvas)
+        // each mouse.move takes tens of ms, and a glide that waited a fixed time after every
+        // step would take three times as long. A step that is late skips to where the cursor
+        // should be by now, so the glide lands on time and the page's hovers follow it. The
+        // points are computed first, so the random stream (and a re-record) stays the same.
+        const start = Date.now()
+        for (let i = 0; i < steps;) {
+            await page.mouse.move(points[i].x, points[i].y)
+            const due = start + (durationMs * (i + 1)) / steps
+            const now = Date.now()
+            if (now < due) {
+                await page.waitForTimeout(due - now)
+                i++
+            } else {
+                i = Math.max(i + 1, Math.min(steps - 1, Math.floor(((now - start) / durationMs) * steps)))
+            }
         }
         pos = to
     }

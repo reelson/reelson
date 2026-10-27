@@ -153,7 +153,11 @@ export interface ZoomSpec {
     clicks?: number[]
     x?: number
     y?: number
+    /** Manual zoom: recording time the zoom-in starts. */
     at?: number
+    /** Manual zoom: starts at this marker (plus `offset`), so it follows a re-record. */
+    marker?: string
+    offset?: number
     duration?: number
     in?: number
     out?: number
@@ -487,14 +491,13 @@ export function computeTimeline(
 
 /** A trim edge in recording seconds (undefined: not set). */
 /**
- * When the step that ends at `marker` began: the first glide (or click) after the previous
- * marker — and after `from`, the trim — else the marker itself (nothing logged in between,
- * e.g. a page load).
+ * When the step that ends at `marker` began: the first glide (towards a click, or a moveTo of
+ * its own) after the previous marker — and after `from`, the trim — else the marker itself
+ * (nothing logged in between, e.g. a page load).
  */
 export function stepStart(markers: Markers, marker: number, from: number): number {
     const previous = Math.max(from, ...markers.markers.map((m) => m.at).filter((at) => at < marker - 1e-6))
-    const first = (markers.clicks ?? [])
-        .map((c) => c.move ?? c.at)
+    const first = [...(markers.clicks ?? []).map((c) => c.move ?? c.at), ...(markers.focus ?? []).map((f) => f.at)]
         .filter((t) => t >= previous - 1e-6 && t < marker)
         .sort((a, b) => a - b)[0]
     return first ?? marker

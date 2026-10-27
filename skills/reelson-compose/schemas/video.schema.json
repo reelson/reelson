@@ -158,7 +158,9 @@
                     "follow": { "type": "boolean", "description": "Pan with the cursor while zoomed, so the clicks need not fit one view (recordings with a logged cursor, record.cursor \"layer\"). Default false." },
                     "x": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame width. Default: centred on the clicks." },
                     "y": { "type": "number", "minimum": 0, "maximum": 1, "description": "Focus point, fraction of the frame height." },
-                    "at": { "type": "number", "minimum": 0, "description": "Manual zoom: recording time the zoom-in starts (instead of `clicks`)." },
+                    "at": { "type": "number", "minimum": 0, "description": "Manual zoom: recording time the zoom-in starts (instead of `clicks`). Goes stale after a re-record: prefer `marker`." },
+                    "marker": { "type": "string", "description": "Manual zoom: starts at this markers.json label (plus `offset`), so it follows a re-record. Instead of `at`." },
+                    "offset": { "type": "number", "description": "Manual zoom with `marker`: seconds after the marker (negative: before)." },
                     "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Manual zoom: seconds from zoom-in start to zoomed-out." },
                     "in": { "type": "number", "minimum": 0.4, "description": "Zoom-in ease seconds (default 0.8)." },
                     "out": { "type": "number", "minimum": 0.4, "description": "Zoom-out ease seconds (default 0.8)." }

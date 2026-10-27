@@ -182,7 +182,7 @@ function verifyTake(demoDir: string, scenario: string, take: Take, config: Loade
             notes.push(...plan.warnings)
             const overlaps = zoomOverlaps(plan.zooms)
             plan.zooms.forEach((z, i) => {
-                for (const p of [...checkZoom(z, plan.clicks, plan.timeline).problems, ...overlaps.filter((o) => o.index === i).map((o) => o.message)]) {
+                for (const p of [...checkZoom(z, plan.clicks, plan.timeline, plan.moves).problems, ...overlaps.filter((o) => o.index === i).map((o) => o.message)]) {
                     problems.push(`zoom ${i + 1}: ${p}`)
                 }
             })
