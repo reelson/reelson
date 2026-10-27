@@ -4,7 +4,7 @@ All notable changes to reelson. The format follows [Keep a Changelog](https://ke
 versions follow [Semantic Versioning](https://semver.org/) (before 1.0, a minor version may change
 `video.json` or `demo.config.json`; the notes say how to update).
 
-## Unreleased
+## 0.10.0 — 2026-10-27
 
 Voice-over lines are made again on the next `reelson voice` / `render` (the cache version changed).
 Re-record a demo whose glides ran slow on a busy page to get them at their normal pace.
